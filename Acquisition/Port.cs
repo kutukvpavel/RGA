@@ -7,7 +7,7 @@ namespace Acquisition
 {
     public class Port
     {
-        public static readonly string NewLine = "\n";
+        public static readonly string NewLine = "\r";
 
         public event EventHandler<TextEventArgs> LineReceived;
 
@@ -15,10 +15,12 @@ namespace Acquisition
         {
             SerialPort = port;
             port.RtsEnable = true;
+            port.Encoding = Encoding.ASCII;
             port.DataReceived += Port_DataReceived;
         }
 
         public SerialPortStream SerialPort { get; }
+        public char[] ToTrim { get; set; } = new char[] { '\n' };
 
         public void Send(Command cmd)
         {
@@ -27,7 +29,7 @@ namespace Acquisition
             SerialPort.Write(NewLine);
         }
 
-        private StringBuilder Buffer = new StringBuilder();
+        private readonly StringBuilder Buffer = new StringBuilder();
 
         private void Port_DataReceived(object sender, SerialDataReceivedEventArgs e)
         {
@@ -38,7 +40,7 @@ namespace Acquisition
                 append = Buffer.Append(append).ToString();
                 while (index > -1)
                 {
-                    LineReceived?.Invoke(this, new TextEventArgs(append.Substring(0, index)));
+                    LineReceived?.Invoke(this, new TextEventArgs(append.Substring(0, index).TrimEnd(ToTrim)));
                     append.Remove(0, index + 1);
                     index = append.IndexOf(NewLine);
                 }
