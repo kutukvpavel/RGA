@@ -3,7 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.30621.155
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Acquisition", "Acquisition\Acquisition.csproj", "{7FE4EE1E-A1D6-4C99-8FB4-2FCFEDDBD126}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Acquisition", "Acquisition\Acquisition.csproj", "{7FE4EE1E-A1D6-4C99-8FB4-2FCFEDDBD126}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "3DSpectrumVisualizer", "3DSpectrumVisualizer\3DSpectrumVisualizer.csproj", "{A603796A-B9E2-4F02-8549-D54C1289A41B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +17,10 @@ Global
 		{7FE4EE1E-A1D6-4C99-8FB4-2FCFEDDBD126}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7FE4EE1E-A1D6-4C99-8FB4-2FCFEDDBD126}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7FE4EE1E-A1D6-4C99-8FB4-2FCFEDDBD126}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A603796A-B9E2-4F02-8549-D54C1289A41B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A603796A-B9E2-4F02-8549-D54C1289A41B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A603796A-B9E2-4F02-8549-D54C1289A41B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A603796A-B9E2-4F02-8549-D54C1289A41B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
