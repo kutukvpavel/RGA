@@ -40,11 +40,6 @@ namespace Acquisition
 
         private void CommunicationPort_LineReceived(object sender, TextEventArgs e)
         {
-            if (State == HeadState.Scanning)
-            {
-
-                return;
-            }
             try
             {
                 switch (LastCommand.ExpectedResponse)
@@ -67,8 +62,8 @@ namespace Acquisition
             {
                 ExceptionLog?.Invoke(this, new ExceptionEventArgs(ex, e.Text));
                 LastCommand.Response = null;
+                Busy = false;
             }
-            Busy = false;
         }
 
         public HeadState State { get; private set; } = HeadState.PowerUp;
@@ -83,7 +78,6 @@ namespace Acquisition
 
         public void ExecuteSequence(CommandSequence s)
         {
-
             foreach (var item in s)
             {
                 Busy = true;

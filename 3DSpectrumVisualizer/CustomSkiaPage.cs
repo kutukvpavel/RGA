@@ -8,8 +8,10 @@ using Avalonia.Rendering.SceneGraph;
 using Avalonia.Skia;
 using Avalonia.Threading;
 using SkiaSharp;
+using System.Threading;
+using System.Collections.Generic;
 
-namespace RenderDemo.Pages
+namespace _3DSpectrumVisualizer
 {
     public class CustomSkiaPage : Control
     {
@@ -17,15 +19,38 @@ namespace RenderDemo.Pages
         {
             ClipToBounds = true;
         }
-        
+
+        public float ScalingFactor { get; set; } = 50;
+        public float XTranslate { get; set; } = 10;
+        public float YTranslate { get; set; } = 10;
+        public float XRotate { get; set; } = 50;
+        public float YRotate { get; set; } = 50;
+        public float ScanSpacing { get; set; } = 50;
+
         class CustomDrawOp : ICustomDrawOperation
         {
-            private readonly FormattedText _noSkia;
+            private readonly SK3dView View3D;
+            private float Scaling;
+            private float ScanSpacing;
+            static SKColor BackgroundColor = new SKColor(211, 215, 222);
+            //static Stopwatch St = Stopwatch.StartNew();
 
-            public CustomDrawOp(Rect bounds, FormattedText noSkia)
+            public CustomDrawOp(
+                Rect bounds, 
+                float scale, 
+                float xTranslate, 
+                float yTranslate, 
+                float xRotate,
+                float yRotate,
+                float scanSpacing)
             {
-                _noSkia = noSkia;
+                ScanSpacing = -scanSpacing;
                 Bounds = bounds;
+                Scaling = scale;
+                View3D = new SK3dView();
+                View3D.Translate(xTranslate, yTranslate, 1);
+                View3D.RotateXDegrees(xRotate);
+                View3D.RotateYDegrees(yRotate);
             }
             
             public void Dispose()
@@ -36,83 +61,60 @@ namespace RenderDemo.Pages
             public Rect Bounds { get; }
             public bool HitTest(Point p) => false;
             public bool Equals(ICustomDrawOperation other) => false;
-            static Stopwatch St = Stopwatch.StartNew();
             public void Render(IDrawingContextImpl context)
             {
-                var canvas = (context as ISkiaDrawingContextImpl)?.SkCanvas;
-                if (canvas == null)
-                    context.DrawText(Brushes.Black, new Point(), _noSkia.PlatformImpl);
-                else
+                bool lockTaken = Monitor.TryEnter(Program.UpdateSynchronizingObject);
+                if (!lockTaken) return;
+                try
                 {
-                    canvas.Save();
-                    // create the first shader
-                    var colors = new SKColor[] {
-                        new SKColor(0, 255, 255),
-                        new SKColor(255, 0, 255),
-                        new SKColor(255, 255, 0),
-                        new SKColor(0, 255, 255)
-                    };
+                    var canvas = (context as ISkiaDrawingContextImpl)?.SkCanvas;
+                    using (SKAutoCanvasRestore ar1 = new SKAutoCanvasRestore(canvas))
+                    {
+                        canvas.Clear(BackgroundColor);
+                        canvas.Scale(Scaling);
+                        View3D.Save();
+                        foreach (var item in Program.Repositories)
+                        {
+                            foreach (var scan in item.Results)
+                            {
+                                using (SKAutoCanvasRestore ar2 = new SKAutoCanvasRestore(canvas))
+                                {
+                                    View3D.TranslateY(ScanSpacing);
+                                    View3D.Save();
+                                    View3D.RotateXDegrees(90);
+                                    View3D.ApplyToCanvas(canvas);
+                                    canvas.DrawPath(scan.Path2D, item.Paint);
+                                    View3D.Restore();
+                                }
+                            }
+                        }
+                        View3D.Restore();
+                    }
+                }
+                catch (Exception)
+                {
 
-                    var sx = Animate(100, 2, 10);
-                    var sy = Animate(1000, 5, 15);
-                    var lightPosition = new SKPoint(
-                        (float)(Bounds.Width / 2 + Math.Cos(St.Elapsed.TotalSeconds) * Bounds.Width / 4),
-                        (float)(Bounds.Height / 2 + Math.Sin(St.Elapsed.TotalSeconds) * Bounds.Height / 4));
-                    using (var sweep =
-                        SKShader.CreateSweepGradient(new SKPoint((int)Bounds.Width / 2, (int)Bounds.Height / 2), colors,
-                            null)) 
-                    using(var turbulence = SKShader.CreatePerlinNoiseFractalNoise(0.05f, 0.05f, 4, 0))
-                    using(var shader = SKShader.CreateCompose(sweep, turbulence, SKBlendMode.SrcATop))
-                    using(var blur = SKImageFilter.CreateBlur(Animate(100, 2, 10), Animate(100, 5, 15)))
-                    using (var paint = new SKPaint
-                    {
-                        Shader = shader,
-                        ImageFilter = blur
-                    })
-                        canvas.DrawPaint(paint);
-                    
-                    using (var pseudoLight = SKShader.CreateRadialGradient(
-                        lightPosition,
-                        (float) (Bounds.Width/3),
-                        new [] { 
-                            new SKColor(255, 200, 200, 100), 
-                            SKColors.Transparent,
-                            new SKColor(40,40,40, 220), 
-                            new SKColor(20,20,20, (byte)Animate(100, 200,220)) },
-                        new float[] { 0.3f, 0.3f, 0.8f, 1 },
-                        SKShaderTileMode.Clamp))
-                    using (var paint = new SKPaint
-                    {
-                        Shader = pseudoLight
-                    })
-                        canvas.DrawPaint(paint);
-                    canvas.Restore();
+                }
+                finally
+                {
+                    Monitor.Exit(Program.UpdateSynchronizingObject);
                 }
             }    
-            static int Animate(int d, int from, int to)
-            {
-                var ms = (int)(St.ElapsedMilliseconds / d);
-                var diff = to - from;
-                var range = diff * 2;
-                var v = ms % range;
-                if (v > diff)
-                    v = range - v;
-                var rv = v + from;
-                if (rv < from || rv > to)
-                    throw new Exception("WTF");
-                return rv;
-            }
         }
 
 
         
         public override void Render(DrawingContext context)
         {
-            var noSkia = new FormattedText()
-            {
-                Text = "Current rendering API is not Skia"
-            };
-            context.Custom(new CustomDrawOp(new Rect(0, 0, Bounds.Width, Bounds.Height), noSkia));
+            context.Custom(new CustomDrawOp(
+                new Rect(0, 0, Bounds.Width, Bounds.Height), 
+                ScalingFactor / 10,
+                XTranslate,
+                -(YTranslate + 10),
+                (XRotate - 50) * 2 + 90,
+                (YRotate - 50) * 2,
+                ScanSpacing / 50
+                ));
             Dispatcher.UIThread.InvokeAsync(InvalidateVisual, DispatcherPriority.Background);
         }
     }

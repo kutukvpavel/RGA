@@ -12,7 +12,6 @@ namespace _3DSpectrumVisualizer
 #if DEBUG
             this.AttachDevTools();
 #endif
-
         }
 
         private void InitializeComponent()

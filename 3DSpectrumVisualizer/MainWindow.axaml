@@ -1,9 +1,29 @@
 <Window xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-        x:Class="_3DSpectrumVisualizer.MainWindow"
-        Title="_3DSpectrumVisualizer">
-    Welcome to Avalonia!
+		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+		xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+		xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+		xmlns:local="using:_3DSpectrumVisualizer"
+		mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+		x:Class="_3DSpectrumVisualizer.MainWindow"
+		Title="_3DSpectrumVisualizer">
+	<Window.Styles>
+		<Style Selector="Slider">
+			<Setter Property="Margin" Value="3"></Setter>
+			<Setter Property="Height" Value="40"></Setter>
+			<Setter Property="RenderTransform">
+				<Setter.Value>
+					<TranslateTransform X="0" Y="-10"></TranslateTransform>
+				</Setter.Value>
+			</Setter>
+		</Style>
+	</Window.Styles>
+	<Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,*">
+		<Slider Grid.Row="0" Grid.Column="0"  Value="{Binding #Canvas.ScalingFactor, Mode=TwoWay}"></Slider>
+		<Slider Grid.Row="1" Grid.Column="0" Value="{Binding #Canvas.XTranslate, Mode=TwoWay}"></Slider>
+		<Slider Grid.Row="2" Grid.Column="0" Value="{Binding #Canvas.YTranslate, Mode=TwoWay}"></Slider>
+		<Slider Grid.Row="0" Grid.Column="1" Value="{Binding #Canvas.ScanSpacing, Mode=TwoWay}"></Slider>
+		<Slider Grid.Row="1" Grid.Column="1" Value="{Binding #Canvas.XRotate, Mode=TwoWay}"></Slider>
+		<Slider Grid.Row="2" Grid.Column="1" Value="{Binding #Canvas.YRotate, Mode=TwoWay}"></Slider>
+		<local:CustomSkiaPage x:Name="Canvas" Grid.Row="3" Grid.ColumnSpan="2" ></local:CustomSkiaPage>
+	</Grid>
 </Window>
