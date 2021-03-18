@@ -9,21 +9,34 @@
 	<Window.Styles>
 		<Style Selector="Slider">
 			<Setter Property="Margin" Value="3"></Setter>
-			<Setter Property="Height" Value="40"></Setter>
+			<Setter Property="MaxHeight" Value="40"></Setter>
+			
 			<Setter Property="RenderTransform">
 				<Setter.Value>
-					<TranslateTransform X="0" Y="-10"></TranslateTransform>
+					<TransformGroup>
+						<TranslateTransform X="0" Y="-10"></TranslateTransform>
+					</TransformGroup>
 				</Setter.Value>
 			</Setter>
 		</Style>
+		<Style Selector="CheckBox">
+			<Setter Property="Margin" Value="0"></Setter>
+			<Setter Property="HorizontalAlignment" Value="Center"></Setter>
+		</Style>
 	</Window.Styles>
-	<Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto,*">
+	<Grid ColumnDefinitions="100,100,*" RowDefinitions="Auto,Auto,Auto,*">
 		<Slider Grid.Row="0" Grid.Column="0"  Value="{Binding #Canvas.ScalingFactor, Mode=TwoWay}"></Slider>
 		<Slider Grid.Row="1" Grid.Column="0" Value="{Binding #Canvas.XTranslate, Mode=TwoWay}"></Slider>
 		<Slider Grid.Row="2" Grid.Column="0" Value="{Binding #Canvas.YTranslate, Mode=TwoWay}"></Slider>
 		<Slider Grid.Row="0" Grid.Column="1" Value="{Binding #Canvas.ScanSpacing, Mode=TwoWay}"></Slider>
 		<Slider Grid.Row="1" Grid.Column="1" Value="{Binding #Canvas.XRotate, Mode=TwoWay}"></Slider>
 		<Slider Grid.Row="2" Grid.Column="1" Value="{Binding #Canvas.YRotate, Mode=TwoWay}"></Slider>
-		<local:CustomSkiaPage x:Name="Canvas" Grid.Row="3" Grid.ColumnSpan="2" ></local:CustomSkiaPage>
+		<Slider Grid.Row="0" Grid.Column="2" Value="{Binding #Canvas.ZRotate, Mode=TwoWay}"></Slider>
+		<Slider Grid.Row="1" Grid.Column="2" Value="{Binding #Canvas.ZScalingFactor, Mode=TwoWay}"></Slider>
+		<CheckBox Grid.Row="2" Grid.Column="2" IsChecked="{Binding #Canvas.RenderEnabled, Mode=TwoWay}"
+				  Checked="OnRenderChecked">
+			Rendering Enabled
+		</CheckBox>
+		<local:CustomSkiaPage x:Name="Canvas" Grid.Row="3" Grid.ColumnSpan="3" ></local:CustomSkiaPage>
 	</Grid>
 </Window>

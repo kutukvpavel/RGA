@@ -25,32 +25,42 @@ namespace _3DSpectrumVisualizer
         public float YTranslate { get; set; } = 10;
         public float XRotate { get; set; } = 50;
         public float YRotate { get; set; } = 50;
+        public float ZRotate { get; set; } = 50;
+        public float ZTranslate { get; set; } = 50;
+        public float ZScalingFactor { get; set; } = 50;
         public float ScanSpacing { get; set; } = 50;
+        public bool RenderEnabled { get; set; } = false;
 
         class CustomDrawOp : ICustomDrawOperation
         {
             private readonly SK3dView View3D;
             private float Scaling;
             private float ScanSpacing;
+            private float ZScaling;
             static SKColor BackgroundColor = new SKColor(211, 215, 222);
             //static Stopwatch St = Stopwatch.StartNew();
 
             public CustomDrawOp(
                 Rect bounds, 
                 float scale, 
+                float zScale,
                 float xTranslate, 
                 float yTranslate, 
+                float zTranslate,
                 float xRotate,
                 float yRotate,
+                float zRotate,
                 float scanSpacing)
             {
                 ScanSpacing = -scanSpacing;
                 Bounds = bounds;
                 Scaling = scale;
+                ZScaling = zScale;
                 View3D = new SK3dView();
-                View3D.Translate(xTranslate, yTranslate, 1);
+                View3D.Translate(xTranslate, yTranslate, zTranslate);
                 View3D.RotateXDegrees(xRotate);
                 View3D.RotateYDegrees(yRotate);
+                View3D.RotateZDegrees(zRotate);
             }
             
             public void Dispose()
@@ -65,6 +75,7 @@ namespace _3DSpectrumVisualizer
             {
                 bool lockTaken = Monitor.TryEnter(Program.UpdateSynchronizingObject);
                 if (!lockTaken) return;
+
                 try
                 {
                     var canvas = (context as ISkiaDrawingContextImpl)?.SkCanvas;
@@ -83,6 +94,7 @@ namespace _3DSpectrumVisualizer
                                     View3D.Save();
                                     View3D.RotateXDegrees(90);
                                     View3D.ApplyToCanvas(canvas);
+                                    canvas.Scale(1, ZScaling);
                                     canvas.DrawPath(scan.Path2D, item.Paint);
                                     View3D.Restore();
                                 }
@@ -106,13 +118,17 @@ namespace _3DSpectrumVisualizer
         
         public override void Render(DrawingContext context)
         {
+            if (!RenderEnabled) return;
             context.Custom(new CustomDrawOp(
                 new Rect(0, 0, Bounds.Width, Bounds.Height), 
-                ScalingFactor / 10,
+                ScalingFactor / 5,
+                ZScalingFactor / 50,
                 XTranslate,
-                -(YTranslate + 10),
-                (XRotate - 50) * 2 + 90,
-                (YRotate - 50) * 2,
+                -(YTranslate),
+                ZTranslate / 50,
+                (XRotate - 50) * 4 + 90,
+                (YRotate - 50) * 4,
+                (ZRotate - 50) * 4,
                 ScanSpacing / 50
                 ));
             Dispatcher.UIThread.InvokeAsync(InvalidateVisual, DispatcherPriority.Background);

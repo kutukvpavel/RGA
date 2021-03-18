@@ -1,21 +1,23 @@
-﻿using System;
+﻿using SkiaSharp;
+using System;
 using System.Collections.Generic;
-using System.Text;
-using CsvHelper;
-using CsvHelper.Configuration;
+using System.Globalization;
 using System.IO;
 using System.Linq;
-using MoreLinq;
-using System.Globalization;
 using System.Threading;
 using System.Timers;
-using System.Drawing;
-using SkiaSharp;
 
 namespace _3DSpectrumVisualizer
 {
     public class DataRepository
     {
+        public static SKColor[] LightGradient { get; set; } = new SKColor[]
+        {
+            SKColor.Parse("#00FFFFFF"),
+            SKColor.Parse("#647B7B7B"),
+            SKColor.Parse("#8F7B7B7B")
+        };
+
         public DataRepository(string folder, int pollPeriod = 3000)
         {
             Folder = folder;
@@ -27,6 +29,11 @@ namespace _3DSpectrumVisualizer
         public string Filter { get; set; } = "*.csv";
         public List<ScanResult> Results { get; } = new List<ScanResult>();
         public SKPaint Paint { get; set; }
+        public SKColor[] ColorScheme { get; set; } = new SKColor[0];
+        public float Min { get; private set; } = 0;
+        public float Max { get; private set; } = 0;
+        public float Left { get; private set; } = 0;
+        public float Right { get; private set; } = 0;
 
         public bool Enabled
         {
@@ -52,7 +59,7 @@ namespace _3DSpectrumVisualizer
                     {
                         if (!FileIsInUse(item))
                         {
-                            Results.Add(new ScanResult(File.ReadLines(item.FullName)));
+                            AddFile(item);
                             if (item.CreationTimeUtc > _LastFileCreationTime)
                                 _LastFileCreationTime = item.CreationTimeUtc;
                         }
@@ -86,6 +93,53 @@ namespace _3DSpectrumVisualizer
                 return true;
             }
             return false;
+        }
+        private void AddFile(FileInfo item)
+        {
+            var sr = new ScanResult(File.ReadLines(item.FullName));
+            var b = sr.Path2D.Bounds;
+            bool updateShader = false;
+            if (b.Bottom > Max)
+            {
+                Max = b.Bottom;
+                updateShader = true;
+            }
+            if (b.Top < Min)
+            {
+                Min = b.Top;
+                updateShader = true;
+            }
+            if (b.Left < Left)
+            {
+                Left = b.Left;
+                updateShader = true;
+            }
+            if (b.Right > Right)
+            {
+                Right = b.Right;
+                updateShader = true;
+            }
+            if (updateShader)
+            {
+                Paint.Shader = SKShader.CreateColor(Paint.Color);
+                var gradShader = SKShader.CreateLinearGradient(
+                    new SKPoint(0, Min),
+                    new SKPoint(0, Max),
+                    ColorScheme,
+                    SKShaderTileMode.Clamp
+                    );
+                var lightShader = SKShader.CreateLinearGradient(
+                    new SKPoint(Left, 0),
+                    new SKPoint(Right, 0),
+                    LightGradient,
+                    SKShaderTileMode.Clamp
+                    );
+                if (ColorScheme.Length > 1)
+                    Paint.Shader = SKShader.CreateCompose(Paint.Shader, gradShader);
+                if (LightGradient.Length > 1)
+                    Paint.Shader = SKShader.CreateCompose(Paint.Shader, lightShader);
+            }
+            Results.Add(sr);
         }
 
         #endregion

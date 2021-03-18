@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 
 namespace _3DSpectrumVisualizer
@@ -14,9 +15,17 @@ namespace _3DSpectrumVisualizer
 #endif
         }
 
+        private CustomSkiaPage Canvas;
+
         private void InitializeComponent()
         {
             AvaloniaXamlLoader.Load(this);
+            Canvas = this.FindControl<CustomSkiaPage>("Canvas");
+        }
+
+        private void OnRenderChecked(object sender, RoutedEventArgs e)
+        {
+            Canvas.InvalidateVisual();
         }
     }
 }

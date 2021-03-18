@@ -4,6 +4,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using System.Collections.Generic;
 using SkiaSharp;
+using System.Linq;
 
 namespace _3DSpectrumVisualizer
 {
@@ -24,15 +25,18 @@ namespace _3DSpectrumVisualizer
         {
             for (int i = 0; i < args.Length; i++)
             {
-                Repositories.Add(new DataRepository(args[i]) 
+                var dr = new DataRepository(args[i])
                 {
-                    Paint = new SKPaint() 
-                    { 
-                        Color = (i < ColorScheme.Count) ? ColorScheme[i] : DefaultColor,
-                        StrokeWidth = 0.5f
+                    Paint = new SKPaint()
+                    {
+                        Color = (ColorSchemes.Count > i) ? ColorSchemes[i][0] : DefaultColor,
+                        StrokeWidth = 0.1f,
+                        Style = SKPaintStyle.Fill
                     },
                     Filter = "*.txt"
-                });
+                };
+                if (ColorSchemes.Count > i) dr.ColorScheme = ColorSchemes[i];
+                Repositories.Add(dr);
             }
             foreach (var item in Repositories)
             {
@@ -43,10 +47,20 @@ namespace _3DSpectrumVisualizer
 
         public static SKColor DefaultColor = new SKColor(0, 0, 0);
 
-        public static List<SKColor> ColorScheme { get; } = new List<SKColor>()
+        public static List<SKColor[]> ColorSchemes { get; } = new List<SKColor[]>()
         {
-            new SKColor(104, 179, 217),
-            new SKColor(104, 217, 119)
+            new SKColor[] 
+            { 
+                SKColor.Parse("#FB47FF"),
+                SKColor.Parse("#E8D845"),
+                SKColor.Parse("#4FDCD3")
+            },
+            new SKColor[] 
+            {
+                SKColor.Parse("#4590E8"),
+                SKColor.Parse("#4ACC3F"), 
+                SKColor.Parse("#CC3F41") 
+            }
         };
 
         public static List<DataRepository> Repositories { get; } = new List<DataRepository>();
