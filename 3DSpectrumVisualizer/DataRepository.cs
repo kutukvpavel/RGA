@@ -11,6 +11,7 @@ namespace _3DSpectrumVisualizer
 {
     public class DataRepository
     {
+        public static SKColor FallbackColor { get; set; } = SKColor.Parse("#000000");
         public static SKColor[] LightGradient { get; set; } = new SKColor[]
         {
             SKColor.Parse("#00FFFFFF"),
@@ -23,17 +24,24 @@ namespace _3DSpectrumVisualizer
             Folder = folder;
             _PollTimer = new System.Timers.Timer(pollPeriod) { AutoReset = true, Enabled = false };
             _PollTimer.Elapsed += _PollTimer_Elapsed;
+            PaintFill.Shader = Shader;
+            PaintStroke.Shader = Shader;
         }
 
+        public bool Throttle { get; set; } = false;
         public string Folder { get; }
         public string Filter { get; set; } = "*.csv";
         public List<ScanResult> Results { get; } = new List<ScanResult>();
-        public SKPaint Paint { get; set; }
+        public SKPaint PaintFill { get; set; } = new SKPaint() { Color = FallbackColor, Style = SKPaintStyle.Fill, IsAntialias = false };
+        public SKPaint PaintStroke { get; set; } = new SKPaint() { Color = FallbackColor, Style = SKPaintStyle.Stroke, IsAntialias = false };
+        public SKShader Shader { get; private set; }
         public SKColor[] ColorScheme { get; set; } = new SKColor[0];
         public float Min { get; private set; } = 0;
         public float Max { get; private set; } = 0;
         public float Left { get; private set; } = 0;
         public float Right { get; private set; } = 0;
+        public float MidX { get => (Right - Left) / 2; }
+        public float MidY { get => (Max - Min) / 2; }
 
         public bool Enabled
         {
@@ -121,7 +129,7 @@ namespace _3DSpectrumVisualizer
             }
             if (updateShader)
             {
-                Paint.Shader = SKShader.CreateColor(Paint.Color);
+                Shader = SKShader.CreateColor(FallbackColor);
                 var gradShader = SKShader.CreateLinearGradient(
                     new SKPoint(0, Min),
                     new SKPoint(0, Max),
@@ -135,9 +143,11 @@ namespace _3DSpectrumVisualizer
                     SKShaderTileMode.Clamp
                     );
                 if (ColorScheme.Length > 1)
-                    Paint.Shader = SKShader.CreateCompose(Paint.Shader, gradShader);
+                    Shader = SKShader.CreateCompose(Shader, gradShader);
                 if (LightGradient.Length > 1)
-                    Paint.Shader = SKShader.CreateCompose(Paint.Shader, lightShader);
+                    Shader = SKShader.CreateCompose(Shader, lightShader);
+                PaintFill.Shader = Shader;
+                PaintStroke.Shader = Shader;
             }
             Results.Add(sr);
         }
@@ -150,6 +160,7 @@ namespace _3DSpectrumVisualizer
         public static char Delimeter { get; set; } = ',';
         public static CultureInfo CurrentCulture { get; set; } = CultureInfo.InvariantCulture;
         public static int Capacity { get; set; } = 65 * 10;
+        public static bool ClipNegativeValues { get; set; } = true;
 
         public ScanResult(IEnumerable<string> rawLines)
         {
@@ -181,7 +192,7 @@ namespace _3DSpectrumVisualizer
                                 NumberStyles.AllowLeadingSign, 
                                 CurrentCulture))
                                 .ToArray();
-                            Path2D.LineTo(temp[0], temp[1]);
+                            Path2D.LineTo(temp[0], (temp[1] < 0 && ClipNegativeValues) ? 0 : temp[1]);
                         }
                         catch (FormatException)
                         {

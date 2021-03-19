@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
+using Avalonia.Media;
 
 namespace _3DSpectrumVisualizer
 {
@@ -15,17 +16,22 @@ namespace _3DSpectrumVisualizer
 #endif
         }
 
-        private CustomSkiaPage Canvas;
+        private Skia3DSpectrum Spectrum3D;
+        private Skia2DWaterfall Waterfall2D;
+        private Label GLLabel;
 
         private void InitializeComponent()
         {
             AvaloniaXamlLoader.Load(this);
-            Canvas = this.FindControl<CustomSkiaPage>("Canvas");
+            Spectrum3D = this.FindControl<Skia3DSpectrum>("Spectrum3D");
+            Waterfall2D = this.FindControl<Skia2DWaterfall>("Waterfall2D");
+            GLLabel = this.FindControl<Label>("GLLabel");
         }
 
         private void OnRenderChecked(object sender, RoutedEventArgs e)
         {
-            Canvas.InvalidateVisual();
+            GLLabel.Background = SkiaCustomControl.OpenGLEnabled ? Brushes.Lime : Brushes.OrangeRed;
+            Waterfall2D.SelectedRepositoryIndex = 0;
         }
     }
 }
