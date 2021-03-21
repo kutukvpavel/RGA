@@ -33,11 +33,16 @@
 		</Style>
 	</Window.Styles>
 	<Grid ColumnDefinitions="*,*" RowDefinitions="*,*">
-		<StackPanel Grid.Row="0" Grid.Column="1">
+		<StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2">
+			<Button IsVisible="False" Content="Dump Data" Button.Click="OnDumpDataClick"></Button>
 			<CheckBox IsChecked="{Binding #Spectrum3D.RenderEnabled, Mode=TwoWay}" Checked="OnRenderChecked" />
 			<Label ClipToBounds="True" VerticalContentAlignment="Center" Margin="10,3,0,3" FontSize="16"
 				x:Name="GLLabel" BorderThickness="1" BorderBrush="Black">
 				GL
+			</Label>
+			<Label VerticalContentAlignment="Center" Margin="10,3,0,3" FontSize="16"
+				   x:Name="CoordsLabel">
+				Coords...
 			</Label>
 		</StackPanel>
 		<local:Skia3DSpectrum x:Name="Spectrum3D" Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"></local:Skia3DSpectrum>

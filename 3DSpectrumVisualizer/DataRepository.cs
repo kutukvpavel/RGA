@@ -32,8 +32,19 @@ namespace _3DSpectrumVisualizer
         public string Folder { get; }
         public string Filter { get; set; } = "*.csv";
         public List<ScanResult> Results { get; } = new List<ScanResult>();
-        public SKPaint PaintFill { get; set; } = new SKPaint() { Color = FallbackColor, Style = SKPaintStyle.Fill, IsAntialias = false };
-        public SKPaint PaintStroke { get; set; } = new SKPaint() { Color = FallbackColor, Style = SKPaintStyle.Stroke, IsAntialias = false };
+        public SKPaint PaintFill { get; set; } = new SKPaint() 
+        { 
+            Color = FallbackColor, 
+            Style = SKPaintStyle.Fill, 
+            IsAntialias = false
+        };
+        public SKPaint PaintStroke { get; set; } = new SKPaint() 
+        { 
+            Color = FallbackColor, 
+            Style = SKPaintStyle.Stroke, 
+            StrokeWidth = 0,
+            IsAntialias = false
+        };
         public SKShader Shader { get; private set; }
         public SKColor[] ColorScheme { get; set; } = new SKColor[0];
         public float Min { get; private set; } = 0;
@@ -52,7 +63,7 @@ namespace _3DSpectrumVisualizer
         #region Private
 
         private DateTime _LastFileCreationTime = DateTime.MinValue;
-        private System.Timers.Timer _PollTimer;
+        private readonly System.Timers.Timer _PollTimer;
         private void _PollTimer_Elapsed(object sender, ElapsedEventArgs e)
         {
             bool lockTaken = Monitor.TryEnter(Program.UpdateSynchronizingObject, 10);
@@ -60,7 +71,8 @@ namespace _3DSpectrumVisualizer
             try
             {
                 var newFiles = Directory.EnumerateFiles(Folder, Filter, SearchOption.TopDirectoryOnly)
-                    .AsParallel().Select(x => new FileInfo(x)).Where(x => x.CreationTimeUtc > _LastFileCreationTime);
+                    .AsParallel().Select(x => new FileInfo(x)).Where(x => x.CreationTimeUtc > _LastFileCreationTime)
+                    .OrderBy(x => x.Name);
                 foreach (var item in newFiles)
                 {
                     try
@@ -74,7 +86,7 @@ namespace _3DSpectrumVisualizer
                     }
                     catch (Exception)
                     {
-
+                        Results.Add(new ScanResult());
                     }
                 }
             }
@@ -104,7 +116,7 @@ namespace _3DSpectrumVisualizer
         }
         private void AddFile(FileInfo item)
         {
-            var sr = new ScanResult(File.ReadLines(item.FullName));
+            var sr = new ScanResult(File.ReadLines(item.FullName), item.Name);
             var b = sr.Path2D.Bounds;
             bool updateShader = false;
             if (b.Bottom > Max)
@@ -145,7 +157,7 @@ namespace _3DSpectrumVisualizer
                 if (ColorScheme.Length > 1)
                     Shader = SKShader.CreateCompose(Shader, gradShader);
                 if (LightGradient.Length > 1)
-                    Shader = SKShader.CreateCompose(Shader, lightShader);
+                    Shader = SKShader.CreateCompose(Shader, lightShader, SKBlendMode.Darken);
                 PaintFill.Shader = Shader;
                 PaintStroke.Shader = Shader;
             }
@@ -162,13 +174,21 @@ namespace _3DSpectrumVisualizer
         public static int Capacity { get; set; } = 65 * 10;
         public static bool ClipNegativeValues { get; set; } = true;
 
-        public ScanResult(IEnumerable<string> rawLines)
+        private static readonly string PlacholderName = "N/A";
+
+        public ScanResult()
         {
+            Name = PlacholderName;
+        }
+        public ScanResult(IEnumerable<string> rawLines, string name)
+        {
+            Name = name;
             Path2D = new SKPath();
             Parse(rawLines);
         }
 
         public SKPath Path2D { get; private set; }
+        public string Name { get; }
 
         private void Parse(IEnumerable<string> rawLines)
         {

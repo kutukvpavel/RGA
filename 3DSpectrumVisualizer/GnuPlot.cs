@@ -5,6 +5,10 @@ using System.IO;
 using System.Threading;
 using System.Linq;
 
+/*
+ https://github.com/AwokeKnowing/GnuplotCSharp
+ */
+
 namespace AwokeKnowing.GnuplotCSharp
 {
     public class GnuPlot
@@ -428,7 +432,7 @@ namespace AwokeKnowing.GnuplotCSharp
             return "\"" + path.Replace(@"\", @"\\") + "\"";
         }
 
-        public void SaveSetState(string? filename = null)
+        public void SaveSetState(string filename = null)
         {
             if (filename == null)
                 filename = Path.GetTempPath() + "setstate.tmp";
@@ -436,7 +440,7 @@ namespace AwokeKnowing.GnuplotCSharp
             GnupStWr.Flush();
             waitForFile(filename);
         }
-        public void LoadSetState(string? filename = null)
+        public void LoadSetState(string filename = null)
         {
             if (filename == null)
                 filename = Path.GetTempPath() + "setstate.tmp";
@@ -507,8 +511,8 @@ namespace AwokeKnowing.GnuplotCSharp
         int contourLabelCount = 50000;
         void setContourLabels(string contourFile)
         {
-            var file = new System.IO.StreamReader(contourFile);
-            string? line;
+            var file = new StreamReader(contourFile);
+            string line;
             while ((line = file.ReadLine()) != null)
             {
                 if (line.Contains("label:"))
@@ -530,7 +534,7 @@ namespace AwokeKnowing.GnuplotCSharp
         {
             Thread.Sleep(20);
             int attempts = timeout / 100;
-            System.IO.StreamReader? file = null;
+            StreamReader file = null;
             while (file == null)
             {
                 try { file = new System.IO.StreamReader(filename); }
@@ -606,8 +610,8 @@ namespace AwokeKnowing.GnuplotCSharp
 
     public class StoredPlot
     {
-        public string? File = null;
-        public string? Function = null;
+        public string File = null;
+        public string Function = null;
         public double[] X = new double[0];
         public double[] Y = new double[0];
         public double[] Z = new double[0];

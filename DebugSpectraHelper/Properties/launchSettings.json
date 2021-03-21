@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "DebugSpectraHelper": {
+      "commandName": "Project",
+      "commandLineArgs": "E:\\Doc\\rga_samples\\seed.seed"
+    }
+  }
+}

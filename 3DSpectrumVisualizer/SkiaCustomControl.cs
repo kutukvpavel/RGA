@@ -13,7 +13,7 @@ using System.Timers;
 
 namespace _3DSpectrumVisualizer
 {
-    public abstract class SkiaCustomControl : Control
+    public abstract class SkiaCustomControl : UserControl
     {
         private System.Timers.Timer _RedrawTimer = new System.Timers.Timer() { Enabled = false, Interval = 30, AutoReset = true };
         private Task _RedrawTask;
@@ -51,9 +51,12 @@ namespace _3DSpectrumVisualizer
 
         protected abstract class CustomDrawOp : ICustomDrawOperation
         {
-            public CustomDrawOp(Rect bounds)
+            protected Control _Parent;
+
+            public CustomDrawOp(Control parent)
             {
-                Bounds = bounds;
+                Bounds = new Rect(0, 0, parent.Bounds.Width, parent.Bounds.Height);
+                _Parent = parent;
             }
 
             public void Dispose()
@@ -62,7 +65,10 @@ namespace _3DSpectrumVisualizer
             }
 
             public Rect Bounds { get; }
-            public bool HitTest(Point p) => false;
+            public bool HitTest(Point p)
+            {
+                return true;
+            }
             public bool Equals(ICustomDrawOperation other) => false;
             public void Render(IDrawingContextImpl context)
             {

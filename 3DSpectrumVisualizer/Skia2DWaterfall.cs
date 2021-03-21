@@ -26,7 +26,7 @@ namespace _3DSpectrumVisualizer
         protected override CustomDrawOp PrepareCustomDrawingOperation()
         {
             return new Draw2DWaterfall(
-                new Rect(0, 0, Bounds.Width, Bounds.Height),
+                this,
                 ScanSpacing / 50,
                 SelectedRepositoryIndex
                 );
@@ -36,27 +36,31 @@ namespace _3DSpectrumVisualizer
         {
             private float _ScanSpacing;
             private int _SelectedRepo;
-            private SK3dView View3D;
+            //private SK3dView _View3D;
+            private static SKMatrix _PathFlattener = SKMatrix.CreateScale(1, 0);
 
             public Draw2DWaterfall(
-                Rect bounds,
+                Control parent,
                 float scanSpacing,
                 int selectedRepo
-                ) : base(bounds)
+                ) : base(parent)
             {
                 _ScanSpacing = scanSpacing;
                 _SelectedRepo = selectedRepo;
-                View3D = new SK3dView();
+                //_View3D = new SK3dView();
             }
 
             protected override void RenderCanvas(SKCanvas canvas)
             {
-                if (_SelectedRepo < 0) return;
+                /*if (_SelectedRepo < 0) return;
                 var item = Program.Repositories[_SelectedRepo];
                 for (int i = 0; i < item.Results.Count; i++)
                 {
-                    //???
-                }
+                    var scan = item.Results[i].Path2D;
+                    _PathFlattener.TransY = i * _ScanSpacing;
+                    scan.Transform(_PathFlattener);
+                    canvas.DrawPoints(SKPointMode.)
+                }*/
             }
         }
     }
