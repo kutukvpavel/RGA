@@ -22,10 +22,10 @@ namespace _3DSpectrumVisualizer
             if ((_RedrawTask?.IsCompleted ?? true) && RenderEnabled)
                 _RedrawTask = Dispatcher.UIThread.InvokeAsync(() =>
                 {
-                    if (Monitor.TryEnter(Program.UpdateSynchronizingObject))
+                    if (Monitor.TryEnter(UpdateSynchronizingObject))
                     {
                         InvalidateVisual();
-                        Monitor.Exit(Program.UpdateSynchronizingObject);
+                        Monitor.Exit(UpdateSynchronizingObject);
                     }
                 },
                 DispatcherPriority.Background
@@ -38,6 +38,7 @@ namespace _3DSpectrumVisualizer
             _RedrawTimer.Elapsed += _RedrawTimer_Elapsed;
         }
 
+        public object UpdateSynchronizingObject { get; set; } = new object();
         public static bool OpenGLEnabled
         {
             get => AvaloniaLocator.Current.GetService<Avalonia.OpenGL.IPlatformOpenGlInterface>() != null;
@@ -69,13 +70,13 @@ namespace _3DSpectrumVisualizer
             {
                 return true;
             }
-            public bool Equals(ICustomDrawOperation other) => false;
+            public abstract bool Equals(ICustomDrawOperation other);
             public void Render(IDrawingContextImpl context)
             {
-                var canvas = (context as ISkiaDrawingContextImpl)?.SkCanvas;
-                using (SKAutoCanvasRestore ar1 = new SKAutoCanvasRestore(canvas))
+                var c = ((ISkiaDrawingContextImpl)context).SkCanvas;
+                using (SKAutoCanvasRestore ar1 = new SKAutoCanvasRestore(c))
                 {
-                    RenderCanvas(canvas);
+                    RenderCanvas(c);
                 }
             }
             protected abstract void RenderCanvas(SKCanvas canvas);

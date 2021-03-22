@@ -9,6 +9,8 @@ using CsvHelper;
 using CsvHelper.Configuration;
 using System.IO;
 using System.Globalization;
+using SkiaSharp;
+using System.Linq;
 
 namespace _3DSpectrumVisualizer
 {
@@ -28,7 +30,6 @@ namespace _3DSpectrumVisualizer
         };
 
         private Skia3DSpectrum Spectrum3D;
-        private Skia2DWaterfall Waterfall2D;
         private Label GLLabel;
         private Label CoordsLabel;
 
@@ -36,11 +37,14 @@ namespace _3DSpectrumVisualizer
         {
             AvaloniaXamlLoader.Load(this);
             Spectrum3D = this.FindControl<Skia3DSpectrum>("Spectrum3D");
+            Spectrum3D.UpdateSynchronizingObject = Program.UpdateSynchronizingObject;
             Spectrum3D.PropertyChanged += Spectrum3D_PropertyChanged;
-            Waterfall2D = this.FindControl<Skia2DWaterfall>("Waterfall2D");
+            Spectrum3D.Background = SKColor.Parse("#464646");
             GLLabel = this.FindControl<Label>("GLLabel");
             CoordsLabel = this.FindControl<Label>("CoordsLabel");
         }
+
+        #region UI events
 
         private void Spectrum3D_PropertyChanged(object sender, AvaloniaPropertyChangedEventArgs e)
         {
@@ -50,7 +54,6 @@ namespace _3DSpectrumVisualizer
         private void OnRenderChecked(object sender, RoutedEventArgs e)
         {
             GLLabel.Background = SkiaCustomControl.OpenGLEnabled ? Brushes.Lime : Brushes.OrangeRed;
-            Waterfall2D.SelectedRepositoryIndex = 0;
         }
 
         private void OnDumpDataClick(object sender, RoutedEventArgs e)
@@ -72,5 +75,34 @@ namespace _3DSpectrumVisualizer
                 }
             }
         }
+
+        private void OnTopViewClick(object sender, RoutedEventArgs e)
+        {
+            Spectrum3D.XRotate = 90;
+            Spectrum3D.ZRotate = 0;
+            Spectrum3D.XTranslate = 0;
+            Spectrum3D.YTranslate = 0;
+            Spectrum3D.ScalingFactor = (float)Spectrum3D.Bounds.Width / Program.Repositories.Max(x => x.Right - x.Left);
+            Spectrum3D.ScanSpacing = 
+                (float)Spectrum3D.Bounds.Height / (Program.Repositories.Max(x => x.Results.Count) * Spectrum3D.ScalingFactor);
+            Spectrum3D.ZScalingFactor = Skia3DSpectrum.ScalingLowerLimit;
+        }
+
+        private void OnOpenInGnuPlotClick(object sender, RoutedEventArgs e)
+        {
+            Program.GnuPlotInstance.HoldOn();
+            foreach (var item in Program.Repositories)
+            {
+                var data = item.Get3DPoints();
+                Program.GnuPlotInstance.SPlot(
+                    data.Item1.Take(100000).ToArray(), 
+                    data.Item2.Take(100000).ToArray(), 
+                    data.Item3.Take(100000).ToArray(),
+                    "pause -1");
+            }
+            Program.GnuPlotInstance.HoldOff();
+        }
+
+        #endregion
     }
 }

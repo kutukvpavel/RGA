@@ -37,7 +37,7 @@ namespace DebugSpectraHelper
                 foreach (var item in points)
                 {
                     cw.WriteField(item.X);
-                    cw.WriteField((item.Y * i / 100).ToString("E2", CultureInfo.InvariantCulture));
+                    cw.WriteField((item.Y * i / 1000).ToString("E2", CultureInfo.InvariantCulture));
                     cw.WriteField("");
                     cw.NextRecord();
                 }

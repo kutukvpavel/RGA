@@ -3,10 +3,10 @@
 		xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 		xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 		xmlns:local="clr-namespace:_3DSpectrumVisualizer"
-		mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-		Width="800" Height="1000"
+		mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="300"
+		Width="1000" Height="600" WindowState="Maximized"
 		x:Class="_3DSpectrumVisualizer.MainWindow"
-		Title="_3DSpectrumVisualizer">
+		Title="RGA 3D Spectrum Visualizer" Icon="avares://3DSpectrumVisualizer/Assets/chart-icon.ico">
 	<Window.Styles>
 		<Style Selector="Slider">
 			<Setter Property="Margin" Value="3"></Setter>
@@ -19,8 +19,12 @@
 				</Setter.Value>
 			</Setter>
 		</Style>
+		<Style Selector="Button">
+			<Setter Property="Margin" Value="3"></Setter>
+		</Style>
 		<Style Selector="CheckBox">
-			<Setter Property="Margin" Value="20,0,10,0"></Setter>
+			<Setter Property="MinWidth" Value="0"></Setter>
+			<Setter Property="Margin" Value="20,0,20,0"></Setter>
 			<Setter Property="HorizontalAlignment" Value="Right"></Setter>
 			<Setter Property="Content" Value="Render"></Setter>
 		</Style>
@@ -32,11 +36,13 @@
 			<Setter Property="Margin" Value="3,0,5,0"></Setter>
 		</Style>
 	</Window.Styles>
-	<Grid ColumnDefinitions="*,*" RowDefinitions="*,*">
+	<Grid ColumnDefinitions="*" RowDefinitions="auto,*">
 		<StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2">
+			<Button Content="Open in GNUPlot" Background="LightGreen" Button.Click="OnOpenInGnuPlotClick"></Button>
+			<Button Content="Top View" Background="LightBlue" Button.Click="OnTopViewClick"></Button>
 			<Button IsVisible="False" Content="Dump Data" Button.Click="OnDumpDataClick"></Button>
 			<CheckBox IsChecked="{Binding #Spectrum3D.RenderEnabled, Mode=TwoWay}" Checked="OnRenderChecked" />
-			<Label ClipToBounds="True" VerticalContentAlignment="Center" Margin="10,3,0,3" FontSize="16"
+			<Label ClipToBounds="True" VerticalContentAlignment="Center" Margin="0,3,0,3" FontSize="16"
 				x:Name="GLLabel" BorderThickness="1" BorderBrush="Black">
 				GL
 			</Label>
@@ -45,10 +51,6 @@
 				Coords...
 			</Label>
 		</StackPanel>
-		<local:Skia3DSpectrum x:Name="Spectrum3D" Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"></local:Skia3DSpectrum>
-		<StackPanel Grid.Row="1" Grid.Column="1">
-			<CheckBox IsChecked="{Binding #Waterfall2D.RenderEnabled, Mode=TwoWay}" Checked="OnRenderChecked" />
-		</StackPanel>
-		<local:Skia2DWaterfall x:Name="Waterfall2D" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"></local:Skia2DWaterfall>
+		<local:Skia3DSpectrum x:Name="Spectrum3D" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"></local:Skia3DSpectrum>
 	</Grid>
 </Window>

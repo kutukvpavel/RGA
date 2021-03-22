@@ -5,6 +5,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using System.Collections.Generic;
 using SkiaSharp;
 using System.Linq;
+using AwokeKnowing.GnuplotCSharp;
 
 namespace _3DSpectrumVisualizer
 {
@@ -27,7 +28,11 @@ namespace _3DSpectrumVisualizer
         {
             for (int i = 0; i < args.Length; i++)
             {
-                var dr = new DataRepository(args[i]) { Filter = "*.txt" };
+                var dr = new DataRepository(args[i]) 
+                { 
+                    Filter = "*.txt", 
+                    UpdateSynchronizingObject = Program.UpdateSynchronizingObject 
+                };
                 if (ColorSchemes.Count > i)
                 {
                     dr.PaintFill.Color = ColorSchemes[i][0];
@@ -46,23 +51,24 @@ namespace _3DSpectrumVisualizer
 
         public static List<SKColor[]> ColorSchemes { get; } = new List<SKColor[]>()
         {
-
             new SKColor[]
             {
-                SKColor.Parse("#4590E8"),
-                SKColor.Parse("#4ACC3F"),
-                SKColor.Parse("#CC3F41")
+                SKColor.Parse("#84CB32CE"),
+                SKColor.Parse("#8DD1C12C"),
+                SKColor.Parse("#882EC6BC")
             },
-            new SKColor[] 
-            { 
-                SKColor.Parse("#FB47FF"),
-                SKColor.Parse("#E8D845"),
-                SKColor.Parse("#4FDCD3")
+            new SKColor[]
+            {
+                SKColor.Parse("#551B23D4"),
+                SKColor.Parse("#8627C624"),
+                SKColor.Parse("#7FCB2325")
             }
         };
 
         public static List<DataRepository> Repositories { get; } = new List<DataRepository>();
 
         public static object UpdateSynchronizingObject { get; } = new object();
+
+        public static GnuPlot GnuPlotInstance { get; } = new GnuPlot(@"C:\gnuplot_new\bin");
     }
 }

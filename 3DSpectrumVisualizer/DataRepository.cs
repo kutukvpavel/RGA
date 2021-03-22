@@ -6,16 +6,22 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Timers;
+using MoreLinq;
+using System.Threading.Tasks;
 
 namespace _3DSpectrumVisualizer
 {
     public class DataRepository
     {
-        public static SKColor FallbackColor { get; set; } = SKColor.Parse("#000000");
+        public static ParallelOptions ParallelOptions { get; set; } = new ParallelOptions()
+        {
+            MaxDegreeOfParallelism = 4
+        };
+        public static SKColor FallbackColor { get; set; } = SKColor.Parse("#84F7EFEF");
         public static SKColor[] LightGradient { get; set; } = new SKColor[]
         {
             SKColor.Parse("#00FFFFFF"),
-            SKColor.Parse("#647B7B7B"),
+            /*SKColor.Parse("#647B7B7B"),*/
             SKColor.Parse("#8F7B7B7B")
         };
 
@@ -28,7 +34,8 @@ namespace _3DSpectrumVisualizer
             PaintStroke.Shader = Shader;
         }
 
-        public bool Throttle { get; set; } = false;
+        public object UpdateSynchronizingObject { get; set; } = new object();
+        //public bool Throttle { get; set; } = false;
         public string Folder { get; }
         public string Filter { get; set; } = "*.csv";
         public List<ScanResult> Results { get; } = new List<ScanResult>();
@@ -60,13 +67,39 @@ namespace _3DSpectrumVisualizer
             set { if (value) _PollTimer.Start(); else _PollTimer.Stop(); }
         }
 
+        public Tuple<double[], double[], double[]> Get3DPoints()
+        {
+            double[] x = new double[0], y = new double[0], z = new double[0];
+            lock (UpdateSynchronizingObject)
+            {
+                Parallel.Invoke(
+                    () =>
+                    {
+                        x = Results.Select(x => x.Path2D.Points.Select(x => (double)x.X))
+                            .Flatten().Cast<double>().ToArray();
+                    },
+                    () =>
+                    {
+                        z = Results.Select(x => x.Path2D.Points.Select(x => (double)x.Y))
+                            .Flatten().Cast<double>().ToArray();
+                    },
+                    () =>
+                    {
+                        y = Results.Select((x, i) => Enumerable.Repeat((double)i, x.Path2D.PointCount))
+                            .Flatten().Cast<double>().ToArray();
+                    }
+                );
+            }
+            return new Tuple<double[], double[], double[]>(x, y, z);
+        }
+
         #region Private
 
         private DateTime _LastFileCreationTime = DateTime.MinValue;
         private readonly System.Timers.Timer _PollTimer;
         private void _PollTimer_Elapsed(object sender, ElapsedEventArgs e)
         {
-            bool lockTaken = Monitor.TryEnter(Program.UpdateSynchronizingObject, 10);
+            bool lockTaken = Monitor.TryEnter(UpdateSynchronizingObject, 10);
             if (!lockTaken) return;
             try
             {
@@ -96,7 +129,7 @@ namespace _3DSpectrumVisualizer
             }
             finally
             {
-                Monitor.Exit(Program.UpdateSynchronizingObject);
+                Monitor.Exit(UpdateSynchronizingObject);
             }
         }
         private bool FileIsInUse(FileInfo file)
@@ -141,23 +174,29 @@ namespace _3DSpectrumVisualizer
             }
             if (updateShader)
             {
-                Shader = SKShader.CreateColor(FallbackColor);
-                var gradShader = SKShader.CreateLinearGradient(
-                    new SKPoint(0, Min),
-                    new SKPoint(0, Max),
-                    ColorScheme,
-                    SKShaderTileMode.Clamp
-                    );
-                var lightShader = SKShader.CreateLinearGradient(
-                    new SKPoint(Left, 0),
-                    new SKPoint(Right, 0),
-                    LightGradient,
-                    SKShaderTileMode.Clamp
-                    );
                 if (ColorScheme.Length > 1)
-                    Shader = SKShader.CreateCompose(Shader, gradShader);
+                {
+                    Shader = SKShader.CreateLinearGradient(
+                        new SKPoint(0, Min),
+                        new SKPoint(0, Max),
+                        ColorScheme,
+                        SKShaderTileMode.Clamp
+                        );
+                }
+                else
+                {
+                    Shader = SKShader.CreateColor(FallbackColor);
+                }
                 if (LightGradient.Length > 1)
+                {
+                    var lightShader = SKShader.CreateLinearGradient(
+                        new SKPoint(Left, 0),
+                        new SKPoint(Right, 0),
+                        LightGradient,
+                        SKShaderTileMode.Clamp
+                        );
                     Shader = SKShader.CreateCompose(Shader, lightShader, SKBlendMode.Darken);
+                }
                 PaintFill.Shader = Shader;
                 PaintStroke.Shader = Shader;
             }
@@ -171,7 +210,6 @@ namespace _3DSpectrumVisualizer
     {
         public static char Delimeter { get; set; } = ',';
         public static CultureInfo CurrentCulture { get; set; } = CultureInfo.InvariantCulture;
-        public static int Capacity { get; set; } = 65 * 10;
         public static bool ClipNegativeValues { get; set; } = true;
 
         private static readonly string PlacholderName = "N/A";
@@ -216,7 +254,7 @@ namespace _3DSpectrumVisualizer
                         }
                         catch (FormatException)
                         {
-
+                            
                         }
                     }
                     else
