@@ -38,10 +38,9 @@
 	</Window.Styles>
 	<Grid ColumnDefinitions="*" RowDefinitions="auto,*">
 		<StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2">
-			<Button Content="Open in GNUPlot" Background="LightGreen" Button.Click="OnOpenInGnuPlotClick"></Button>
 			<Button Content="Top View" Background="LightBlue" Button.Click="OnTopViewClick"></Button>
 			<Button IsVisible="False" Content="Dump Data" Button.Click="OnDumpDataClick"></Button>
-			<CheckBox IsChecked="{Binding #Spectrum3D.RenderEnabled, Mode=TwoWay}" Checked="OnRenderChecked" />
+			<CheckBox IsChecked="{Binding #Spectrum3D.RenderContinuous, Mode=TwoWay}" Checked="OnRenderChecked" />
 			<Label ClipToBounds="True" VerticalContentAlignment="Center" Margin="0,3,0,3" FontSize="16"
 				x:Name="GLLabel" BorderThickness="1" BorderBrush="Black">
 				GL

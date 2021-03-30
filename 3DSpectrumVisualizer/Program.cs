@@ -5,7 +5,6 @@ using Avalonia.Controls.ApplicationLifetimes;
 using System.Collections.Generic;
 using SkiaSharp;
 using System.Linq;
-using AwokeKnowing.GnuplotCSharp;
 
 namespace _3DSpectrumVisualizer
 {
@@ -69,6 +68,6 @@ namespace _3DSpectrumVisualizer
 
         public static object UpdateSynchronizingObject { get; } = new object();
 
-        public static GnuPlot GnuPlotInstance { get; } = new GnuPlot(@"C:\gnuplot_new\bin");
+        //public static GnuPlot GnuPlotInstance { get; } = new GnuPlot(@"C:\gnuplot_new\bin");
     }
 }

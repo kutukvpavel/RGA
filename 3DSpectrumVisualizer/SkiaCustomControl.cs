@@ -19,23 +19,14 @@ namespace _3DSpectrumVisualizer
         private Task _RedrawTask;
         private void _RedrawTimer_Elapsed(object sender, ElapsedEventArgs e)
         {
-            if ((_RedrawTask?.IsCompleted ?? true) && RenderEnabled)
-                _RedrawTask = Dispatcher.UIThread.InvokeAsync(() =>
-                {
-                    if (Monitor.TryEnter(UpdateSynchronizingObject))
-                    {
-                        InvalidateVisual();
-                        Monitor.Exit(UpdateSynchronizingObject);
-                    }
-                },
-                DispatcherPriority.Background
-                );
+            InvalidateVisual();
         }
 
         public SkiaCustomControl()
         {
             ClipToBounds = true;
             _RedrawTimer.Elapsed += _RedrawTimer_Elapsed;
+            this.AttachedToVisualTree += SkiaCustomControl_AttachedToVisualTree;
         }
 
         public object UpdateSynchronizingObject { get; set; } = new object();
@@ -48,7 +39,11 @@ namespace _3DSpectrumVisualizer
             get => _RedrawTimer.Interval;
             set => _RedrawTimer.Interval = value;
         }
-        public bool RenderEnabled { get; set; } = false;
+        public bool RenderContinuous
+        {
+            get => _RedrawTimer.Enabled;
+            set => _RedrawTimer.Enabled = value;
+        }
 
         protected abstract class CustomDrawOp : ICustomDrawOperation
         {
@@ -87,12 +82,26 @@ namespace _3DSpectrumVisualizer
             context.Custom(PrepareCustomDrawingOperation());
         }
 
+        public new void InvalidateVisual()
+        {
+            if (_RedrawTask?.IsCompleted ?? true)
+                _RedrawTask = Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    if (Monitor.TryEnter(UpdateSynchronizingObject))
+                    {
+                        base.InvalidateVisual();
+                        Monitor.Exit(UpdateSynchronizingObject);
+                    }
+                },
+                DispatcherPriority.Background
+                );
+        }
+
         protected abstract CustomDrawOp PrepareCustomDrawingOperation();
 
-        public override void EndInit()
+        private void SkiaCustomControl_AttachedToVisualTree(object sender, VisualTreeAttachmentEventArgs e)
         {
-            _RedrawTimer.Start();
-            base.EndInit();
+            InvalidateVisual();
         }
     }
 }

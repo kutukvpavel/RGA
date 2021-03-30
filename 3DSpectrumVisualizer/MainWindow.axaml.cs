@@ -86,21 +86,7 @@ namespace _3DSpectrumVisualizer
             Spectrum3D.ScanSpacing = 
                 (float)Spectrum3D.Bounds.Height / (Program.Repositories.Max(x => x.Results.Count) * Spectrum3D.ScalingFactor);
             Spectrum3D.ZScalingFactor = Skia3DSpectrum.ScalingLowerLimit;
-        }
-
-        private void OnOpenInGnuPlotClick(object sender, RoutedEventArgs e)
-        {
-            Program.GnuPlotInstance.HoldOn();
-            foreach (var item in Program.Repositories)
-            {
-                var data = item.Get3DPoints();
-                Program.GnuPlotInstance.SPlot(
-                    data.Item1.Take(100000).ToArray(), 
-                    data.Item2.Take(100000).ToArray(), 
-                    data.Item3.Take(100000).ToArray(),
-                    "pause -1");
-            }
-            Program.GnuPlotInstance.HoldOff();
+            Spectrum3D.InvalidateVisual();
         }
 
         #endregion

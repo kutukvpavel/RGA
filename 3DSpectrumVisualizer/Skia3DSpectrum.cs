@@ -77,19 +77,26 @@ namespace _3DSpectrumVisualizer
         {
             var point = e.GetCurrentPoint(this);
             var pos = point.Position;
+            bool invalidate = false;
             if (point.Properties.IsLeftButtonPressed) //Pan
             {
                 XTranslate += (float)(pos.X - _LastPoint.X);
                 YTranslate += (float)(pos.Y - _LastPoint.Y);
+                invalidate = true;
             }
             else if (point.Properties.IsRightButtonPressed) //Rotate
             {
                 var div = ScalingFactor > 1 ? (float)Math.Sqrt(ScalingFactor) : 1;
                 ZRotate += (float)(pos.X - _LastPoint.X) / div;
                 XRotate += (float)(pos.Y - _LastPoint.Y) / div;
+                invalidate = true;
             }
             _LastPoint = pos;
-            UpdateCoordsString();
+            if (invalidate)
+            {
+                InvalidateVisual();
+                UpdateCoordsString();
+            }
             e.Handled = true;
         }
 
@@ -103,6 +110,7 @@ namespace _3DSpectrumVisualizer
             else
                 ScalingFactor += ScalingFactor * delta;
             UpdateCoordsString();
+            InvalidateVisual();
             e.Handled = true;
         }
 
