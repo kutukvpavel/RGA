@@ -7,7 +7,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Acquisition", "Acquisition\
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "3DSpectrumVisualizer", "3DSpectrumVisualizer\3DSpectrumVisualizer.csproj", "{A603796A-B9E2-4F02-8549-D54C1289A41B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DebugSpectraHelper", "DebugSpectraHelper\DebugSpectraHelper.csproj", "{BD0731E2-25AE-46C8-B207-AF046B9E3025}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DebugSpectraHelper", "DebugSpectraHelper\DebugSpectraHelper.csproj", "{BD0731E2-25AE-46C8-B207-AF046B9E3025}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

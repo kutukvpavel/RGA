@@ -12,16 +12,34 @@ namespace Acquisition
             Console.WriteLine("Hello World!");
 
             Device = new Head(new Port(new RJCP.IO.Ports.SerialPortStream(args[0])));
+            Device.TerminalLog += (s, t) => { Console.WriteLine(t); };
 
-
+            try
+            {
+                Console.WriteLine("Press enter to start...");
+                ConsoleKey lastKey = ConsoleKey.Enter;
+                while (lastKey == ConsoleKey.Enter || lastKey == ConsoleKey.Spacebar)
+                {
+                    StateMachine();
+                    Console.WriteLine("Confirm execution of the next sequence...");
+                    lastKey = Console.ReadKey().Key;
+                    if (lastKey == ConsoleKey.Spacebar) Device.StartScan();
+                }
+                Console.WriteLine("Aborted.");
+                Device.AbortScan();
+            }
+            finally
+            {
+                Device.Dispose();
+            }
         }
 
         static void StateMachine()
         {
-            if (CommandSet.Sequences.ContainsKey(Device.State))
-            {
-                Device.ExecuteSequence(CommandSet.Sequences[Device.State]);
-            }
+            Device.ExecuteSequence(CommandSet.Sequences[Device.State]);
+#if DEBUG
+            Console.WriteLine("Resulting state: " + Enum.GetName(typeof(HeadState), Device.State));
+#endif
         }
     }
 }
