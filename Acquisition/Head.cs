@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Threading;
-using System.Linq;
-using RJCP.IO.Ports;
 
 namespace Acquisition
 {
@@ -14,7 +11,8 @@ namespace Acquisition
         IonizerON,
         DetectorON,
         StartScan,
-        Scanning
+        Scanning,
+        PowerDown
     }
 
     [Flags]
@@ -33,22 +31,33 @@ namespace Acquisition
     {
         public event EventHandler<ExceptionEventArgs> ExceptionLog;
         public event EventHandler<string> TerminalLog;
-        public event EventHandler<List<int>> ScanCompleted;
+        public event EventHandler ScanCompleted;
         public object SynchronizingObject { get; } = new object();
 
         public Head(Port port)
         {
             CommunicationPort = port;
-            CommunicationPort.LineReceived += (s, e) => { TerminalLog?.Invoke(s, e.Text); };
+            CommunicationPort.SerialPort.ReceivedBytesThreshold = 2;
+            CommunicationPort.SerialPort.ReadTimeout = 1000;
+            CommunicationPort.SerialPort.ReadBufferSize = 64 * 1024;
             CommunicationPort.LineReceived += CommunicationPort_LineReceived;
-            CommunicationPort.CommandTransmitted += (s, e) => { TerminalLog?.Invoke(s, e.Text); };
-            CommunicationPort.SerialPort.DataReceived += SerialPort_DataReceived;
+            CommunicationPort.LineReceived += (s, e) => { if (State != HeadState.Scanning) TerminalLog?.Invoke(s, e); };
+            CommunicationPort.BytesReceived += CommunicationPort_BytesReceived;
+            CommunicationPort.CommandTransmitted += (s, e) => { TerminalLog?.Invoke(s, e); };
             CommunicationPort.SerialPort.Open();
         }
 
         public void Dispose()
         {
             if (_Disposed) return;
+            try
+            {
+                ExecuteSequence(CommandSet.Sequences[HeadState.PowerDown]);
+            }
+            catch (Exception)
+            {
+
+            }
             try
             {
                 CommunicationPort.SerialPort.Close();
@@ -68,19 +77,17 @@ namespace Acquisition
 
         private bool _Disposed = false;
         private BlockingQueue _TerminalQueue = new BlockingQueue();
-        private BlockingQueue _ScanCompletedQueue = new BlockingQueue();
         private Queue<byte> _ScanBuffer = new Queue<byte>(4 * 2);
         private List<int> _ScanResult = new List<int>(65 * 10);
 
-        private void SerialPort_DataReceived(object sender, SerialDataReceivedEventArgs e)
+        private void CommunicationPort_BytesReceived(object sender, byte[] e)
         {
             if (State != HeadState.Scanning) return;
             try
             {
                 lock (SynchronizingObject)
                 {
-                    byte[] b = Encoding.ASCII.GetBytes(((SerialPortStream)sender).ReadExisting());
-                    foreach (var item in b)
+                    foreach (var item in e)
                     {
                         _ScanBuffer.Enqueue(item);
                     }
@@ -93,35 +100,56 @@ namespace Acquisition
                             res += _ScanBuffer.Dequeue() << (8 * j);
                         }
                         _ScanResult.Add(res);
+                        if (_ScanResult.Count == TotalScanPoints)
+                        {
+                            _ScanBuffer.Clear();
+                            break;
+                        }
+                    }
+                    if (_ScanResult.Count >= TotalScanPoints)
+                    {
+                        LastScanResult = _ScanResult.ToArray();
+                        _ScanResult.Clear();
+                        State = HeadState.DetectorON;
                     }
                 }
+                if (State != HeadState.Scanning) ScanCompleted?.Invoke(this, new EventArgs());
             }
             catch (Exception ex)
             {
-                ExceptionLog?.Invoke(this, new ExceptionEventArgs(ex, ))
+                ExceptionLog?.Invoke(this, new ExceptionEventArgs(ex));
             }
         }
 
-        private void CommunicationPort_LineReceived(object sender, TextEventArgs e)
+        private void CommunicationPort_LineReceived(object sender, string e)
         {
             if (State == HeadState.Scanning) return;
             try
             {
-                LastCommand.InvokeExecutionCallback(this, e.Text);
+                LastCommand.InvokeExecutionCallback(this, e);
             }
             catch (Exception ex)
             {
-                ExceptionLog?.Invoke(this, new ExceptionEventArgs(ex, e.Text));
+                ExceptionLog?.Invoke(this, new ExceptionEventArgs(ex, e));
             }
         }
 
         #endregion
 
+        #region Properties
+
         public int Timeout { get; set; } = 5000;
 
         public string ID { get; private set; }
 
-        public HeadState State { get; private set; } = HeadState.PowerUp;
+        private HeadState _State = HeadState.PowerUp;
+        public HeadState State { get => _State; 
+            private set 
+            {
+                _State = value;
+                CommunicationPort.Mode = _State == HeadState.Scanning ? PortMode.Bytes : PortMode.String;
+            }
+        }
 
         public Port CommunicationPort { get; }
 
@@ -130,6 +158,20 @@ namespace Acquisition
         public Command LastCommand { get; private set; }
 
         public HeadStatusBits LastStatus { get; private set; } = HeadStatusBits.None;
+
+        public int[] LastScanResult { get; private set; }
+
+        public int StartAMU { get; private set; } = 1;
+
+        public int EndAMU { get; private set; } = 200;
+
+        public int PointsPerAMU { get; private set; } = 10;
+
+        public int TotalScanPoints { get; private set; }
+
+        #endregion
+
+        #region Public Methods
 
         public void StartScan()
         {
@@ -149,9 +191,29 @@ namespace Acquisition
             }
         }
 
+        public void SetTotalScanPoints(int p)
+        {
+            TotalScanPoints = p + 1; // + Total Pressure
+        }
+
         public void SetID(string id)
         {
             ID = id;
+        }
+
+        public void SetStartAMU(int amu)
+        {
+            StartAMU = amu;
+        }
+
+        public void SetEndAMU(int amu)
+        {
+            EndAMU = amu;
+        }
+
+        public void SetPointsPerAMU(int p)
+        {
+            PointsPerAMU = p;
         }
 
         public void SetStatus(HeadStatusBits s)
@@ -165,7 +227,7 @@ namespace Acquisition
             {
                 foreach (var item in s)
                 {
-#if DEBUG
+#if DEBUG_STEP
                     Console.WriteLine("Confirm execution of the next command...");
                     Console.ReadKey();
 #endif
@@ -174,7 +236,11 @@ namespace Acquisition
                         item.ResetState();
                         LastCommand = item;
                         CommunicationPort.Send(item);
-                        if (item.NoResponseExpected) continue;
+                        if (item.NoResponseExpected)
+                        {
+                            item.InvokeExecutionCallback(this, null);
+                            continue;
+                        }
                         for (int j = 0; j < Timeout; j++)
                         {
                             Thread.Sleep(1);
@@ -196,6 +262,8 @@ namespace Acquisition
                 State = s.SuccessNextState;
             }
         }
+
+        #endregion
     }
 
     public class ExceptionEventArgs : EventArgs

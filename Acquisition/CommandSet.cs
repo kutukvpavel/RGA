@@ -45,6 +45,30 @@ namespace Acquisition
             return true;
         }
 
+        public static bool ParseTotalScanPoints(Command cmd, Head h, string resp)
+        {
+            h.SetTotalScanPoints(int.Parse(resp));
+            return true;
+        }
+
+        public static bool ParseStartAMU(Command cmd, Head h, string resp)
+        {
+            h.SetStartAMU(int.Parse(resp));
+            return true;
+        }
+
+        public static bool ParseStopAMU(Command cmd, Head h, string resp)
+        {
+            h.SetEndAMU(int.Parse(resp));
+            return true;
+        }
+
+        public static bool ParsePointsPerAMU(Command cmd, Head h, string resp)
+        {
+            h.SetPointsPerAMU(int.Parse(resp));
+            return true;
+        }
+
         public static Command StatusQuery = new Command("ER", ParseStatusByte, QueryParameter);
         public static Command InitializeCommunication = new Command("IN", ParseStatusByte, 0);
         public static Command IdentificationQuery = new Command("ID", ParseIDString, QueryParameter);
@@ -55,7 +79,14 @@ namespace Acquisition
         public static Command TurnHVOFF = new Command("HV", ParseStatusByte, 0.0);
         public static Command HighVoltageQuery = new Command("HV", ParseHighVoltage, QueryParameter);
         public static Command TurnHVON = new Command("HV", ParseStatusByte, 1449);
-        public static Command StartAnalogScan = new Command("SC", null, 1);
+        public static Command StartAnalogScan = new Command("SC", null, 1, true);
+        public static Command SetStartAMU = new Command("MI", null, 1, true);
+        public static Command SetEndAMU = new Command("MF", null, 200, true); //Use default values here
+        public static Command SetPointsPerAMU = new Command("SA", null, 10, true);
+        public static Command TotalScanPointsQuery = new Command("AP", ParseTotalScanPoints, QueryParameter);
+        public static Command QueryStartAMU = new Command("MI", ParseStartAMU, QueryParameter);
+        public static Command QueryStopAMU = new Command("MF", ParseStopAMU, QueryParameter);
+        public static Command QueryPointsPerAMU = new Command("SA", ParsePointsPerAMU, QueryParameter);
 
         public static readonly Dictionary<HeadState, CommandSequence> Sequences = new Dictionary<HeadState, CommandSequence>()
         {
@@ -81,7 +112,7 @@ namespace Acquisition
                 new CommandSequence(HeadState.Initialized, HeadState.DetectorON)
                 {
                     FilamentCurrentQuery,
-                    TurnHVON,
+                    //TurnHVON, //Do not turn on CDEM by default
                     HighVoltageQuery
                 }
             },
@@ -99,7 +130,25 @@ namespace Acquisition
                 HeadState.StartScan,
                 new CommandSequence(HeadState.DetectorON, HeadState.Scanning)
                 {
+                    SetStartAMU,
+                    QueryStartAMU,
+                    SetPointsPerAMU,
+                    QueryPointsPerAMU,
+                    SetEndAMU,
+                    QueryStopAMU,
+                    StatusQuery,
+                    TotalScanPointsQuery,
                     StartAnalogScan
+                }
+            },
+            {
+                HeadState.PowerDown,
+                new CommandSequence(HeadState.PowerDown, HeadState.PowerDown)
+                {
+                    ShutDownMassFilter,
+                    TurnHVOFF,
+                    TurnFilamentOFF,
+                    StatusQuery
                 }
             }
         };
