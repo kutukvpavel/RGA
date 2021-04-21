@@ -3,7 +3,8 @@
 		xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 		xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 		xmlns:local="clr-namespace:_3DSpectrumVisualizer"
-		mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="300"
+		xmlns:colorpicker="clr-namespace:AvaloniaColorPicker;assembly=AvaloniaColorPicker"
+		mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="500"
 		Width="1000" Height="600" WindowState="Maximized"
 		x:Class="_3DSpectrumVisualizer.MainWindow"
 		Title="RGA 3D Spectrum Visualizer" Icon="avares://3DSpectrumVisualizer/Assets/chart-icon.ico">
@@ -26,7 +27,7 @@
 			<Setter Property="MinWidth" Value="0"></Setter>
 			<Setter Property="Margin" Value="20,0,20,0"></Setter>
 			<Setter Property="HorizontalAlignment" Value="Right"></Setter>
-			<Setter Property="Content" Value="Render"></Setter>
+			<Setter Property="Content" Value="Force Render"></Setter>
 		</Style>
 		<Style Selector="StackPanel">
 			<Setter Property="ZIndex" Value="1"></Setter>
@@ -36,9 +37,34 @@
 			<Setter Property="Margin" Value="3,0,5,0"></Setter>
 		</Style>
 	</Window.Styles>
-	<Grid ColumnDefinitions="*" RowDefinitions="auto,*">
-		<StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2">
+	<Grid ColumnDefinitions="auto,*" RowDefinitions="auto,*">
+		<Expander Grid.Row="1" Grid.Column="0" ExpandDirection="Right" IsExpanded="True" Padding="0,10,0,0">
+			<ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Visible" Padding="0,0,10,0">
+				<StackPanel Orientation="Vertical">
+					<TextBlock>Background</TextBlock>
+					<colorpicker:ColorButton Margin="0,10,0,10" PropertyChanged="OnBackgroundEdited"
+						Color="{Binding #Spectrum3D.Background, Converter={x:Static local:Skia3DSpectrum.ColorConverter}}"></colorpicker:ColorButton>
+					<TextBlock>Lighting Emulation</TextBlock>
+					<Slider x:Name="sldLight" Maximum="255" PropertyChanged="OnLightSliderChanged"></Slider>
+					<TextBlock Margin="0,0,0,10">Color Scheme</TextBlock>
+					<NumericUpDown Minimum="1" DataContext="{x:Static local:Program.ColorSchemes}" Maximum="{Binding Count}" Value="{Binding SelectedIndex, Mode=TwoWay}"></NumericUpDown>
+					<ListBox x:Name="lstColors" DataContext="{x:Static local:Program.ColorSchemes}" Items="{Binding SelectedItem}">
+						<ListBox.ItemTemplate>
+							<DataTemplate>
+								<Border Background="{Binding, Converter={x:Static local:ColorScheme.BrushConverter}}">
+									<TextBlock Text="{Binding, Converter={x:Static local:ColorScheme.StringConverter}}"></TextBlock>
+								</Border>
+							</DataTemplate>
+						</ListBox.ItemTemplate>
+					</ListBox>
+					<colorpicker:ColorButton PropertyChanged="OnColorSchemeEdited"
+						Color="{Binding #lstColors.SelectedItem, Converter={x:Static local:ColorScheme.ColorConverter}}"></colorpicker:ColorButton>
+				</StackPanel>
+			</ScrollViewer>
+		</Expander>
+		<StackPanel Grid.Row="0" Grid.Column="1">
 			<Button Content="Top View" Background="LightBlue" Button.Click="OnTopViewClick"></Button>
+			<Button Content="3D View" Background="LightGreen" Button.Click="OnRestore3DViewClick"></Button>
 			<Button IsVisible="False" Content="Dump Data" Button.Click="OnDumpDataClick"></Button>
 			<CheckBox IsChecked="{Binding #Spectrum3D.RenderContinuous, Mode=TwoWay}" Checked="OnRenderChecked" />
 			<Label ClipToBounds="True" VerticalContentAlignment="Center" Margin="0,3,0,3" FontSize="16"
@@ -50,6 +76,6 @@
 				Coords...
 			</Label>
 		</StackPanel>
-		<local:Skia3DSpectrum x:Name="Spectrum3D" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"></local:Skia3DSpectrum>
+		<local:Skia3DSpectrum x:Name="Spectrum3D" Grid.Row="1" Grid.Column="1"></local:Skia3DSpectrum>
 	</Grid>
 </Window>

@@ -1,14 +1,20 @@
 ﻿using Avalonia;
+using Avalonia.Data.Converters;
 using Avalonia.Input;
+using Avalonia.Media;
 using Avalonia.Rendering.SceneGraph;
 using SkiaSharp;
 using System;
+using System.ComponentModel;
 
 namespace _3DSpectrumVisualizer
 {
     public class Skia3DSpectrum : SkiaCustomControl
     {
         public static float ScalingLowerLimit { get; set; } = 0.001f;
+
+        public static IValueConverter ColorConverter = new FuncValueConverter<SKColor, Color>(
+            (x) => Color.FromArgb(x.Alpha, x.Red, x.Green, x.Blue));
 
         public Skia3DSpectrum() : base()
         {
@@ -21,7 +27,12 @@ namespace _3DSpectrumVisualizer
         public new SKColor Background
         {
             get => Draw3DSpectrum.BackgroundColor;
-            set => Draw3DSpectrum.BackgroundColor = value;
+            set {
+                if (Draw3DSpectrum.BackgroundColor == value) return;
+                Draw3DSpectrum.BackgroundColor = value;
+                RaisePropertyChanged(_BackgroundProperty, new Avalonia.Data.Optional<SKColor>(),
+                    new Avalonia.Data.BindingValue<SKColor>(value));
+            }
         }
         private float _ScalingFactor = 2;
         public float ScalingFactor
@@ -57,8 +68,12 @@ namespace _3DSpectrumVisualizer
             }
         }
 
-        public readonly AvaloniaProperty<string> CoordinatesString =
+        private readonly AvaloniaProperty<float> GeneralOpacityProperty =
+            AvaloniaProperty.Register<Skia3DSpectrum, float>("GeneralOpacity");
+        private readonly AvaloniaProperty<string> CoordinatesString =
             AvaloniaProperty.Register<Skia3DSpectrum, string>("CoordinatesString");
+        private readonly AvaloniaProperty<SKColor> _BackgroundProperty =
+            AvaloniaProperty.Register<Skia3DSpectrum, SKColor>("Background");
 
         #endregion
 

@@ -8,6 +8,7 @@ using System.Threading;
 using System.Timers;
 using MoreLinq;
 using System.Threading.Tasks;
+using Avalonia.Data.Converters;
 
 namespace _3DSpectrumVisualizer
 {
@@ -17,10 +18,10 @@ namespace _3DSpectrumVisualizer
         {
             MaxDegreeOfParallelism = 4
         };
-        public static SKColor FallbackColor { get; set; } = SKColor.Parse("#84F7EFEF");
+        public static SKColor FallbackColor { get; set; } = SKColor.Parse("#84FFFFFF");
         public static SKColor[] LightGradient { get; set; } = new SKColor[]
         {
-            SKColor.Parse("#00FFFFFF"),
+            SKColor.Parse("#00FAF4F4"),
             /*SKColor.Parse("#647B7B7B"),*/
             SKColor.Parse("#8F7B7B7B")
         };
@@ -33,6 +34,8 @@ namespace _3DSpectrumVisualizer
             PaintFill.Shader = Shader;
             PaintStroke.Shader = Shader;
         }
+
+        public event EventHandler DataAdded;
 
         public object UpdateSynchronizingObject { get; set; } = new object();
         //public bool Throttle { get; set; } = false;
@@ -53,7 +56,7 @@ namespace _3DSpectrumVisualizer
             IsAntialias = false
         };
         public SKShader Shader { get; private set; }
-        public SKColor[] ColorScheme { get; set; } = new SKColor[0];
+        public ICollection<SKColor> ColorScheme { get; set; } = new SKColor[0];
         public float Min { get; private set; } = 0;
         public float Max { get; private set; } = 0;
         public float Left { get; private set; } = 0;
@@ -93,12 +96,42 @@ namespace _3DSpectrumVisualizer
             return new Tuple<double[], double[], double[]>(x, y, z);
         }
 
+        public void RecalculateShader()
+        {
+            if (ColorScheme.Count > 1)
+            {
+                Shader = SKShader.CreateLinearGradient(
+                    new SKPoint(0, Min),
+                    new SKPoint(0, Max),
+                    ColorScheme.ToArray(),
+                    SKShaderTileMode.Clamp
+                    );
+            }
+            else
+            {
+                Shader = SKShader.CreateColor(FallbackColor);
+            }
+            if (LightGradient.Length > 1)
+            {
+                var lightShader = SKShader.CreateLinearGradient(
+                    new SKPoint(Left, 0),
+                    new SKPoint(Right, 0),
+                    LightGradient,
+                    SKShaderTileMode.Clamp
+                    );
+                Shader = SKShader.CreateCompose(Shader, lightShader, SKBlendMode.Darken);
+            }
+            PaintFill.Shader = Shader;
+            PaintStroke.Shader = Shader;
+        }
+
         #region Private
 
         private DateTime _LastFileCreationTime = DateTime.MinValue;
         private readonly System.Timers.Timer _PollTimer;
         private void _PollTimer_Elapsed(object sender, ElapsedEventArgs e)
         {
+            bool raiseDataAdded = false;
             bool lockTaken = Monitor.TryEnter(UpdateSynchronizingObject, 10);
             if (!lockTaken) return;
             try
@@ -115,6 +148,7 @@ namespace _3DSpectrumVisualizer
                             AddFile(item);
                             if (item.CreationTimeUtc > _LastFileCreationTime)
                                 _LastFileCreationTime = item.CreationTimeUtc;
+                            raiseDataAdded = true;
                         }
                     }
                     catch (Exception)
@@ -131,6 +165,7 @@ namespace _3DSpectrumVisualizer
             {
                 Monitor.Exit(UpdateSynchronizingObject);
             }
+            if (raiseDataAdded) DataAdded?.Invoke(this, new EventArgs());
         }
         private bool FileIsInUse(FileInfo file)
         {
@@ -172,34 +207,7 @@ namespace _3DSpectrumVisualizer
                 Right = b.Right;
                 updateShader = true;
             }
-            if (updateShader)
-            {
-                if (ColorScheme.Length > 1)
-                {
-                    Shader = SKShader.CreateLinearGradient(
-                        new SKPoint(0, Min),
-                        new SKPoint(0, Max),
-                        ColorScheme,
-                        SKShaderTileMode.Clamp
-                        );
-                }
-                else
-                {
-                    Shader = SKShader.CreateColor(FallbackColor);
-                }
-                if (LightGradient.Length > 1)
-                {
-                    var lightShader = SKShader.CreateLinearGradient(
-                        new SKPoint(Left, 0),
-                        new SKPoint(Right, 0),
-                        LightGradient,
-                        SKShaderTileMode.Clamp
-                        );
-                    Shader = SKShader.CreateCompose(Shader, lightShader, SKBlendMode.Darken);
-                }
-                PaintFill.Shader = Shader;
-                PaintStroke.Shader = Shader;
-            }
+            if (updateShader) RecalculateShader();
             Results.Add(sr);
         }
 

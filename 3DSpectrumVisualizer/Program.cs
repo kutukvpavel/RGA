@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using SkiaSharp;
 using System.Linq;
 
@@ -25,11 +26,17 @@ namespace _3DSpectrumVisualizer
 
         public static void AppMain(Application app, string[] args)
         {
+            string filter = "*.csv";
+            if (args[0].StartsWith("-f"))
+            {
+                filter = args[0].Split(':')[1];
+                args = args.Skip(1).ToArray();
+            }
             for (int i = 0; i < args.Length; i++)
             {
                 var dr = new DataRepository(args[i]) 
                 { 
-                    Filter = "*.txt", 
+                    Filter = filter, 
                     UpdateSynchronizingObject = Program.UpdateSynchronizingObject 
                 };
                 if (ColorSchemes.Count > i)
@@ -48,19 +55,23 @@ namespace _3DSpectrumVisualizer
             app.Run(mainWindow);
         }
 
-        public static List<SKColor[]> ColorSchemes { get; } = new List<SKColor[]>()
+        public static ColorScheme ColorSchemes { get; } = new ColorScheme()
         {
-            new SKColor[]
-            {
-                SKColor.Parse("#84CB32CE"),
-                SKColor.Parse("#8DD1C12C"),
-                SKColor.Parse("#882EC6BC")
-            },
-            new SKColor[]
+            new ObservableCollection<SKColor>()
             {
                 SKColor.Parse("#551B23D4"),
                 SKColor.Parse("#8627C624"),
+                SKColor.Parse("#8627C624"),
+                SKColor.Parse("#7FCB2325"),
                 SKColor.Parse("#7FCB2325")
+            },
+            new ObservableCollection<SKColor>()
+            {
+                SKColor.Parse("#84CB32CE"),
+                SKColor.Parse("#8DD1C12C"),
+                SKColor.Parse("#8DD1C12C"),
+                SKColor.Parse("#882EC6BC"),
+                SKColor.Parse("#882EC6BC")
             }
         };
 

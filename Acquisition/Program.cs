@@ -11,6 +11,8 @@ namespace Acquisition
 {
     public class Program
     {
+        private static bool CancellationRequested = false;
+
         public static Head Device { get; private set; }
 
         public static string WorkingDirectory { get => Environment.CurrentDirectory; }
@@ -19,6 +21,7 @@ namespace Acquisition
 
         static void Main(string[] args)
         {
+            Console.CancelKeyPress += Console_CancelKeyPress;
             Console.WriteLine("RGA Acquisition Helper v1.0 started!");
 
             Device = new Head(new Port(new RJCP.IO.Ports.SerialPortStream(args[0])));
@@ -49,8 +52,8 @@ namespace Acquisition
                     Thread.Sleep(500);
                     if (Device.State == HeadState.DetectorON)
                     {
-                        Console.WriteLine("Press Enter to start acquisition or Esc to exit...");
-                        if (Console.ReadKey().Key == ConsoleKey.Escape) break;
+                        Console.WriteLine("Starting new scan...");
+                        if (CancellationRequested) break;
                         Device.StartScan();
                     }
                 }
@@ -60,6 +63,12 @@ namespace Acquisition
             {
                 Device.Dispose();
             }
+        }
+
+        private static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
+        {
+            CancellationRequested = true;
+            e.Cancel = true;
         }
 
         private static void Device_ScanCompleted(object sender, EventArgs e)
