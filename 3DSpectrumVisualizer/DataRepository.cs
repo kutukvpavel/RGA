@@ -22,7 +22,6 @@ namespace _3DSpectrumVisualizer
         public static SKColor[] LightGradient { get; set; } = new SKColor[]
         {
             SKColor.Parse("#00FAF4F4"),
-            /*SKColor.Parse("#647B7B7B"),*/
             SKColor.Parse("#8F7B7B7B")
         };
 
@@ -57,12 +56,13 @@ namespace _3DSpectrumVisualizer
         };
         public SKShader Shader { get; private set; }
         public ICollection<SKColor> ColorScheme { get; set; } = new SKColor[0];
-        public float Min { get; private set; } = 0;
+        public float Min { get; private set; } = 1;
         public float Max { get; private set; } = 0;
-        public float Left { get; private set; } = 0;
+        public float Left { get; private set; } = 1;
         public float Right { get; private set; } = 0;
         public float MidX { get => (Right - Left) / 2; }
         public float MidY { get => (Max - Min) / 2; }
+        public bool LogarithmicIntensity { get; set; } = false;
 
         public bool Enabled
         {
@@ -101,8 +101,8 @@ namespace _3DSpectrumVisualizer
             if (ColorScheme.Count > 1)
             {
                 Shader = SKShader.CreateLinearGradient(
-                    new SKPoint(0, Min),
-                    new SKPoint(0, Max),
+                    new SKPoint(0, LogarithmicIntensity ? MathF.Log10(Min) : Min),
+                    new SKPoint(0, LogarithmicIntensity ? MathF.Log10(Max) : Max),
                     ColorScheme.ToArray(),
                     SKShaderTileMode.Clamp
                     );
@@ -185,7 +185,7 @@ namespace _3DSpectrumVisualizer
         private void AddFile(FileInfo item)
         {
             var sr = new ScanResult(File.ReadLines(item.FullName), item.Name);
-            var b = sr.Path2D.Bounds;
+            var b = sr.Path2D.TightBounds;
             bool updateShader = false;
             if (b.Bottom > Max)
             {
@@ -218,7 +218,6 @@ namespace _3DSpectrumVisualizer
     {
         public static char Delimeter { get; set; } = ',';
         public static CultureInfo CurrentCulture { get; set; } = CultureInfo.InvariantCulture;
-        public static bool ClipNegativeValues { get; set; } = true;
 
         private static readonly string PlacholderName = "N/A";
 
@@ -230,10 +229,12 @@ namespace _3DSpectrumVisualizer
         {
             Name = name;
             Path2D = new SKPath();
+            LogPath2D = new SKPath();
             Parse(rawLines);
         }
 
         public SKPath Path2D { get; private set; }
+        public SKPath LogPath2D { get; private set; }
         public string Name { get; }
 
         private void Parse(IEnumerable<string> rawLines)
@@ -258,7 +259,17 @@ namespace _3DSpectrumVisualizer
                                 NumberStyles.AllowLeadingSign, 
                                 CurrentCulture))
                                 .ToArray();
-                            Path2D.LineTo(temp[0], (temp[1] < 0 && ClipNegativeValues) ? 0 : temp[1]);
+                            if (temp[1] <= 0) continue;
+                            if (Path2D.Points.Length > 0)
+                            {
+                                Path2D.LineTo(temp[0], temp[1]);
+                                LogPath2D.LineTo(temp[0], MathF.Log10(temp[1]));
+                            }
+                            else
+                            {
+                                Path2D.MoveTo(temp[0], temp[1]);
+                                LogPath2D.MoveTo(temp[0], MathF.Log10(temp[1]));
+                            }
                         }
                         catch (FormatException)
                         {

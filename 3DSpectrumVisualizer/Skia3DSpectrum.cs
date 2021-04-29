@@ -5,6 +5,7 @@ using Avalonia.Media;
 using Avalonia.Rendering.SceneGraph;
 using SkiaSharp;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 
 namespace _3DSpectrumVisualizer
@@ -24,6 +25,19 @@ namespace _3DSpectrumVisualizer
 
         #region Properties
 
+        private IEnumerable<DataRepository> _Repos = new List<DataRepository>();
+        public IEnumerable<DataRepository> DataRepositories
+        {
+            get { return _Repos; }
+            set
+            {
+                _Repos = value;
+                foreach (var item in _Repos)
+                {
+                    item.DataAdded += (s, e) => { RecalculateAxes(); };
+                }
+            }
+        }
         public new SKColor Background
         {
             get => Draw3DSpectrum.BackgroundColor;
@@ -68,8 +82,8 @@ namespace _3DSpectrumVisualizer
             }
         }
 
-        private readonly AvaloniaProperty<float> GeneralOpacityProperty =
-            AvaloniaProperty.Register<Skia3DSpectrum, float>("GeneralOpacity");
+        /*private readonly AvaloniaProperty<float> GeneralOpacityProperty =
+            AvaloniaProperty.Register<Skia3DSpectrum, float>("GeneralOpacity");*/
         private readonly AvaloniaProperty<string> CoordinatesString =
             AvaloniaProperty.Register<Skia3DSpectrum, string>("CoordinatesString");
         private readonly AvaloniaProperty<SKColor> _BackgroundProperty =
@@ -131,6 +145,15 @@ namespace _3DSpectrumVisualizer
 
         #endregion
 
+        #region Axes
+
+        public void RecalculateAxes()
+        {
+
+        }
+
+        #endregion
+
         #region Render
 
         protected override CustomDrawOp PrepareCustomDrawingOperation()
@@ -152,6 +175,7 @@ namespace _3DSpectrumVisualizer
             private float YRotate;
             private float ZRotate;
             private int DropCoef;
+            IEnumerable<DataRepository> Data;
 
             public Draw3DSpectrum(Skia3DSpectrum parent) : base(parent)
             {
@@ -168,6 +192,7 @@ namespace _3DSpectrumVisualizer
                 View3D.RotateXDegrees(XRotate);
                 View3D.RotateYDegrees(YRotate);
                 View3D.RotateZDegrees(ZRotate);
+                Data = parent.DataRepositories;
             }
 
             public override bool Equals(ICustomDrawOperation other)
@@ -184,7 +209,7 @@ namespace _3DSpectrumVisualizer
                 canvas.Clear(BackgroundColor);
                 canvas.Translate(XTranslate, YTranslate);
                 canvas.Scale(Scaling);
-                foreach (var item in Program.Repositories)
+                foreach (var item in Data)
                 {
                     View3D.Save();
                     View3D.TranslateX(-item.MidX);
@@ -194,7 +219,8 @@ namespace _3DSpectrumVisualizer
                         View3D.TranslateY(ScanSpacing);
                         if (DropCoef > 1) if (i % DropCoef == 0) continue;
                         var scan = item.Results[i];
-                        if (scan.Path2D == null) continue;
+                        var path = item.LogarithmicIntensity ? scan.LogPath2D : scan.Path2D;
+                        if (path == null) continue;
                         using (SKAutoCanvasRestore ar2 = new SKAutoCanvasRestore(canvas))
                         {
                             View3D.Save();
@@ -202,11 +228,16 @@ namespace _3DSpectrumVisualizer
                             View3D.ApplyToCanvas(canvas);
                             View3D.Restore();
                             canvas.Scale(1, ZScaling);
-                            canvas.DrawPath(scan.Path2D, item.PaintStroke);
+                            canvas.DrawPath(path, item.PaintStroke);
                         }
                     }
                     View3D.Restore();
                 }
+            }
+
+            private void RenderAxes()
+            {
+
             }
         }
 

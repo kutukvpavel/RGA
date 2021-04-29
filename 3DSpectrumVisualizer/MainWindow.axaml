@@ -62,10 +62,11 @@
 				</StackPanel>
 			</ScrollViewer>
 		</Expander>
-		<StackPanel Grid.Row="0" Grid.Column="1">
+		<StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2">
 			<Button Content="Top View" Background="LightBlue" Button.Click="OnTopViewClick"></Button>
 			<Button Content="3D View" Background="LightGreen" Button.Click="OnRestore3DViewClick"></Button>
 			<Button IsVisible="False" Content="Dump Data" Button.Click="OnDumpDataClick"></Button>
+			<CheckBox x:Name="chkLog10">Log10</CheckBox>
 			<CheckBox IsChecked="{Binding #Spectrum3D.RenderContinuous, Mode=TwoWay}" Checked="OnRenderChecked" />
 			<Label ClipToBounds="True" VerticalContentAlignment="Center" Margin="0,3,0,3" FontSize="16"
 				x:Name="GLLabel" BorderThickness="1" BorderBrush="Black">

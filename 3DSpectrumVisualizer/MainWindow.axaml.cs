@@ -22,10 +22,6 @@ namespace _3DSpectrumVisualizer
 #if DEBUG
             this.AttachDevTools();
 #endif
-            foreach (var item in Program.Repositories)
-            {
-                item.DataAdded += Item_DataAdded;
-            }
         }
 
         private static CsvConfiguration DumpConfig = new CsvConfiguration(CultureInfo.CurrentCulture)
@@ -34,6 +30,7 @@ namespace _3DSpectrumVisualizer
         };
 
         private Skia3DSpectrum Spectrum3D;
+        private CheckBox LogarithmicIntensity;
         private Label GLLabel;
         private Label CoordsLabel;
         private ListBox LstColors;
@@ -46,6 +43,7 @@ namespace _3DSpectrumVisualizer
             AvaloniaXamlLoader.Load(this);
             Spectrum3D = this.FindControl<Skia3DSpectrum>("Spectrum3D");
             Spectrum3D.UpdateSynchronizingObject = Program.UpdateSynchronizingObject;
+            Spectrum3D.DataRepositories = Program.Repositories;
             Spectrum3D.PropertyChanged += Spectrum3D_PropertyChanged;
             Spectrum3D.PointerPressed += Spectrum3D_PointerPressed;
             Spectrum3D.Background = SKColor.Parse("#0E0D0D");
@@ -54,6 +52,8 @@ namespace _3DSpectrumVisualizer
             LstColors = this.FindControl<ListBox>("lstColors");
             LightEmulation = this.FindControl<Slider>("sldLight");
             LightEmulation.Value = DataRepository.LightGradient[1].Alpha;
+            LogarithmicIntensity = this.FindControl<CheckBox>("chkLog10");
+            LogarithmicIntensity.Click += OnLogarithmicChecked;
         }
 
         #region UI events
@@ -99,6 +99,17 @@ namespace _3DSpectrumVisualizer
             }
         }
 
+        private void OnLogarithmicChecked(object sender, RoutedEventArgs e)
+        {
+            bool c = (bool)LogarithmicIntensity.IsChecked;
+            foreach (var item in Program.Repositories)
+            {
+                item.LogarithmicIntensity = c;
+                item.RecalculateShader();
+            }
+            Spectrum3D.InvalidateVisual();
+        }
+
         private void OnLightSliderChanged(object sender, AvaloniaPropertyChangedEventArgs e)
         {
             if (!IsInitialized) return;
@@ -121,11 +132,6 @@ namespace _3DSpectrumVisualizer
 
                 }
             }
-        }
-
-        private void Item_DataAdded(object sender, System.EventArgs e)
-        {
-            Spectrum3D.InvalidateVisual();
         }
 
         private void Spectrum3D_PropertyChanged(object sender, AvaloniaPropertyChangedEventArgs e)
