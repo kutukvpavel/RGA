@@ -29,7 +29,16 @@ namespace Acquisition
             Device.ScanCompleted += Device_ScanCompleted;
             Device.ExceptionLog += (s, e) => { Console.WriteLine(e.LogString); };
 
-            CommandSet.SetEndAMU.Parameter = 65.ToString();
+            try
+            {
+                CommandSet.SetStartAMU.Parameter = args[1];
+                CommandSet.SetEndAMU.Parameter = args[2];
+                CommandSet.TurnHVON.Parameter = args[3];
+            }
+            catch (IndexOutOfRangeException)
+            {
+
+            }
 
             try
             {
