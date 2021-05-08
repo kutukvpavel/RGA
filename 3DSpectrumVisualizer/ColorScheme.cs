@@ -7,10 +7,12 @@ using Avalonia.Data.Converters;
 using Avalonia.Media;
 using System.Linq;
 using System.ComponentModel;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 
 namespace _3DSpectrumVisualizer
 {
-    public class ColorScheme : ObservableCollection<ObservableCollection<SKColor>>, INotifyPropertyChanged
+    public class ColorScheme : ObservableCollection<SKColorObservableCollection>, INotifyPropertyChanged
     {
         private int _SelectedIndex = 0;
 
@@ -33,4 +35,8 @@ namespace _3DSpectrumVisualizer
         }
         public ObservableCollection<SKColor> SelectedItem { get => this[_SelectedIndex]; }
     }
+
+    [JsonArray(ItemConverterType = typeof(SKColorJsonConverter))]
+    public class SKColorObservableCollection : ObservableCollection<SKColor>
+    { }
 }

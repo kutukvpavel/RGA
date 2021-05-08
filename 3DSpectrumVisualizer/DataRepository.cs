@@ -259,14 +259,22 @@ namespace _3DSpectrumVisualizer
                                 NumberStyles.AllowLeadingSign, 
                                 CurrentCulture))
                                 .ToArray();
-                            if (temp[1] <= 0) continue;
                             if (Path2D.Points.Length > 0)
                             {
-                                Path2D.LineTo(temp[0], temp[1]);
-                                LogPath2D.LineTo(temp[0], MathF.Log10(temp[1]));
+                                if (temp[1] <= 0)
+                                {
+                                    Path2D.LineTo(temp[0], Path2D.LastPoint.Y);
+                                    LogPath2D.LineTo(temp[0], LogPath2D.LastPoint.Y);
+                                }
+                                else
+                                {
+                                    Path2D.LineTo(temp[0], temp[1]);
+                                    LogPath2D.LineTo(temp[0], MathF.Log10(temp[1]));
+                                }
                             }
                             else
                             {
+                                if (temp[1] <= 0) continue;
                                 Path2D.MoveTo(temp[0], temp[1]);
                                 LogPath2D.MoveTo(temp[0], MathF.Log10(temp[1]));
                             }
