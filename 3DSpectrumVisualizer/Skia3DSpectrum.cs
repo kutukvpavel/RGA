@@ -27,27 +27,16 @@ namespace _3DSpectrumVisualizer
 
         #region Properties
         public SKPaint FontPaint { get; set; } = new SKPaint() 
-        { Color = SKColor.Parse("#ECE2E2"), StrokeWidth = 2, TextSize = 0.5f, TextScaleX = 1 };
-
-        private IEnumerable<DataRepository> _Repos = new List<DataRepository>();
-        public IEnumerable<DataRepository> DataRepositories
-        {
-            get { return _Repos; }
-            set
-            {
-                _Repos = value;
-            }
-        }
+        { Color = SKColor.Parse("#ECE2E2"), StrokeWidth = 2, TextSize = 0.7f, TextScaleX = 1 };
+        public IEnumerable<DataRepository> DataRepositories { get; set; } = new List<DataRepository>();
         public new SKColor Background
         {
-            get => Draw3DSpectrum.BackgroundColor;
-            set {
-                if (Draw3DSpectrum.BackgroundColor == value) return;
-                Draw3DSpectrum.BackgroundColor = value;
+            get => base.Background;
+            set
+            {
                 var grayscale = value.Red * 0.299 + value.Green * 0.587 + value.Blue * 0.114;
                 FontPaint.Color = SKColor.Parse(grayscale > 167 ? "#000000" : "#FFFFFF");
-                RaisePropertyChanged(_BackgroundProperty, new Avalonia.Data.Optional<SKColor>(),
-                    new Avalonia.Data.BindingValue<SKColor>(value));
+                base.Background = value;
             }
         }
         private float _ScalingFactor = 2;
@@ -77,20 +66,19 @@ namespace _3DSpectrumVisualizer
         public int PointDropCoef { 
             get
             {
-                int c = (int)(10 * (ScalingFactor * ScanSpacing) + 0.5f);
+                if (!DataRepositories.Any()) return -1;
+                int c = (int)(DataRepositories.Average(x => x.AverageScanTime) * 10 * (ScalingFactor * ScanSpacing) + 0.5f);
                 if (c > 10) c = -1;
                 else if (c < 2) c = 2;
                 return c;
             }
         }
-        public float TimeAxisInterval { get; set; } = 10;
+        public float TimeAxisInterval { get; set; } = 5;
 
         /*private readonly AvaloniaProperty<float> GeneralOpacityProperty =
             AvaloniaProperty.Register<Skia3DSpectrum, float>("GeneralOpacity");*/
         private readonly AvaloniaProperty<string> CoordinatesString =
             AvaloniaProperty.Register<Skia3DSpectrum, string>("CoordinatesString");
-        private readonly AvaloniaProperty<SKColor> _BackgroundProperty =
-            AvaloniaProperty.Register<Skia3DSpectrum, SKColor>("Background");
 
         #endregion
 
@@ -102,7 +90,7 @@ namespace _3DSpectrumVisualizer
         {
             RaisePropertyChanged<string>(CoordinatesString, new Avalonia.Data.Optional<string>(),
                 FormattableString.Invariant(
-                $"Rot: ({XRotate:F0}, {YRotate:F0}, {ZRotate:F0}); Tr: ({XTranslate:F0}, {YTranslate:F0}, {ZTranslate:F0}); Sc: ({ScalingFactor:F2}, {ScanSpacing:F2}, {ZScalingFactor:F3}); D.P.: {PointDropCoef}"));
+                $"Rot: ({XRotate:F0}, {YRotate:F0}, {ZRotate:F0}); Tr: ({XTranslate:F0}, {YTranslate:F0}, {ZTranslate:F0}); Sc: ({ScalingFactor:F2}, {ScanSpacing:F3}, {ZScalingFactor:F3}); D.P.: {PointDropCoef}"));
         }
 
         private void Skia3DSpectrum_PointerMoved(object sender, PointerEventArgs e)
@@ -140,7 +128,15 @@ namespace _3DSpectrumVisualizer
             else if (e.KeyModifiers.HasFlag(KeyModifiers.Shift))
                 ScanSpacing += ScanSpacing * delta;
             else
+            {
+                /*var point = e.GetCurrentPoint(this);
+                var pos = point.Position.Transform(new TranslateTransform(-Bounds.Width / 2, -Bounds.Height / 2).Value);*/
+                float correction = ScalingFactor;
                 ScalingFactor += ScalingFactor * delta;
+                correction = ScalingFactor / correction; //Correct translation matrix so that the pivot point of scaling is the center of the screen
+                XTranslate *= correction;
+                YTranslate *= correction;
+            }
             UpdateCoordsString();
             InvalidateVisual();
             e.Handled = true;
@@ -157,8 +153,6 @@ namespace _3DSpectrumVisualizer
 
         class Draw3DSpectrum : CustomDrawOp
         {
-            public static SKColor BackgroundColor { get; set; } = new SKColor(211, 215, 222);
-
             private readonly SK3dView View3D;
             private float Scaling;
             private float ScanSpacing;
@@ -193,26 +187,20 @@ namespace _3DSpectrumVisualizer
                 TimeAxisInterval = parent.TimeAxisInterval;
             }
 
-            public override bool Equals(ICustomDrawOperation other)
-            {
-                var o = (other as Draw3DSpectrum);
-                if (o == null) return false;
-                return (Scaling == o.Scaling) && (ZScaling == o.ZScaling) && (ScanSpacing == o.ScanSpacing) &&
-                    /*(Bounds == o.Bounds) &&*/ (XTranslate == o.XTranslate) && (YTranslate == o.YTranslate) &&
-                    (XRotate == o.XRotate) && (YRotate == o.YRotate) && (ZRotate == o.ZRotate);
-            }
-
             protected override void RenderCanvas(SKCanvas canvas)
             {
                 canvas.Clear(BackgroundColor);
                 canvas.Translate(XTranslate, YTranslate);
                 canvas.Scale(Scaling);
                 //Axes
-                var dataMaxLen = Data.MaxBy(x => x.Right).First();
+                if (!Data.Any()) return;
+                var dataMaxLen = Data.MaxBy(x => x.Right).FirstOrDefault();
+                if (dataMaxLen == null) return;
                 var dataMaxDuration = Data.Max(x => x.Duration);
+                var yOffset = dataMaxDuration * ScanSpacing / 2;
                 View3D.Save();
                 View3D.TranslateX(-dataMaxLen.MidX); //
-                View3D.TranslateY(dataMaxDuration * ScanSpacing / 2);
+                View3D.TranslateY(yOffset);
                 using (SKAutoCanvasRestore ar = new SKAutoCanvasRestore(canvas))
                 {
                     View3D.ApplyToCanvas(canvas);
@@ -224,8 +212,8 @@ namespace _3DSpectrumVisualizer
                 foreach (var item in Data)
                 {
                     View3D.Save();
-                    View3D.TranslateX(-item.MidX);
-                    View3D.TranslateY(item.Duration * ScanSpacing / 2);
+                    View3D.TranslateX(-dataMaxLen.MidX);
+                    View3D.TranslateY(yOffset);
                     for (int i = 0; i < item.Results.Count; i++)
                     {
                         if (i > 0) View3D.TranslateY(-ScanSpacing * 
@@ -269,8 +257,8 @@ namespace _3DSpectrumVisualizer
                 float stepScaled = step * ScanSpacing;
                 var min = Data.Min(x => x.StartTime);
                 var max = Data.Max(x => x.EndTime);
-                int ticks = (int)MathF.Floor((float)(max - min).TotalSeconds * ScanSpacing / step);
-                var marginStart = -FontPaint.TextSize * FontPaint.TextScaleX * 10;
+                int ticks = (int)MathF.Floor((float)(max - min).TotalSeconds / step);
+                var marginStart = -FontPaint.TextSize * FontPaint.TextScaleX * 5;
                 var marginEnd = 1 * FontPaint.TextSize * FontPaint.TextScaleX + dataMaxLen.Right;
                 for (int i = 0; i < ticks; i++)
                 {

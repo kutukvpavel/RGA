@@ -9,6 +9,7 @@ using System.Timers;
 using MoreLinq;
 using System.Threading.Tasks;
 using Avalonia.Data.Converters;
+using System.Diagnostics.CodeAnalysis;
 
 namespace _3DSpectrumVisualizer
 {
@@ -24,6 +25,7 @@ namespace _3DSpectrumVisualizer
             SKColor.Parse("#00FAF4F4"),
             SKColor.Parse("#8F7B7B7B")
         };
+        private static SKPointXEqualityComparer XEqualityComparer;
 
         public DataRepository(string folder, int pollPeriod = 3000)
         {
@@ -58,11 +60,27 @@ namespace _3DSpectrumVisualizer
             StrokeWidth = 0,
             IsAntialias = false
         };
+        private SKPaint _SectionPaintBuffer = new SKPaint() 
+        { 
+            Style = SKPaintStyle.Stroke, 
+            IsAntialias = true,
+            StrokeWidth = 1
+        };
+        public SKPaint SectionPaint
+        {
+            get
+            {
+                _SectionPaintBuffer.Color = PaintStroke.Color;
+                _SectionPaintBuffer.Shader = PaintStroke.Shader;
+                return _SectionPaintBuffer;
+            }
+        }
         public SKShader Shader { get; private set; }
         public ICollection<SKColor> ColorScheme { get; set; } = new SKColor[0];
         public DateTime StartTime { get; private set; }
         public DateTime EndTime { get; private set; }
         public float Duration { get => (float)(EndTime - StartTime).TotalSeconds; }
+        public float AverageScanTime { get; private set; } = 0;
         public float Min { get; private set; } = 1;
         public float Max { get; private set; } = 0;
         public float Left { get; private set; } = 1;
@@ -72,6 +90,7 @@ namespace _3DSpectrumVisualizer
         public bool LogarithmicIntensity { get; set; } = false;
         public SKPath MassAxis { get; private set; } = new SKPath();
         public SKPath TimeAxis { get; private set; } = new SKPath();
+        public Dictionary<float, SpectrumSection> Sections { get; private set; } = new Dictionary<float, SpectrumSection>();
 
         public bool Enabled
         {
@@ -177,6 +196,8 @@ namespace _3DSpectrumVisualizer
             PaintStroke.Shader = Shader;
         }
 
+        #endregion
+
         #region Private
 
         private DateTime _LastFileCreationTime = DateTime.MinValue;
@@ -202,13 +223,17 @@ namespace _3DSpectrumVisualizer
         }
         private void AddFile(FileInfo item)
         {
-            var ct = DateTime.Parse(item.Name.Replace('_', ' ')
-                .Replace("Scan", "", StringComparison.InvariantCultureIgnoreCase)
-                .Trim(),
-                CultureInfo.InvariantCulture
-                );
+            string ts = Path.GetFileNameWithoutExtension(item.Name).Replace('_', ' ')
+                .Replace("Scan", "", StringComparison.InvariantCultureIgnoreCase).Trim();
+            int timeIndex = ts.IndexOf(' ');
+            ts = new string(ts.Select((x, i) => i > timeIndex ? (x == '-' ? ':' : x) : x).ToArray()); //Replace dashes with colons for time string
+            var ct = DateTime.Parse(ts, CultureInfo.InvariantCulture);
             if (Results.Count == 0) StartTime = ct;
-            else EndTime = ct;
+            else
+            {
+                EndTime = ct;
+                AverageScanTime = Duration / (Results.Count + 1);
+            }
             var sr = new ScanResult(File.ReadLines(item.FullName), item.Name, ct);
             var b = sr.Path2D.TightBounds;
             bool updateShader = false;
@@ -239,6 +264,17 @@ namespace _3DSpectrumVisualizer
             if (updateMassAxis) RecalculateMassAxis();
             Results.Add(sr);
             RecalculateTimeAxis();
+            foreach (var point in sr.Path2D.Points.Select(x => new SKPoint(MathF.Round(x.X, 2), x.Y)).Distinct(XEqualityComparer))
+            {
+                if (!Sections.ContainsKey(point.X))
+                {
+                    Sections.Add(point.X, new SpectrumSection(point.Y));
+                }
+                else
+                {
+                    Sections[point.X].AddPoint((float)(sr.CreationTime - StartTime).TotalSeconds, point.Y);
+                }
+            }
         }
 
         private void RecalculateMassAxis()
@@ -341,6 +377,43 @@ namespace _3DSpectrumVisualizer
                     consequtiveEmptyLines = (i.Length > 0) ? 0 : (consequtiveEmptyLines + 1);
                 }
             }
+        }
+    }
+
+    public class SpectrumSection
+    {
+        public SpectrumSection()
+        { }
+        public SpectrumSection(float firstPoint) : this()
+        {
+            LinearPath.MoveTo(0, firstPoint);
+            LogPath.MoveTo(0, MathF.Log10(firstPoint));
+        }
+
+        #region Properties
+
+        public SKPath LinearPath { get; private set; } = new SKPath();
+
+        public SKPath LogPath { get; private set; } = new SKPath();
+
+        #endregion
+
+        public void AddPoint(float x, float y)
+        {
+            LinearPath.LineTo(x, y);
+        }
+    }
+
+    public class SKPointXEqualityComparer : IEqualityComparer<SKPoint>
+    {
+        public bool Equals([AllowNull] SKPoint x, [AllowNull] SKPoint y)
+        {
+            return x.X == y.X;
+        }
+
+        public int GetHashCode([DisallowNull] SKPoint obj)
+        {
+            return obj.X.GetHashCode();
         }
     }
 }
