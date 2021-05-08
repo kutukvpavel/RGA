@@ -97,40 +97,7 @@ namespace _3DSpectrumVisualizer
             return new Tuple<double[], double[], double[]>(x, y, z);
         }
 
-        public void RecalculateShader()
-        {
-            if (ColorScheme.Count > 1)
-            {
-                Shader = SKShader.CreateLinearGradient(
-                    new SKPoint(0, LogarithmicIntensity ? MathF.Log10(Min) : Min),
-                    new SKPoint(0, LogarithmicIntensity ? MathF.Log10(Max) : Max),
-                    ColorScheme.ToArray(),
-                    SKShaderTileMode.Clamp
-                    );
-            }
-            else
-            {
-                Shader = SKShader.CreateColor(FallbackColor);
-            }
-            if (LightGradient.Length > 1)
-            {
-                var lightShader = SKShader.CreateLinearGradient(
-                    new SKPoint(Left, 0),
-                    new SKPoint(Right, 0),
-                    LightGradient,
-                    SKShaderTileMode.Clamp
-                    );
-                Shader = SKShader.CreateCompose(Shader, lightShader, SKBlendMode.Darken);
-            }
-            PaintFill.Shader = Shader;
-            PaintStroke.Shader = Shader;
-        }
-
-        #region Private
-
-        private DateTime _LastFileCreationTime = DateTime.MinValue;
-        private readonly System.Timers.Timer _PollTimer;
-        private void _PollTimer_Elapsed(object sender, ElapsedEventArgs e)
+        public void UpdateData()
         {
             bool raiseDataAdded = false;
             bool lockTaken = Monitor.TryEnter(UpdateSynchronizingObject, 10);
@@ -167,6 +134,44 @@ namespace _3DSpectrumVisualizer
                 Monitor.Exit(UpdateSynchronizingObject);
             }
             if (raiseDataAdded) DataAdded?.Invoke(this, new EventArgs());
+        }
+
+        public void RecalculateShader()
+        {
+            if (ColorScheme.Count > 1)
+            {
+                Shader = SKShader.CreateLinearGradient(
+                    new SKPoint(0, LogarithmicIntensity ? MathF.Log10(Min) : Min),
+                    new SKPoint(0, LogarithmicIntensity ? MathF.Log10(Max) : Max),
+                    ColorScheme.ToArray(),
+                    SKShaderTileMode.Clamp
+                    );
+            }
+            else
+            {
+                Shader = SKShader.CreateColor(FallbackColor);
+            }
+            if (LightGradient.Length > 1)
+            {
+                var lightShader = SKShader.CreateLinearGradient(
+                    new SKPoint(Left, 0),
+                    new SKPoint(Right, 0),
+                    LightGradient,
+                    SKShaderTileMode.Clamp
+                    );
+                Shader = SKShader.CreateCompose(Shader, lightShader, SKBlendMode.Darken);
+            }
+            PaintFill.Shader = Shader;
+            PaintStroke.Shader = Shader;
+        }
+
+        #region Private
+
+        private DateTime _LastFileCreationTime = DateTime.MinValue;
+        private readonly System.Timers.Timer _PollTimer;
+        private void _PollTimer_Elapsed(object sender, ElapsedEventArgs e)
+        {
+            UpdateData();
         }
         private bool FileIsInUse(FileInfo file)
         {

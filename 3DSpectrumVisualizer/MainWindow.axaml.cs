@@ -24,6 +24,11 @@ namespace _3DSpectrumVisualizer
 #endif
         }
 
+        public void InvalidateSpectrum(object sender, System.EventArgs e)
+        {
+             Spectrum3D.InvalidateVisual();
+        }
+
         private static CsvConfiguration DumpConfig = new CsvConfiguration(CultureInfo.CurrentCulture)
         {
             Delimiter = CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator == "," ? ";" : ","

@@ -47,11 +47,13 @@ namespace _3DSpectrumVisualizer
                 }
                 Repositories.Add(dr);
             }
+            var mainWindow = new MainWindow();
             foreach (var item in Repositories)
             {
+                item.DataAdded += mainWindow.InvalidateSpectrum;
+                item.UpdateData();
                 item.Enabled = true;
             }
-            var mainWindow = new MainWindow();
             app.Run(mainWindow);
         }
 
@@ -78,7 +80,5 @@ namespace _3DSpectrumVisualizer
         public static List<DataRepository> Repositories { get; } = new List<DataRepository>();
 
         public static object UpdateSynchronizingObject { get; } = new object();
-
-        //public static GnuPlot GnuPlotInstance { get; } = new GnuPlot(@"C:\gnuplot_new\bin");
     }
 }
