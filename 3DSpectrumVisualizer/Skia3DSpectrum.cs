@@ -44,6 +44,8 @@ namespace _3DSpectrumVisualizer
             set {
                 if (Draw3DSpectrum.BackgroundColor == value) return;
                 Draw3DSpectrum.BackgroundColor = value;
+                var grayscale = value.Red * 0.299 + value.Green * 0.587 + value.Blue * 0.114;
+                FontPaint.Color = SKColor.Parse(grayscale > 167 ? "#000000" : "#FFFFFF");
                 RaisePropertyChanged(_BackgroundProperty, new Avalonia.Data.Optional<SKColor>(),
                     new Avalonia.Data.BindingValue<SKColor>(value));
             }
@@ -81,6 +83,7 @@ namespace _3DSpectrumVisualizer
                 return c;
             }
         }
+        public float TimeAxisInterval { get; set; } = 10;
 
         /*private readonly AvaloniaProperty<float> GeneralOpacityProperty =
             AvaloniaProperty.Register<Skia3DSpectrum, float>("GeneralOpacity");*/
@@ -168,6 +171,7 @@ namespace _3DSpectrumVisualizer
             private int DropCoef;
             IEnumerable<DataRepository> Data;
             private SKPaint FontPaint;
+            private float TimeAxisInterval;
 
             public Draw3DSpectrum(Skia3DSpectrum parent) : base(parent)
             {
@@ -186,6 +190,7 @@ namespace _3DSpectrumVisualizer
                 View3D.RotateZDegrees(ZRotate);
                 Data = parent.DataRepositories;
                 FontPaint = parent.FontPaint;
+                TimeAxisInterval = parent.TimeAxisInterval;
             }
 
             public override bool Equals(ICustomDrawOperation other)
@@ -202,41 +207,34 @@ namespace _3DSpectrumVisualizer
                 canvas.Clear(BackgroundColor);
                 canvas.Translate(XTranslate, YTranslate);
                 canvas.Scale(Scaling);
+                //Axes
                 var dataMaxLen = Data.MaxBy(x => x.Right).First();
-                var axisLabels = string.Join(' ', Enumerable.Range(0, (int)MathF.Ceiling(dataMaxLen.Right)));
-                using (SKAutoCanvasRestore ar1 = new SKAutoCanvasRestore(canvas))
+                var dataMaxDuration = Data.Max(x => x.Duration);
+                View3D.Save();
+                View3D.TranslateX(-dataMaxLen.MidX); //
+                View3D.TranslateY(dataMaxDuration * ScanSpacing / 2);
+                using (SKAutoCanvasRestore ar = new SKAutoCanvasRestore(canvas))
                 {
-                    View3D.Save();
-                    View3D.TranslateX(-dataMaxLen.MidX);
-                    View3D.TranslateY(dataMaxLen.Results.Count * ScanSpacing / 2);
                     View3D.ApplyToCanvas(canvas);
-                    var shift = FontPaint.TextSize * FontPaint.TextScaleX / 3;
-                    var margin = FontPaint.TextSize * 1.1f;
-                    for (int i = 0; i < dataMaxLen.Right; i++)
-                    {
-                        var s = i.ToString();
-                        canvas.DrawText(s,
-                            i - shift * s.Length,
-                            -margin, FontPaint);
-                        canvas.DrawText(s,
-                            i - shift * s.Length,
-                            margin + dataMaxLen.Results.Count * ScanSpacing, FontPaint);
-                    }
-                    View3D.Restore();
+                    RenderMassAxis(canvas, dataMaxLen, dataMaxDuration);
+                    RenderTimeAxis(canvas, dataMaxLen);
                 }
+                View3D.Restore();
+                //Data
                 foreach (var item in Data)
                 {
                     View3D.Save();
                     View3D.TranslateX(-item.MidX);
-                    View3D.TranslateY(item.Results.Count * ScanSpacing / 2);
+                    View3D.TranslateY(item.Duration * ScanSpacing / 2);
                     for (int i = 0; i < item.Results.Count; i++)
                     {
-                        View3D.TranslateY(-ScanSpacing);
+                        if (i > 0) View3D.TranslateY(-ScanSpacing * 
+                            (float)(item.Results[i].CreationTime - item.Results[i - 1].CreationTime).TotalSeconds);
                         if (DropCoef > 1) if (i % DropCoef == 0) continue;
                         var scan = item.Results[i];
                         var path = item.LogarithmicIntensity ? scan.LogPath2D : scan.Path2D;
                         if (path == null) continue;
-                        using (SKAutoCanvasRestore ar2 = new SKAutoCanvasRestore(canvas))
+                        using (SKAutoCanvasRestore ar = new SKAutoCanvasRestore(canvas))
                         {
                             View3D.Save();
                             View3D.RotateXDegrees(90);
@@ -247,6 +245,39 @@ namespace _3DSpectrumVisualizer
                         }
                     }
                     View3D.Restore();
+                }
+            }
+
+            private void RenderMassAxis(SKCanvas canvas, DataRepository dataMaxLen, float dataMaxDuration)
+            {
+                var axisLabels = string.Join(' ', Enumerable.Range(0, (int)MathF.Ceiling(dataMaxLen.Right)));
+                var shift = FontPaint.TextSize * FontPaint.TextScaleX / 3;
+                var marginStart = -FontPaint.TextSize * 1.1f;
+                var marginEnd = -marginStart + dataMaxDuration * ScanSpacing;
+                for (int i = 0; i < dataMaxLen.Right; i++)
+                {
+                    var s = i.ToString();
+                    var x = i - shift * s.Length;
+                    canvas.DrawText(s, x, marginStart, FontPaint);
+                    canvas.DrawText(s, x, marginEnd, FontPaint);
+                }
+            }
+
+            private void RenderTimeAxis(SKCanvas canvas, DataRepository dataMaxLen)
+            {
+                int step = (int)MathF.Ceiling(FontPaint.TextSize * TimeAxisInterval / ScanSpacing); //in seconds, since default Y unit is 1S
+                float stepScaled = step * ScanSpacing;
+                var min = Data.Min(x => x.StartTime);
+                var max = Data.Max(x => x.EndTime);
+                int ticks = (int)MathF.Floor((float)(max - min).TotalSeconds * ScanSpacing / step);
+                var marginStart = -FontPaint.TextSize * FontPaint.TextScaleX * 10;
+                var marginEnd = 1 * FontPaint.TextSize * FontPaint.TextScaleX + dataMaxLen.Right;
+                for (int i = 0; i < ticks; i++)
+                {
+                    var s = min.AddSeconds(i * step).ToLongTimeString();
+                    var y = i * stepScaled;
+                    canvas.DrawText(s, marginStart, y, FontPaint);
+                    canvas.DrawText(s, marginEnd, y, FontPaint);
                 }
             }
         }

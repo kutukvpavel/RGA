@@ -27,6 +27,8 @@ namespace _3DSpectrumVisualizer
 
         public DataRepository(string folder, int pollPeriod = 3000)
         {
+            StartTime = DateTime.Now;
+            EndTime = StartTime;
             Folder = folder;
             _PollTimer = new System.Timers.Timer(pollPeriod) { AutoReset = true, Enabled = false };
             _PollTimer.Elapsed += _PollTimer_Elapsed;
@@ -35,6 +37,8 @@ namespace _3DSpectrumVisualizer
         }
 
         public event EventHandler DataAdded;
+
+        #region Properties
 
         public object UpdateSynchronizingObject { get; set; } = new object();
         //public bool Throttle { get; set; } = false;
@@ -56,6 +60,9 @@ namespace _3DSpectrumVisualizer
         };
         public SKShader Shader { get; private set; }
         public ICollection<SKColor> ColorScheme { get; set; } = new SKColor[0];
+        public DateTime StartTime { get; private set; }
+        public DateTime EndTime { get; private set; }
+        public float Duration { get => (float)(EndTime - StartTime).TotalSeconds; }
         public float Min { get; private set; } = 1;
         public float Max { get; private set; } = 0;
         public float Left { get; private set; } = 1;
@@ -64,12 +71,17 @@ namespace _3DSpectrumVisualizer
         public float MidY { get => (Max - Min) / 2; }
         public bool LogarithmicIntensity { get; set; } = false;
         public SKPath MassAxis { get; private set; } = new SKPath();
+        public SKPath TimeAxis { get; private set; } = new SKPath();
 
         public bool Enabled
         {
             get { return _PollTimer.Enabled; }
             set { if (value) _PollTimer.Start(); else _PollTimer.Stop(); }
         }
+
+        #endregion
+
+        #region Public Methods
 
         public Tuple<double[], double[], double[]> Get3DPoints()
         {
@@ -125,6 +137,8 @@ namespace _3DSpectrumVisualizer
             PaintFill.Shader = Shader;
             PaintStroke.Shader = Shader;
         }
+
+        #endregion
 
         #region Private
 
@@ -185,7 +199,14 @@ namespace _3DSpectrumVisualizer
         }
         private void AddFile(FileInfo item)
         {
-            var sr = new ScanResult(File.ReadLines(item.FullName), item.Name);
+            var ct = DateTime.Parse(item.Name.Replace('_', ' ')
+                .Replace("Scan", "", StringComparison.InvariantCultureIgnoreCase)
+                .Trim(),
+                CultureInfo.InvariantCulture
+                );
+            if (Results.Count == 0) StartTime = ct;
+            else EndTime = ct;
+            var sr = new ScanResult(File.ReadLines(item.FullName), item.Name, ct);
             var b = sr.Path2D.TightBounds;
             bool updateShader = false;
             bool updateMassAxis = false;
@@ -214,12 +235,19 @@ namespace _3DSpectrumVisualizer
             if (updateShader) RecalculateShader();
             if (updateMassAxis) RecalculateMassAxis();
             Results.Add(sr);
+            RecalculateTimeAxis();
         }
 
         private void RecalculateMassAxis()
         {
             MassAxis.Reset();
             MassAxis.LineTo(Right, 0);
+        }
+
+        private void RecalculateTimeAxis()
+        {
+            TimeAxis.Reset();
+            TimeAxis.LineTo(0, Duration);
         }
 
         #endregion
@@ -235,10 +263,12 @@ namespace _3DSpectrumVisualizer
         public ScanResult()
         {
             Name = PlacholderName;
+            CreationTime = DateTime.Now;
         }
-        public ScanResult(IEnumerable<string> rawLines, string name)
+        public ScanResult(IEnumerable<string> rawLines, string name, DateTime creationTime)
         {
             Name = name;
+            CreationTime = creationTime;
             Path2D = new SKPath();
             LogPath2D = new SKPath();
             Parse(rawLines);
@@ -247,6 +277,7 @@ namespace _3DSpectrumVisualizer
         public SKPath Path2D { get; private set; }
         public SKPath LogPath2D { get; private set; }
         public string Name { get; }
+        public DateTime CreationTime { get; }
 
         private void Parse(IEnumerable<string> rawLines)
         {

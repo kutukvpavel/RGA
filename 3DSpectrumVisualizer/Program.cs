@@ -126,8 +126,6 @@ namespace _3DSpectrumVisualizer
         public static List<DataRepository> Repositories { get; } = new List<DataRepository>();
 
         public static object UpdateSynchronizingObject { get; } = new object();
-
-        //public static GnuPlot GnuPlotInstance { get; } = new GnuPlot(@"C:\gnuplot_new\bin");
     }
 
     public class SKColorJsonConverter : JsonConverter<SKColor>
