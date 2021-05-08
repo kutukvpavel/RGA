@@ -64,8 +64,7 @@ namespace _3DSpectrumVisualizer
         private SKPaint _SectionPaintBuffer = new SKPaint() 
         { 
             Style = SKPaintStyle.Stroke, 
-            IsAntialias = true,
-            StrokeWidth = 1
+            IsAntialias = true
         };
         public SKPaint SectionPaint
         {
@@ -73,6 +72,7 @@ namespace _3DSpectrumVisualizer
             {
                 _SectionPaintBuffer.Color = PaintStroke.Color;
                 _SectionPaintBuffer.Shader = PaintStroke.Shader;
+                _SectionPaintBuffer.StrokeWidth = LogarithmicIntensity ? 0.1f : 1f;
                 return _SectionPaintBuffer;
             }
         }
@@ -404,6 +404,7 @@ namespace _3DSpectrumVisualizer
         public void AddPoint(float x, float y)
         {
             LinearPath.LineTo(x, y);
+            LogPath.LineTo(x, MathF.Log10(y));
         }
     }
 

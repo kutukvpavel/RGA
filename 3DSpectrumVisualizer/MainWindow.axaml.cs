@@ -236,6 +236,11 @@ namespace _3DSpectrumVisualizer
             }
         }
 
+        private void OnSectionAutoscaleClick(object sender, RoutedEventArgs e)
+        {
+            SectionPlot.Autoscale();
+        }
+
         private void OnRestore3DViewClick(object sender, RoutedEventArgs e)
         {
             Spectrum3D.XTranslate = Last3DCorrds[0];

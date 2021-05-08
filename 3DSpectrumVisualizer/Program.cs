@@ -65,6 +65,28 @@ namespace _3DSpectrumVisualizer
             Serialize(ColorSchemes, ColorSerializationName, ColorSerializationConverter);
         }
 
+        public static ColorScheme ColorSchemes { get; private set; } = new ColorScheme()
+        {
+            new SKColorObservableCollection()
+            {
+                SKColor.Parse("#C50D17F4"),
+                SKColor.Parse("#C013E90F"),
+                SKColor.Parse("#C5EF0F12")
+            },
+            new SKColorObservableCollection()
+            {
+                SKColor.Parse("#C3E511E9"),
+                SKColor.Parse("#C8F1DC0F"),
+                SKColor.Parse("#D40DECDD")
+            }
+        };
+
+        public static List<DataRepository> Repositories { get; } = new List<DataRepository>();
+
+        public static object UpdateSynchronizingObject { get; } = new object();
+
+        #region Serialization
+
         public static void Serialize<T>(T obj, string name, JsonConverter converter = null)
         {
             try
@@ -74,7 +96,7 @@ namespace _3DSpectrumVisualizer
             }
             catch (Exception)
             {
-                
+
             }
         }
 
@@ -111,26 +133,6 @@ namespace _3DSpectrumVisualizer
             new JsonSerializerOptions() { PropertyNameCaseInsensitive = true };*/
 
         public static JsonConverter ColorSerializationConverter = new SKColorJsonConverter();
-
-        public static ColorScheme ColorSchemes { get; private set; } = new ColorScheme()
-        {
-            new SKColorObservableCollection()
-            {
-                SKColor.Parse("#C50D17F4"),
-                SKColor.Parse("#C013E90F"),
-                SKColor.Parse("#C5EF0F12")
-            },
-            new SKColorObservableCollection()
-            {
-                SKColor.Parse("#C3E511E9"),
-                SKColor.Parse("#C8F1DC0F"),
-                SKColor.Parse("#D40DECDD")
-            }
-        };
-
-        public static List<DataRepository> Repositories { get; } = new List<DataRepository>();
-
-        public static object UpdateSynchronizingObject { get; } = new object();
     }
 
     public class SKColorJsonConverter : JsonConverter<SKColor>
@@ -145,4 +147,6 @@ namespace _3DSpectrumVisualizer
             writer.WriteValue(value.ToString());
         }
     }
+
+    #endregion
 }

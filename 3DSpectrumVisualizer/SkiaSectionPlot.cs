@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Text;
 using Avalonia.Input;
 using Avalonia;
+using System.Linq;
 
 namespace _3DSpectrumVisualizer
 {
@@ -35,15 +36,31 @@ namespace _3DSpectrumVisualizer
 
         #endregion
 
-        protected override string UpdateCoordinatesString()
+        public void Autoscale()
         {
-            return FormattableString.Invariant(
-                $"Tr: ({XTranslate:F1}, {YTranslate:F1}); Sc: ({XScaling:F3}, {YScaling:F3})");
+            float max = DataRepositories.Max(x => x.Max);
+            float min = DataRepositories.Min(x => x.Min);
+            if (DataRepositories.Any(x => x.LogarithmicIntensity))
+            {
+                max = MathF.Log10(max);
+                min = MathF.Log10(min);
+            }
+            YScaling = (float)Bounds.Height * 0.98f / (max - min);
+            XScaling = (float)Bounds.Width / DataRepositories.Max(x => x.Duration);
+            XTranslate = 0;
+            YTranslate = min * YScaling;
+            InvalidateVisual();
         }
 
         #region Private
 
         private Point _LastPoint;
+
+        protected override string UpdateCoordinatesString()
+        {
+            return FormattableString.Invariant(
+                $"Tr: ({XTranslate:F1}, {YTranslate:F1}); Sc: ({XScaling:F3}, {YScaling:F3})");
+        }
 
         protected override CustomDrawOp PrepareCustomDrawingOperation()
         {
@@ -107,7 +124,7 @@ namespace _3DSpectrumVisualizer
             public DrawSectionPlot(SkiaSectionPlot parent) : base(parent)
             {
                 XTr = parent.XTranslate;
-                YTr = parent.YTranslate + (float)parent.Bounds.Height * 0.9f;
+                YTr = parent.YTranslate + (float)parent.Bounds.Height * 0.99f;
                 XSc = parent.XScaling;
                 YSc = -parent.YScaling;
                 AMU = MathF.Round(parent.AMU, parent.AMURoundingDigits);
