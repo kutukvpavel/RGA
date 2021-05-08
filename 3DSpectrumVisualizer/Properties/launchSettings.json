@@ -2,7 +2,7 @@
   "profiles": {
     "3DSpectrumVisualizer": {
       "commandName": "Project",
-      "commandLineArgs": "\"C:\\Users\\Admin\\Source\\Repos\\kutukvpavel\\RGA\\Acquisition\\bin\\x64\\Release\\netcoreapp3.1\""
+      "commandLineArgs": "\"E:\\Doc\\rga_samples\""
     }
   }
 }

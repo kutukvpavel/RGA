@@ -33,6 +33,7 @@ namespace _3DSpectrumVisualizer
         {
             Delimiter = CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator == "," ? ";" : ","
         };
+        private const string BackgroundSerializationName = "background";
 
         private Skia3DSpectrum Spectrum3D;
         private CheckBox LogarithmicIntensity;
@@ -51,7 +52,8 @@ namespace _3DSpectrumVisualizer
             Spectrum3D.DataRepositories = Program.Repositories;
             Spectrum3D.PropertyChanged += Spectrum3D_PropertyChanged;
             Spectrum3D.PointerPressed += Spectrum3D_PointerPressed;
-            Spectrum3D.Background = SKColor.Parse("#0E0D0D");
+            Spectrum3D.Background = Program.Deserialize(BackgroundSerializationName, SKColor.Parse("#0E0D0D"),
+                Program.ColorSerializationConverter);
             GLLabel = this.FindControl<Label>("GLLabel");
             CoordsLabel = this.FindControl<Label>("CoordsLabel");
             LstColors = this.FindControl<ListBox>("lstColors");
@@ -59,6 +61,11 @@ namespace _3DSpectrumVisualizer
             LightEmulation.Value = DataRepository.LightGradient[1].Alpha;
             LogarithmicIntensity = this.FindControl<CheckBox>("chkLog10");
             LogarithmicIntensity.Click += OnLogarithmicChecked;
+        }
+
+        private void OnClosing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            Program.Serialize(Spectrum3D.Background, BackgroundSerializationName, Program.ColorSerializationConverter);
         }
 
         #region UI events
