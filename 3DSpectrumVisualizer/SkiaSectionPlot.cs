@@ -16,6 +16,9 @@ namespace _3DSpectrumVisualizer
         }
 
         #region Properties
+
+        public int AMURoundingDigits { get; set; } = 1;
+
         public bool DisableRendering { get; set; } = false;
 
         public float AMU { get; set; } = 1;
@@ -31,6 +34,12 @@ namespace _3DSpectrumVisualizer
         public float YScaling { get; set; } = 1;
 
         #endregion
+
+        protected override string UpdateCoordinatesString()
+        {
+            return FormattableString.Invariant(
+                $"Tr: ({XTranslate:F1}, {YTranslate:F1}); Sc: ({XScaling:F3}, {YScaling:F3})");
+        }
 
         #region Private
 
@@ -62,6 +71,7 @@ namespace _3DSpectrumVisualizer
                 correction = XScaling / correction;
                 XTranslate *= correction;
             }
+            RaiseCoordsChanged();
             InvalidateVisual();
             e.Handled = true;
         }
@@ -74,9 +84,10 @@ namespace _3DSpectrumVisualizer
             {
                 XTranslate += (float)(pos.X - _LastPoint.X);
                 YTranslate += (float)(pos.Y - _LastPoint.Y);
-                _LastPoint = pos;
+                RaiseCoordsChanged();
                 InvalidateVisual();
             }
+            _LastPoint = pos;
             e.Handled = true;
         }
 
@@ -96,10 +107,10 @@ namespace _3DSpectrumVisualizer
             public DrawSectionPlot(SkiaSectionPlot parent) : base(parent)
             {
                 XTr = parent.XTranslate;
-                YTr = parent.YTranslate + (float)parent.Bounds.Height;
+                YTr = parent.YTranslate + (float)parent.Bounds.Height * 0.9f;
                 XSc = parent.XScaling;
                 YSc = -parent.YScaling;
-                AMU = MathF.Round(parent.AMU, 2);
+                AMU = MathF.Round(parent.AMU, parent.AMURoundingDigits);
                 Data = parent.DataRepositories;
             }
 

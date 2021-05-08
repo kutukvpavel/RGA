@@ -16,9 +16,6 @@ namespace _3DSpectrumVisualizer
     {
         public static float ScalingLowerLimit { get; set; } = 0.001f;
 
-        public static IValueConverter ColorConverter = new FuncValueConverter<SKColor, Color>(
-            (x) => Color.FromArgb(x.Alpha, x.Red, x.Green, x.Blue));
-
         public Skia3DSpectrum() : base()
         {
             PointerMoved += Skia3DSpectrum_PointerMoved;
@@ -75,22 +72,16 @@ namespace _3DSpectrumVisualizer
         }
         public float TimeAxisInterval { get; set; } = 5;
 
-        /*private readonly AvaloniaProperty<float> GeneralOpacityProperty =
-            AvaloniaProperty.Register<Skia3DSpectrum, float>("GeneralOpacity");*/
-        private readonly AvaloniaProperty<string> CoordinatesString =
-            AvaloniaProperty.Register<Skia3DSpectrum, string>("CoordinatesString");
-
         #endregion
 
         #region Private
 
         private Point _LastPoint;
 
-        private void UpdateCoordsString()
+        protected override string UpdateCoordinatesString()
         {
-            RaisePropertyChanged<string>(CoordinatesString, new Avalonia.Data.Optional<string>(),
-                FormattableString.Invariant(
-                $"Rot: ({XRotate:F0}, {YRotate:F0}, {ZRotate:F0}); Tr: ({XTranslate:F0}, {YTranslate:F0}, {ZTranslate:F0}); Sc: ({ScalingFactor:F2}, {ScanSpacing:F3}, {ZScalingFactor:F3}); D.P.: {PointDropCoef}"));
+            return FormattableString.Invariant(
+                $"Rot: ({XRotate:F0}, {YRotate:F0}, {ZRotate:F0}); Tr: ({XTranslate:F0}, {YTranslate:F0}, {ZTranslate:F0}); Sc: ({ScalingFactor:F2}, {ScanSpacing:F3}, {ZScalingFactor:F3}); D.P.: {PointDropCoef}");
         }
 
         private void Skia3DSpectrum_PointerMoved(object sender, PointerEventArgs e)
@@ -114,8 +105,8 @@ namespace _3DSpectrumVisualizer
             _LastPoint = pos;
             if (invalidate)
             {
+                RaiseCoordsChanged();
                 InvalidateVisual();
-                UpdateCoordsString();
             }
             e.Handled = true;
         }
@@ -137,7 +128,7 @@ namespace _3DSpectrumVisualizer
                 XTranslate *= correction;
                 YTranslate *= correction;
             }
-            UpdateCoordsString();
+            RaiseCoordsChanged();
             InvalidateVisual();
             e.Handled = true;
         }

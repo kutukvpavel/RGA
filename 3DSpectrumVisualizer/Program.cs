@@ -9,6 +9,7 @@ using System.Linq;
 using System.IO;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
+using Avalonia.Data.Converters;
 
 namespace _3DSpectrumVisualizer
 {
@@ -29,6 +30,8 @@ namespace _3DSpectrumVisualizer
 
         public static void AppMain(Application app, string[] args)
         {
+            MainWindow.AMUValueConverter = new FuncValueConverter<double, string>(x => MathF.Round((float)x, 1).ToString("F1"));
+            DataRepository.AMURoundingDigits = 1;
             ColorSchemes = Deserialize(ColorSerializationName, ColorSchemes, ColorSerializationConverter);
             string filter = "*.csv";
             if (args[0].StartsWith("-f"))
@@ -41,7 +44,7 @@ namespace _3DSpectrumVisualizer
                 var dr = new DataRepository(args[i]) 
                 { 
                     Filter = filter, 
-                    UpdateSynchronizingObject = Program.UpdateSynchronizingObject 
+                    UpdateSynchronizingObject = Program.UpdateSynchronizingObject
                 };
                 if (ColorSchemes.Count > i)
                 {

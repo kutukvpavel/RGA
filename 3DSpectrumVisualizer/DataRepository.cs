@@ -15,6 +15,7 @@ namespace _3DSpectrumVisualizer
 {
     public class DataRepository
     {
+        public static int AMURoundingDigits { get; set; } = 1;
         public static ParallelOptions ParallelOptions { get; set; } = new ParallelOptions()
         {
             MaxDegreeOfParallelism = 4
@@ -264,7 +265,9 @@ namespace _3DSpectrumVisualizer
             if (updateMassAxis) RecalculateMassAxis();
             Results.Add(sr);
             RecalculateTimeAxis();
-            foreach (var point in sr.Path2D.Points.Select(x => new SKPoint(MathF.Round(x.X, 2), x.Y)).Distinct(XEqualityComparer))
+            foreach (var point in sr.Path2D.Points
+                .Select(x => new SKPoint(MathF.Round(x.X, AMURoundingDigits), x.Y))
+                .Distinct(XEqualityComparer))
             {
                 if (!Sections.ContainsKey(point.X))
                 {

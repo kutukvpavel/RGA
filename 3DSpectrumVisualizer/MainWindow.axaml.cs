@@ -11,11 +11,15 @@ using System.IO;
 using System.Globalization;
 using SkiaSharp;
 using System.Linq;
+using Avalonia.Data.Converters;
+using System;
 
 namespace _3DSpectrumVisualizer
 {
     public class MainWindow : Window
     {
+        public static IValueConverter AMUValueConverter { get; set; }
+
         public MainWindow()
         {
             InitializeComponent();
@@ -28,7 +32,7 @@ namespace _3DSpectrumVisualizer
                 Spectrum3D.Background, typeof(Color), null, CultureInfo.CurrentCulture);
         }
 
-        public void InvalidateSpectrum(object sender, System.EventArgs e)
+        public void InvalidateSpectrum(object sender, EventArgs e)
         {
              Spectrum3D.InvalidateVisual();
         }
@@ -48,6 +52,8 @@ namespace _3DSpectrumVisualizer
         private Slider LightEmulation;
         private float[] Last3DCorrds = new float[] { 10, 10, 15, 0, 45, 4, 0.01f, 0.1f };
         private SkiaSectionPlot SectionPlot;
+        private Label SectionCoords;
+        private Slider SectionAMUSlider;
 
         private void InitializeComponent()
         {
@@ -68,6 +74,11 @@ namespace _3DSpectrumVisualizer
             LogarithmicIntensity.Click += OnLogarithmicChecked;
             SectionPlot = this.FindControl<SkiaSectionPlot>("SpectrumSection");
             SectionPlot.DataRepositories = Program.Repositories;
+            SectionPlot.PropertyChanged += SectionPlot_PropertyChanged;
+            SectionPlot.AMURoundingDigits = DataRepository.AMURoundingDigits;
+            SectionCoords = this.FindControl<Label>("lblSectionCoords");
+            SectionAMUSlider = this.FindControl<Slider>("SectionAMUSlider");
+            SectionAMUSlider.PropertyChanged += SectionAMUSlider_PropertyChanged;
         }
 
         private void OnClosing(object sender, System.ComponentModel.CancelEventArgs e)
@@ -76,6 +87,16 @@ namespace _3DSpectrumVisualizer
         }
 
         #region UI events
+
+        private void SectionAMUSlider_PropertyChanged(object sender, AvaloniaPropertyChangedEventArgs e)
+        {
+            if (!IsInitialized) return;
+            if (e.Property == Slider.ValueProperty)
+            {
+                if (e.NewValue == null || !e.IsEffectiveValueChange) return;
+                SectionPlot.InvalidateVisual();
+            }
+        }
 
         private void OnTimeAxisSliderChanged(object sender, AvaloniaPropertyChangedEventArgs e)
         {
@@ -88,7 +109,7 @@ namespace _3DSpectrumVisualizer
                     Spectrum3D.TimeAxisInterval = (float)(double)e.NewValue;
                     Spectrum3D.InvalidateVisual();
                 }
-                catch (System.Exception)
+                catch (Exception)
                 {
 
                 }
@@ -109,8 +130,9 @@ namespace _3DSpectrumVisualizer
                         item.RecalculateShader();
                     }
                     Spectrum3D.InvalidateVisual();
+                    SectionPlot.InvalidateVisual();
                 }
-                catch (System.Exception)
+                catch (Exception)
                 {
 
                 }
@@ -129,8 +151,9 @@ namespace _3DSpectrumVisualizer
                     Spectrum3D.Background = SKColor.Parse(s);
                     SectionPlot.Background = Spectrum3D.Background;
                     Spectrum3D.InvalidateVisual();
+                    SectionPlot.InvalidateVisual();
                 }
-                catch (System.Exception)
+                catch (Exception)
                 {
                     
                 }
@@ -146,6 +169,7 @@ namespace _3DSpectrumVisualizer
                 item.RecalculateShader();
             }
             Spectrum3D.InvalidateVisual();
+            SectionPlot.InvalidateVisual();
         }
 
         private void OnLightSliderChanged(object sender, AvaloniaPropertyChangedEventArgs e)
@@ -165,11 +189,16 @@ namespace _3DSpectrumVisualizer
                     }
                     Spectrum3D.InvalidateVisual();
                 }
-                catch (System.Exception)
+                catch (Exception)
                 {
 
                 }
             }
+        }
+
+        private void SectionPlot_PropertyChanged(object sender, AvaloniaPropertyChangedEventArgs e)
+        {
+            if (e.Property.Name == "CoordinatesString") SectionCoords.Content = e.NewValue;
         }
 
         private void Spectrum3D_PropertyChanged(object sender, AvaloniaPropertyChangedEventArgs e)

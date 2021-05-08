@@ -46,7 +46,7 @@
 					<Slider Minimum="1.5" Maximum="10" x:Name="TimeAxisSlider" PropertyChanged="OnTimeAxisSliderChanged" Value="3"></Slider>
 					<TextBlock>Background</TextBlock>
 					<colorpicker:ColorButton x:Name="BackgroundPicker" Margin="0,10,0,10" PropertyChanged="OnBackgroundEdited"
-						Color="{Binding #Spectrum3D.Background, Converter={x:Static local:Skia3DSpectrum.ColorConverter}}"></colorpicker:ColorButton>
+						Color="{Binding #Spectrum3D.Background, Converter={x:Static local:SkiaCustomControl.ColorConverter}}"></colorpicker:ColorButton>
 					<TextBlock>Lighting Emulation</TextBlock>
 					<Slider x:Name="sldLight" Maximum="255" PropertyChanged="OnLightSliderChanged"></Slider>
 					<TextBlock Margin="0,0,0,10">Color Scheme</TextBlock>
@@ -82,16 +82,16 @@
 		</StackPanel>
 		<local:Skia3DSpectrum x:Name="Spectrum3D" Grid.Row="1" Grid.Column="1"></local:Skia3DSpectrum>
 		<Expander ExpandDirection="Up" Grid.Row="2" Grid.Column="1"
-				  IsExpanded="{Binding !#SpectrumSection.DisableRendering, Mode=OneWayToSource}" 
+				  IsExpanded="{Binding !#SpectrumSection.DisableRendering, Mode=TwoWay}"
 				  Header="Single AMU Section" x:Name="SpectrumSectionExpander">
 			<DockPanel>
 				<DockPanel DockPanel.Dock="Top" LastChildFill="True">
 					<TextBlock DockPanel.Dock="Right" Margin="10,10,10,10" FontSize="16"
-							   Text="{Binding #SectionAMUSlider.Value}"></TextBlock>
-					<Slider SmallChange="0.1" LargeChange="1" DockPanel.Dock="Left" 
-							TickFrequency="0.1" IsSnapToTickEnabled="True" Minimum="1" Maximum="65"
+							   Text="{Binding #SectionAMUSlider.Value, Converter={x:Static local:MainWindow.AMUValueConverter}}"></TextBlock>
+					<Slider SmallChange="0.1" LargeChange="1" DockPanel.Dock="Left" Minimum="1" Maximum="65"
 							Value="{Binding #SpectrumSection.AMU, Mode=OneWayToSource}" x:Name="SectionAMUSlider"></Slider>
 				</DockPanel>
+				<Label x:Name="lblSectionCoords" FontSize="16" DockPanel.Dock="Bottom" MinHeight="30">Coords...</Label>
 				<local:SkiaSectionPlot x:Name="SpectrumSection" MinHeight="200" Margin="10,0,10,0"></local:SkiaSectionPlot>
 			</DockPanel>
 		</Expander>

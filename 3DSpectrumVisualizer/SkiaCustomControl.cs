@@ -1,5 +1,6 @@
 ﻿using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Data.Converters;
 using Avalonia.Media;
 using Avalonia.Platform;
 using Avalonia.Rendering.SceneGraph;
@@ -15,10 +16,15 @@ namespace _3DSpectrumVisualizer
 {
     public abstract class SkiaCustomControl : UserControl
     {
+        public static IValueConverter ColorConverter = new FuncValueConverter<SKColor, Color>(
+            (x) => Color.FromArgb(x.Alpha, x.Red, x.Green, x.Blue));
+
         private System.Timers.Timer _RedrawTimer = new System.Timers.Timer() { Enabled = false, Interval = 30, AutoReset = true };
         private Task _RedrawTask;
         protected readonly AvaloniaProperty<SKColor> _BackgroundProperty =
-            AvaloniaProperty.Register<Skia3DSpectrum, SKColor>("Background");
+            AvaloniaProperty.Register<SkiaCustomControl, SKColor>("Background");
+        protected readonly AvaloniaProperty<string> CoordinatesString =
+            AvaloniaProperty.Register<SkiaCustomControl, string>("CoordinatesString");
 
         private void _RedrawTimer_Elapsed(object sender, ElapsedEventArgs e)
         {
@@ -29,7 +35,7 @@ namespace _3DSpectrumVisualizer
         {
             ClipToBounds = true;
             _RedrawTimer.Elapsed += _RedrawTimer_Elapsed;
-            this.AttachedToVisualTree += SkiaCustomControl_AttachedToVisualTree;
+            AttachedToVisualTree += SkiaCustomControl_AttachedToVisualTree;
         }
 
         public new SKColor Background
@@ -127,7 +133,16 @@ namespace _3DSpectrumVisualizer
 
         private void SkiaCustomControl_AttachedToVisualTree(object sender, VisualTreeAttachmentEventArgs e)
         {
+            RaiseCoordsChanged();
             InvalidateVisual();
+        }
+
+        protected abstract string UpdateCoordinatesString();
+
+        protected void RaiseCoordsChanged()
+        {
+            RaisePropertyChanged<string>(CoordinatesString, new Avalonia.Data.Optional<string>(),
+                UpdateCoordinatesString());
         }
     }
 }
