@@ -63,6 +63,7 @@ namespace _3DSpectrumVisualizer
         public float MidX { get => (Right - Left) / 2; }
         public float MidY { get => (Max - Min) / 2; }
         public bool LogarithmicIntensity { get; set; } = false;
+        public SKPath MassAxis { get; private set; } = new SKPath();
 
         public bool Enabled
         {
@@ -187,6 +188,7 @@ namespace _3DSpectrumVisualizer
             var sr = new ScanResult(File.ReadLines(item.FullName), item.Name);
             var b = sr.Path2D.TightBounds;
             bool updateShader = false;
+            bool updateMassAxis = false;
             if (b.Bottom > Max)
             {
                 Max = b.Bottom;
@@ -201,14 +203,23 @@ namespace _3DSpectrumVisualizer
             {
                 Left = b.Left;
                 updateShader = true;
+                updateMassAxis = true;
             }
             if (b.Right > Right)
             {
                 Right = b.Right;
                 updateShader = true;
+                updateMassAxis = true;
             }
             if (updateShader) RecalculateShader();
+            if (updateMassAxis) RecalculateMassAxis();
             Results.Add(sr);
+        }
+
+        private void RecalculateMassAxis()
+        {
+            MassAxis.Reset();
+            MassAxis.LineTo(Right, 0);
         }
 
         #endregion

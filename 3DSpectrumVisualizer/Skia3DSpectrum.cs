@@ -7,6 +7,8 @@ using SkiaSharp;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
+using MoreLinq;
 
 namespace _3DSpectrumVisualizer
 {
@@ -24,6 +26,8 @@ namespace _3DSpectrumVisualizer
         }
 
         #region Properties
+        public SKPaint FontPaint { get; set; } = new SKPaint() 
+        { Color = SKColor.Parse("#ECE2E2"), StrokeWidth = 2, TextSize = 0.5f, TextScaleX = 1 };
 
         private IEnumerable<DataRepository> _Repos = new List<DataRepository>();
         public IEnumerable<DataRepository> DataRepositories
@@ -32,10 +36,6 @@ namespace _3DSpectrumVisualizer
             set
             {
                 _Repos = value;
-                foreach (var item in _Repos)
-                {
-                    item.DataAdded += (s, e) => { RecalculateAxes(); };
-                }
             }
         }
         public new SKColor Background
@@ -145,15 +145,6 @@ namespace _3DSpectrumVisualizer
 
         #endregion
 
-        #region Axes
-
-        public void RecalculateAxes()
-        {
-
-        }
-
-        #endregion
-
         #region Render
 
         protected override CustomDrawOp PrepareCustomDrawingOperation()
@@ -176,6 +167,7 @@ namespace _3DSpectrumVisualizer
             private float ZRotate;
             private int DropCoef;
             IEnumerable<DataRepository> Data;
+            private SKPaint FontPaint;
 
             public Draw3DSpectrum(Skia3DSpectrum parent) : base(parent)
             {
@@ -193,6 +185,7 @@ namespace _3DSpectrumVisualizer
                 View3D.RotateYDegrees(YRotate);
                 View3D.RotateZDegrees(ZRotate);
                 Data = parent.DataRepositories;
+                FontPaint = parent.FontPaint;
             }
 
             public override bool Equals(ICustomDrawOperation other)
@@ -209,14 +202,36 @@ namespace _3DSpectrumVisualizer
                 canvas.Clear(BackgroundColor);
                 canvas.Translate(XTranslate, YTranslate);
                 canvas.Scale(Scaling);
+                var dataMaxLen = Data.MaxBy(x => x.Right).First();
+                var axisLabels = string.Join(' ', Enumerable.Range(0, (int)MathF.Ceiling(dataMaxLen.Right)));
+                using (SKAutoCanvasRestore ar1 = new SKAutoCanvasRestore(canvas))
+                {
+                    View3D.Save();
+                    View3D.TranslateX(-dataMaxLen.MidX);
+                    View3D.TranslateY(dataMaxLen.Results.Count * ScanSpacing / 2);
+                    View3D.ApplyToCanvas(canvas);
+                    var shift = FontPaint.TextSize * FontPaint.TextScaleX / 3;
+                    var margin = FontPaint.TextSize * 1.1f;
+                    for (int i = 0; i < dataMaxLen.Right; i++)
+                    {
+                        var s = i.ToString();
+                        canvas.DrawText(s,
+                            i - shift * s.Length,
+                            -margin, FontPaint);
+                        canvas.DrawText(s,
+                            i - shift * s.Length,
+                            margin + dataMaxLen.Results.Count * ScanSpacing, FontPaint);
+                    }
+                    View3D.Restore();
+                }
                 foreach (var item in Data)
                 {
                     View3D.Save();
                     View3D.TranslateX(-item.MidX);
-                    View3D.TranslateY(-item.Results.Count * ScanSpacing / 2);
+                    View3D.TranslateY(item.Results.Count * ScanSpacing / 2);
                     for (int i = 0; i < item.Results.Count; i++)
                     {
-                        View3D.TranslateY(ScanSpacing);
+                        View3D.TranslateY(-ScanSpacing);
                         if (DropCoef > 1) if (i % DropCoef == 0) continue;
                         var scan = item.Results[i];
                         var path = item.LogarithmicIntensity ? scan.LogPath2D : scan.Path2D;
@@ -233,11 +248,6 @@ namespace _3DSpectrumVisualizer
                     }
                     View3D.Restore();
                 }
-            }
-
-            private void RenderAxes()
-            {
-
             }
         }
 

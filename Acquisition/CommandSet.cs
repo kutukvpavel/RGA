@@ -80,7 +80,7 @@ namespace Acquisition
         public static Command HighVoltageQuery = new Command("HV", ParseHighVoltage, QueryParameter);
         public static Command TurnHVON = new Command("HV", ParseStatusByte, 1449);
         public static Command StartAnalogScan = new Command("SC", null, 1, true);
-        public static Command SetStartAMU = new Command("MI", null, 1, true);
+        public static Command SetStartAMU = new Command("MI", null, 29, true);
         public static Command SetEndAMU = new Command("MF", null, 200, true); //Use default values here
         public static Command SetPointsPerAMU = new Command("SA", null, 10, true);
         public static Command TotalScanPointsQuery = new Command("AP", ParseTotalScanPoints, QueryParameter);
@@ -112,7 +112,7 @@ namespace Acquisition
                 new CommandSequence(HeadState.Initialized, HeadState.DetectorON)
                 {
                     FilamentCurrentQuery,
-                    //TurnHVON, //Do not turn on CDEM by default
+                    TurnHVON, //Do not turn on CDEM by default
                     HighVoltageQuery
                 }
             },
