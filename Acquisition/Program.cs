@@ -12,6 +12,11 @@ namespace Acquisition
     public class Program
     {
         private static bool CancellationRequested = false;
+        private static string StartAMU = "1";
+        private static string EndAMU = "65";
+
+        public static string GapStartAMU { get; private set; } = null;
+        public static string GapEndAMU { get; private set; } = null;
 
         public static Head Device { get; private set; }
 
@@ -34,10 +39,20 @@ namespace Acquisition
                 CommandSet.SetStartAMU.Parameter = args[1];
                 CommandSet.SetEndAMU.Parameter = args[2];
                 CommandSet.TurnHVON.Parameter = args[3];
+                GapStartAMU = args[4];
+                GapEndAMU = args[5];
             }
             catch (IndexOutOfRangeException)
             {
 
+            }
+
+            bool gap = false;
+            if (GapStartAMU != null && GapEndAMU != null)
+            {
+                gap = true;
+                StartAMU = args[1];
+                EndAMU = args[2];
             }
 
             try
@@ -63,6 +78,10 @@ namespace Acquisition
                     {
                         Console.WriteLine("Starting new scan...");
                         if (CancellationRequested) break;
+                        if (gap)
+                        {
+                            ToggleAroundGap();
+                        }
                         Device.StartScan();
                     }
                 }
@@ -71,6 +90,20 @@ namespace Acquisition
             finally
             {
                 Device.Dispose();
+            }
+        }
+
+        private static void ToggleAroundGap()
+        {
+            if (CommandSet.SetEndAMU.Parameter == EndAMU)
+            {
+                CommandSet.SetStartAMU.Parameter = StartAMU;
+                CommandSet.SetEndAMU.Parameter = GapStartAMU;
+            }
+            else
+            {
+                CommandSet.SetStartAMU.Parameter = GapEndAMU;
+                CommandSet.SetEndAMU.Parameter = EndAMU;
             }
         }
 
