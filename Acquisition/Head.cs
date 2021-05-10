@@ -169,6 +169,8 @@ namespace Acquisition
 
         public int TotalScanPoints { get; private set; }
 
+        public int CdemGain { get; private set; } = 1;
+
         #endregion
 
         #region Public Methods
@@ -189,6 +191,11 @@ namespace Acquisition
                 Thread.Sleep(1000);
                 State = HeadState.DetectorON;
             }
+        }
+
+        public void SetCdemGain(int g)
+        {
+            CdemGain = g;
         }
 
         public void SetTotalScanPoints(int p)

@@ -22,6 +22,8 @@ namespace Acquisition
         public static readonly string QueryParameter = "?";
         public static readonly string DefaultParameter = "*";
 
+        #region Callbacks
+
         public static bool ParseStatusByte(Command cmd, Head h, string resp)
         {
             var i = int.Parse(resp);
@@ -37,12 +39,12 @@ namespace Acquisition
 
         public static bool ParseFilamentCurrent(Command cmd, Head h, string resp)
         {
-            return true;
+            return (float.Parse(resp) - float.Parse(TurnFilamentON.Parameter)) < 0.1;
         }
 
         public static bool ParseHighVoltage(Command cmd, Head h, string resp)
         {
-            return true;
+            return (int.Parse(resp) - int.Parse(TurnHVON.Parameter)) < 50;
         }
 
         public static bool ParseTotalScanPoints(Command cmd, Head h, string resp)
@@ -69,6 +71,21 @@ namespace Acquisition
             return true;
         }
 
+        public static bool ParseHVCalibrated(Command cmd, Head h, string resp)
+        {
+            if (!int.TryParse(resp, out _)) return false;
+            if (int.Parse(TurnHVON.Parameter) > 0) TurnHVON.Parameter = resp;
+            return true;
+        }
+
+        public static bool ParseCdemGain(Command cmd, Head h, string resp)
+        {
+            if (int.Parse(TurnHVON.Parameter) > 0) h.SetCdemGain(int.Parse(resp));
+            return true;
+        }
+
+        #endregion
+
         public static Command StatusQuery = new Command("ER", ParseStatusByte, QueryParameter);
         public static Command InitializeCommunication = new Command("IN", ParseStatusByte, 0);
         public static Command IdentificationQuery = new Command("ID", ParseIDString, QueryParameter);
@@ -87,6 +104,8 @@ namespace Acquisition
         public static Command QueryStartAMU = new Command("MI", ParseStartAMU, QueryParameter);
         public static Command QueryStopAMU = new Command("MF", ParseStopAMU, QueryParameter);
         public static Command QueryPointsPerAMU = new Command("SA", ParsePointsPerAMU, QueryParameter);
+        public static Command QueryHVCalibrated = new Command("MV", ParseHVCalibrated, QueryParameter);
+        public static Command QueryCdemGain = new Command("MG", ParseCdemGain, QueryParameter);
 
         public static readonly Dictionary<HeadState, CommandSequence> Sequences = new Dictionary<HeadState, CommandSequence>()
         {
@@ -96,7 +115,9 @@ namespace Acquisition
                 {
                     ShutDownMassFilter,
                     InitializeCommunication,
-                    IdentificationQuery
+                    IdentificationQuery,
+                    QueryHVCalibrated,
+                    QueryCdemGain
                 }
             },
             {
@@ -112,7 +133,7 @@ namespace Acquisition
                 new CommandSequence(HeadState.Initialized, HeadState.DetectorON)
                 {
                     FilamentCurrentQuery,
-                    TurnHVON, //Do not turn on CDEM by default
+                    TurnHVON,
                     HighVoltageQuery
                 }
             },

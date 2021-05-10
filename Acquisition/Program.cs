@@ -11,6 +11,11 @@ namespace Acquisition
 {
     public class Program
     {
+        public static string BackupSubfolderName { get; set; } = "backup";
+        public static string FileNameFormat { get; set; } = "Scan_{0:yyyy-MM-dd_HH-mm-ss}.csv";
+        public static string AMUForamt { get; set; } = "F2";
+        public static string IntensityFormat { get; set; } = "F4";
+
         private static bool CancellationRequested = false;
         private static string StartAMU = "1";
         private static string EndAMU = "65";
@@ -118,21 +123,37 @@ namespace Acquisition
             Console.WriteLine("\nScan completed.");
             int l = Device.LastScanResult.Length - 1;
             double totalPressure = Device.LastScanResult[l];
-            var y = totalPressure == 0 ? Device.LastScanResult.SkipLast(1).Select(x => (double)x)
-                : Device.LastScanResult.SkipLast(1).Select(x => x / totalPressure);
+            var y = Device.LastScanResult.SkipLast(1).Select(x => x / (double)Device.CdemGain);
+            y = totalPressure == 0 ? y.Select(x => x / 10000.0) : y.Select(x => x / totalPressure);
             double increment = 1.0 / Device.PointsPerAMU;
-            double x = Device.StartAMU;
+            var now = string.Format(FileNameFormat, DateTime.Now);
             var t = new Thread(() =>
             {
-                using TextWriter tw = new StreamWriter(
-                    Path.Combine(WorkingDirectory, $"Scan_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.csv"));
+                using TextWriter tw = new StreamWriter(Path.Combine(WorkingDirectory, now));
                 using CsvWriter cw = new CsvWriter(tw, Configuration);
                 cw.NextRecord();
                 cw.NextRecord();
+                double x = Device.StartAMU;
                 foreach (var item in y)
                 {
-                    cw.WriteField(x.ToString("F2", CultureInfo.InvariantCulture));
-                    cw.WriteField(item.ToString("E4", CultureInfo.InvariantCulture));
+                    cw.WriteField(x.ToString(AMUForamt, CultureInfo.InvariantCulture));
+                    cw.WriteField(item.ToString(IntensityFormat, CultureInfo.InvariantCulture));
+                    x += increment;
+                    cw.NextRecord();
+                }
+            });
+            t.Start();
+            t = new Thread(() =>
+            {
+                using TextWriter tw = new StreamWriter(Path.Combine(WorkingDirectory, BackupSubfolderName, now));
+                using CsvWriter cw = new CsvWriter(tw, Configuration);
+                cw.NextRecord();
+                cw.NextRecord();
+                double x = Device.StartAMU;
+                for (int i = 0; i < Device.LastScanResult.Length; i++)
+                {
+                    cw.WriteField(x.ToString(AMUForamt, CultureInfo.InvariantCulture));
+                    cw.WriteField(Device.LastScanResult[i].ToString(IntensityFormat, CultureInfo.InvariantCulture));
                     x += increment;
                     cw.NextRecord();
                 }
