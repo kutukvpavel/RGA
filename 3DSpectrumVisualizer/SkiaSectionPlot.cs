@@ -14,6 +14,7 @@ namespace _3DSpectrumVisualizer
         {
             PointerMoved += SkiaSectionPlot_PointerMoved;
             PointerWheelChanged += SkiaSectionPlot_PointerWheelChanged;
+            
         }
 
         #region Properties
@@ -38,6 +39,19 @@ namespace _3DSpectrumVisualizer
 
         public void Autoscale()
         {
+            AutoscaleX(false);
+            AutoscaleY();
+        }
+
+        public void AutoscaleX(bool invalidate = true)
+        {
+            XScaling = (float)Bounds.Width / DataRepositories.Max(x => x.Duration);
+            XTranslate = 0;
+            if (invalidate) InvalidateVisual();
+        }
+
+        public void AutoscaleY(bool invalidate = true)
+        {
             float max = DataRepositories.Max(x => x.Max);
             float min = DataRepositories.Min(x => x.Min);
             if (DataRepositories.Any(x => x.LogarithmicIntensity))
@@ -46,10 +60,8 @@ namespace _3DSpectrumVisualizer
                 min = MathF.Log10(min);
             }
             YScaling = (float)Bounds.Height * 0.98f / (max - min);
-            XScaling = (float)Bounds.Width / DataRepositories.Max(x => x.Duration);
-            XTranslate = 0;
             YTranslate = min * YScaling;
-            InvalidateVisual();
+            if (invalidate) InvalidateVisual();
         }
 
         #region Private
@@ -70,8 +82,8 @@ namespace _3DSpectrumVisualizer
 
         private void SkiaSectionPlot_PointerWheelChanged(object sender, PointerWheelEventArgs e)
         {
-            //var point = e.GetCurrentPoint(this);
-            //var pos = point.Position;
+            var point = e.GetCurrentPoint(this);
+            var pos = point.Position;
             var delta = (float)e.Delta.Y / 10;
             float correction;
             if (!e.KeyModifiers.HasFlag(KeyModifiers.Shift))
@@ -80,13 +92,15 @@ namespace _3DSpectrumVisualizer
                 YScaling += YScaling * delta;
                 correction = YScaling / correction;
                 YTranslate *= correction;
+                YTranslate += (correction - 1) * (float)(Bounds.Height - pos.Y);
             }
             if (!e.KeyModifiers.HasFlag(KeyModifiers.Control))
             {
-                correction = YScaling;
+                correction = XScaling;
                 XScaling += XScaling * delta;
                 correction = XScaling / correction;
                 XTranslate *= correction;
+                XTranslate -= (correction - 1) * (float)pos.X;
             }
             RaiseCoordsChanged();
             InvalidateVisual();

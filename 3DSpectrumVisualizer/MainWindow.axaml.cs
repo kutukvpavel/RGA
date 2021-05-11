@@ -34,7 +34,8 @@ namespace _3DSpectrumVisualizer
 
         public void InvalidateSpectrum(object sender, EventArgs e)
         {
-             Spectrum3D.InvalidateVisual();
+            Spectrum3D.InvalidateVisual();
+            SectionPlot.InvalidateVisual();
         }
 
         private static CsvConfiguration DumpConfig = new CsvConfiguration(CultureInfo.CurrentCulture)
@@ -236,9 +237,14 @@ namespace _3DSpectrumVisualizer
             }
         }
 
-        private void OnSectionAutoscaleClick(object sender, RoutedEventArgs e)
+        private void OnSectionAutoscaleXClick(object sender, RoutedEventArgs e)
         {
-            SectionPlot.Autoscale();
+            SectionPlot.AutoscaleX();
+        }
+
+        private void OnSectionAutoscaleYClick(object sender, RoutedEventArgs e)
+        {
+            SectionPlot.AutoscaleY();
         }
 
         private void OnRestore3DViewClick(object sender, RoutedEventArgs e)

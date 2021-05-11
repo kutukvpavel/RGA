@@ -86,13 +86,17 @@
 				  Header="Single AMU Section" x:Name="SpectrumSectionExpander">
 			<DockPanel>
 				<DockPanel DockPanel.Dock="Top" LastChildFill="True">
-					<TextBlock DockPanel.Dock="Right" Margin="10,10,10,10" FontSize="16"
+					<CheckBox x:Name="chkSnap" DockPanel.Dock="Right" Margin="10,0,10,0">0.1 AMU Ticks</CheckBox>
+					<TextBlock DockPanel.Dock="Left" Margin="10,10,0,10" FontSize="16">AMU: </TextBlock>
+					<TextBlock DockPanel.Dock="Left" Margin="5,10,10,10" FontSize="16"
 							   Text="{Binding #SectionAMUSlider.Value, Converter={x:Static local:MainWindow.AMUValueConverter}}"></TextBlock>
 					<Slider SmallChange="0.1" LargeChange="1" DockPanel.Dock="Left" Minimum="1" Maximum="65"
-							Value="{Binding #SpectrumSection.AMU, Mode=OneWayToSource}" x:Name="SectionAMUSlider"></Slider>
+							Value="{Binding #SpectrumSection.AMU, Mode=OneWayToSource}" x:Name="SectionAMUSlider"
+							TickFrequency="1" IsSnapToTickEnabled="{Binding !#chkSnap.IsChecked}"></Slider>
 				</DockPanel>
 				<StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal">
-					<Button Background="LightBlue" Button.Click="OnSectionAutoscaleClick">Auto Scale</Button>
+					<Button Background="#ADE6B7" Button.Click="OnSectionAutoscaleYClick">Auto Y</Button>
+					<Button Background="#ADE2E6" Button.Click="OnSectionAutoscaleXClick">Auto X</Button>
 					<Label x:Name="lblSectionCoords" FontSize="16" DockPanel.Dock="Bottom" MinHeight="30"
 						   Margin="3">Coords...</Label>
 				</StackPanel>

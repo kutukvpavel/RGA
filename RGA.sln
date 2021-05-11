@@ -11,6 +11,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DebugSpectraHelper", "Debug
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AvaloniaDebugHelper", "AvaloniaDebugHelper\AvaloniaDebugHelper.csproj", "{BD408205-88BE-4961-8051-56041657F4DF}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PipesDebugHelper", "PipesDebugHelper\PipesDebugHelper.csproj", "{10A9A194-C163-4494-BA89-AD5B155D380B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -51,6 +53,14 @@ Global
 		{BD408205-88BE-4961-8051-56041657F4DF}.Release|Any CPU.Build.0 = Release|Any CPU
 		{BD408205-88BE-4961-8051-56041657F4DF}.Release|x64.ActiveCfg = Release|Any CPU
 		{BD408205-88BE-4961-8051-56041657F4DF}.Release|x64.Build.0 = Release|Any CPU
+		{10A9A194-C163-4494-BA89-AD5B155D380B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{10A9A194-C163-4494-BA89-AD5B155D380B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{10A9A194-C163-4494-BA89-AD5B155D380B}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{10A9A194-C163-4494-BA89-AD5B155D380B}.Debug|x64.Build.0 = Debug|Any CPU
+		{10A9A194-C163-4494-BA89-AD5B155D380B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{10A9A194-C163-4494-BA89-AD5B155D380B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{10A9A194-C163-4494-BA89-AD5B155D380B}.Release|x64.ActiveCfg = Release|Any CPU
+		{10A9A194-C163-4494-BA89-AD5B155D380B}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

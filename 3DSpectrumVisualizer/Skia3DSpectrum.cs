@@ -120,13 +120,15 @@ namespace _3DSpectrumVisualizer
                 ScanSpacing += ScanSpacing * delta;
             else
             {
-                /*var point = e.GetCurrentPoint(this);
-                var pos = point.Position.Transform(new TranslateTransform(-Bounds.Width / 2, -Bounds.Height / 2).Value);*/
+                var point = e.GetCurrentPoint(this);
+                var pos = point.Position.Transform(new TranslateTransform(-Bounds.Width / 2, -Bounds.Height / 2).Value);
                 float correction = ScalingFactor;
                 ScalingFactor += ScalingFactor * delta;
                 correction = ScalingFactor / correction; //Correct translation matrix so that the pivot point of scaling is the center of the screen
                 XTranslate *= correction;
+                XTranslate -= (correction - 1) * (float)pos.X;
                 YTranslate *= correction;
+                YTranslate -= (correction - 1) * (float)pos.Y;
             }
             RaiseCoordsChanged();
             InvalidateVisual();
