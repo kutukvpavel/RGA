@@ -39,7 +39,8 @@ namespace Acquisition
 
         public static bool ParseFilamentCurrent(Command cmd, Head h, string resp)
         {
-            return (float.Parse(resp) - float.Parse(TurnFilamentON.Parameter)) < 0.1;
+            return (float.Parse(resp, System.Globalization.CultureInfo.InvariantCulture) - 
+                float.Parse(TurnFilamentON.Parameter, System.Globalization.CultureInfo.InvariantCulture)) < 0.1;
         }
 
         public static bool ParseHighVoltage(Command cmd, Head h, string resp)
@@ -80,7 +81,8 @@ namespace Acquisition
 
         public static bool ParseCdemGain(Command cmd, Head h, string resp)
         {
-            if (int.Parse(TurnHVON.Parameter) > 0) h.SetCdemGain(int.Parse(resp));
+            if (int.Parse(TurnHVON.Parameter) > 0) 
+                h.SetCdemGain((int)(float.Parse(resp, System.Globalization.CultureInfo.InvariantCulture) * 1000));
             return true;
         }
 
@@ -106,6 +108,8 @@ namespace Acquisition
         public static Command QueryPointsPerAMU = new Command("SA", ParsePointsPerAMU, QueryParameter);
         public static Command QueryHVCalibrated = new Command("MV", ParseHVCalibrated, QueryParameter);
         public static Command QueryCdemGain = new Command("MG", ParseCdemGain, QueryParameter);
+        public static Command ResetRS232Error = new Command("EC", null, QueryParameter);
+        public static Command SetNoiseFloor = new Command("NF", null, 7);
 
         public static readonly Dictionary<HeadState, CommandSequence> Sequences = new Dictionary<HeadState, CommandSequence>()
         {
@@ -144,17 +148,21 @@ namespace Acquisition
                     ShutDownMassFilter,
                     StatusQuery,
                     FilamentCurrentQuery,
-                    HighVoltageQuery
+                    HighVoltageQuery,
+                    SetNoiseFloor
                 }
             },
             {
                 HeadState.StartScan,
                 new CommandSequence(HeadState.DetectorON, HeadState.Scanning)
                 {
-                    SetStartAMU,
-                    QueryStartAMU,
                     SetPointsPerAMU,
                     QueryPointsPerAMU,
+                    SetStartAMU,
+                    SetEndAMU,
+                    ResetRS232Error,
+                    SetStartAMU,
+                    QueryStartAMU,
                     SetEndAMU,
                     QueryStopAMU,
                     StatusQuery,

@@ -55,6 +55,7 @@ namespace _3DSpectrumVisualizer
         private SkiaSectionPlot SectionPlot;
         private Label SectionCoords;
         private Slider SectionAMUSlider;
+        private CheckBox HorizontalGradient;
 
         private void InitializeComponent()
         {
@@ -80,6 +81,7 @@ namespace _3DSpectrumVisualizer
             SectionCoords = this.FindControl<Label>("lblSectionCoords");
             SectionAMUSlider = this.FindControl<Slider>("SectionAMUSlider");
             SectionAMUSlider.PropertyChanged += SectionAMUSlider_PropertyChanged;
+            HorizontalGradient = this.FindControl<CheckBox>("chkHorizontalGradient");
         }
 
         private void OnClosing(object sender, System.ComponentModel.CancelEventArgs e)
@@ -159,6 +161,17 @@ namespace _3DSpectrumVisualizer
                     
                 }
             }
+        }
+
+        private void OnHorizontalGradientChecked(object sender, RoutedEventArgs e)
+        {
+            DataRepository.UseHorizontalGradient = (bool)HorizontalGradient.IsChecked;
+            foreach (var item in Program.Repositories)
+            {
+                item.RecalculateShader();
+            }
+            Spectrum3D.InvalidateVisual();
+            SectionPlot.InvalidateVisual();
         }
 
         private void OnLogarithmicChecked(object sender, RoutedEventArgs e)

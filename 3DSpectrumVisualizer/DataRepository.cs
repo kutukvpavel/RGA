@@ -15,18 +15,19 @@ namespace _3DSpectrumVisualizer
 {
     public class DataRepository
     {
+        public static bool UseHorizontalGradient { get; set; } = false;
         public static int AMURoundingDigits { get; set; } = 1;
         public static ParallelOptions ParallelOptions { get; set; } = new ParallelOptions()
         {
             MaxDegreeOfParallelism = 4
         };
-        public static SKColor FallbackColor { get; set; } = SKColor.Parse("#84FFFFFF");
+        public static SKColor FallbackColor { get; set; } = SKColor.Parse("#F20B15F7");
         public static SKColor[] LightGradient { get; set; } = new SKColor[]
         {
             SKColor.Parse("#00FAF4F4"),
             SKColor.Parse("#8F7B7B7B")
         };
-        private static SKPointXEqualityComparer XEqualityComparer;
+        private static SKPointXEqualityComparer XEqualityComparer = new SKPointXEqualityComparer();
 
         public DataRepository(string folder, int pollPeriod = 3000)
         {
@@ -64,15 +65,14 @@ namespace _3DSpectrumVisualizer
         private SKPaint _SectionPaintBuffer = new SKPaint() 
         { 
             Style = SKPaintStyle.Stroke, 
-            IsAntialias = true
+            IsAntialias = true,
+            StrokeWidth = 0
         };
         public SKPaint SectionPaint
         {
             get
             {
                 _SectionPaintBuffer.Color = PaintStroke.Color;
-                _SectionPaintBuffer.Shader = PaintStroke.Shader;
-                _SectionPaintBuffer.StrokeWidth = LogarithmicIntensity ? 0.1f : 1f;
                 return _SectionPaintBuffer;
             }
         }
@@ -92,7 +92,6 @@ namespace _3DSpectrumVisualizer
         public SKPath MassAxis { get; private set; } = new SKPath();
         public SKPath TimeAxis { get; private set; } = new SKPath();
         public Dictionary<float, SpectrumSection> Sections { get; private set; } = new Dictionary<float, SpectrumSection>();
-
         public bool Enabled
         {
             get { return _PollTimer.Enabled; }
@@ -170,24 +169,32 @@ namespace _3DSpectrumVisualizer
 
         public void RecalculateShader()
         {
+            float min = LogarithmicIntensity ? MathF.Log10(Min) : Min;
+            float max = LogarithmicIntensity ? MathF.Log10(Max) : Max;
             if (ColorScheme.Count > 1)
             {
                 Shader = SKShader.CreateLinearGradient(
-                    new SKPoint(0, LogarithmicIntensity ? MathF.Log10(Min) : Min),
-                    new SKPoint(0, LogarithmicIntensity ? MathF.Log10(Max) : Max),
+                    UseHorizontalGradient ? new SKPoint(Left, 0) : new SKPoint(0, min),
+                    UseHorizontalGradient ? new SKPoint(Right, 0) : new SKPoint(0, max),
                     ColorScheme.ToArray(),
                     SKShaderTileMode.Clamp
                     );
+                _SectionPaintBuffer.Shader = UseHorizontalGradient ?
+                    SKShader.CreateColor(FallbackColor) :
+                    SKShader.CreateLinearGradient(new SKPoint(0, min), new SKPoint(0, max),
+                        ColorScheme.Select(x => new SKColor(x.Red, x.Green, x.Blue)).ToArray(),
+                        SKShaderTileMode.Clamp);
             }
             else
             {
                 Shader = SKShader.CreateColor(FallbackColor);
+                _SectionPaintBuffer.Shader = Shader;
             }
             if (LightGradient.Length > 1)
             {
                 var lightShader = SKShader.CreateLinearGradient(
-                    new SKPoint(Left, 0),
-                    new SKPoint(Right, 0),
+                    UseHorizontalGradient ? new SKPoint(0, min) : new SKPoint(Left, 0),
+                    UseHorizontalGradient ? new SKPoint(0, max) : new SKPoint(Right, 0),
                     LightGradient,
                     SKShaderTileMode.Clamp
                     );

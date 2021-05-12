@@ -2,7 +2,7 @@
   "profiles": {
     "3DSpectrumVisualizer": {
       "commandName": "Project",
-      "commandLineArgs": "\"E:\\Doc\\rga_samples\""
+      "commandLineArgs": "\"C:\\Users\\Admin\\Desktop\\EXP30MAR\""
     }
   }
 }

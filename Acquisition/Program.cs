@@ -14,7 +14,7 @@ namespace Acquisition
         public static string BackupSubfolderName { get; set; } = "backup";
         public static string FileNameFormat { get; set; } = "Scan_{0:yyyy-MM-dd_HH-mm-ss}.csv";
         public static string AMUForamt { get; set; } = "F2";
-        public static string IntensityFormat { get; set; } = "F4";
+        public static string IntensityFormat { get; set; } = "E4";
 
         private static bool CancellationRequested = false;
         private static string StartAMU = "1";
@@ -145,7 +145,10 @@ namespace Acquisition
             t.Start();
             t = new Thread(() =>
             {
-                using TextWriter tw = new StreamWriter(Path.Combine(WorkingDirectory, BackupSubfolderName, now));
+                string p = Path.Combine(WorkingDirectory, BackupSubfolderName, now);
+                string d = Path.GetDirectoryName(p);
+                if (!Directory.Exists(d)) Directory.CreateDirectory(d);
+                using TextWriter tw = new StreamWriter(p);
                 using CsvWriter cw = new CsvWriter(tw, Configuration);
                 cw.NextRecord();
                 cw.NextRecord();

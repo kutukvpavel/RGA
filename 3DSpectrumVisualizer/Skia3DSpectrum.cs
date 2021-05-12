@@ -48,6 +48,26 @@ namespace _3DSpectrumVisualizer
         public float YRotate { get; set; } = 0;
         public float ZRotate { get; set; } = 45;
         public float ZTranslate { get; set; } = 0;
+        private float _HideLast = 0;
+        private float _HideFirst = 0;
+        public float HideFirstPercentOfResults
+        {
+            get => _HideFirst;
+            set
+            {
+                _HideFirst = value;
+                InvalidateVisual();
+            }
+        }
+        public float HideLastPercentOfResults
+        {
+            get => _HideLast;
+            set
+            {
+                _HideLast = value;
+                InvalidateVisual();
+            }
+        }
         private float _ZScalingFactor = 0.01f;
         public float ZScalingFactor
         {
@@ -66,7 +86,7 @@ namespace _3DSpectrumVisualizer
                 if (!DataRepositories.Any()) return -1;
                 int c = (int)(DataRepositories.Average(x => x.AverageScanTime) * 10 * (ScalingFactor * ScanSpacing) + 0.5f);
                 if (c > 10) c = -1;
-                else if (c < 2) c = 2;
+                else if (c < 3) c = 3;
                 return c;
             }
         }
@@ -159,6 +179,8 @@ namespace _3DSpectrumVisualizer
             IEnumerable<DataRepository> Data;
             private SKPaint FontPaint;
             private float TimeAxisInterval;
+            private float ResultsBegin;
+            private float ResultsEnd;
 
             public Draw3DSpectrum(Skia3DSpectrum parent) : base(parent)
             {
@@ -178,6 +200,8 @@ namespace _3DSpectrumVisualizer
                 Data = parent.DataRepositories;
                 FontPaint = parent.FontPaint;
                 TimeAxisInterval = parent.TimeAxisInterval;
+                ResultsBegin = parent.HideFirstPercentOfResults;
+                ResultsEnd = parent.HideLastPercentOfResults;
             }
 
             protected override void RenderCanvas(SKCanvas canvas)
@@ -211,6 +235,10 @@ namespace _3DSpectrumVisualizer
                     {
                         if (i > 0) View3D.TranslateY(-ScanSpacing * 
                             (float)(item.Results[i].CreationTime - item.Results[i - 1].CreationTime).TotalSeconds);
+                        if ((float)(item.Results[i].CreationTime - item.StartTime).TotalSeconds 
+                            / item.Duration < ResultsBegin) continue;
+                        if ((float)(item.EndTime - item.Results[i].CreationTime).TotalSeconds
+                            / item.Duration < ResultsEnd) break;
                         if (DropCoef > 1) if (i % DropCoef == 0) continue;
                         var scan = item.Results[i];
                         var path = item.LogarithmicIntensity ? scan.LogPath2D : scan.Path2D;
@@ -231,11 +259,12 @@ namespace _3DSpectrumVisualizer
 
             private void RenderMassAxis(SKCanvas canvas, DataRepository dataMaxLen, float dataMaxDuration)
             {
-                var axisLabels = string.Join(' ', Enumerable.Range(0, (int)MathF.Ceiling(dataMaxLen.Right)));
+                //var axisLabels = string.Join(' ', Enumerable.Range(0, (int)MathF.Ceiling(dataMaxLen.Right)));
                 var shift = FontPaint.TextSize * FontPaint.TextScaleX / 3;
                 var marginStart = -FontPaint.TextSize * 1.1f;
-                var marginEnd = -marginStart + dataMaxDuration * ScanSpacing;
-                for (int i = 0; i < dataMaxLen.Right; i++)
+                var marginEnd = -marginStart + dataMaxDuration * (1 - ResultsEnd) * ScanSpacing;
+                marginStart += dataMaxDuration * ResultsBegin * ScanSpacing;
+                for (int i = 0; i <= dataMaxLen.Right; i++)
                 {
                     var s = i.ToString();
                     var x = i - shift * s.Length;
@@ -250,7 +279,7 @@ namespace _3DSpectrumVisualizer
                 float stepScaled = step * ScanSpacing;
                 var min = Data.Min(x => x.StartTime);
                 var max = Data.Max(x => x.EndTime);
-                int ticks = (int)MathF.Floor((float)(max - min).TotalSeconds / step);
+                int ticks = (int)MathF.Floor((float)(max - min).TotalSeconds * (1 - ResultsEnd) / step);
                 var marginStart = -FontPaint.TextSize * FontPaint.TextScaleX * 5;
                 var marginEnd = 1 * FontPaint.TextSize * FontPaint.TextScaleX + dataMaxLen.Right;
                 for (int i = 0; i < ticks; i++)

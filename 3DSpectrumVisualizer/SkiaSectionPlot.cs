@@ -148,6 +148,10 @@ namespace _3DSpectrumVisualizer
             protected override void RenderCanvas(SKCanvas canvas)
             {
                 canvas.Clear(BackgroundColor);
+                using (SKAutoCanvasRestore ar = new SKAutoCanvasRestore(canvas))
+                {
+                    RenderTimeAxis(canvas);
+                }
                 foreach (var item in Data)
                 {
                     canvas.Translate(XTr, YTr);
@@ -157,6 +161,11 @@ namespace _3DSpectrumVisualizer
                         item.SectionPaint
                         );
                 }
+            }
+
+            private void RenderTimeAxis(SKCanvas canvas)
+            {
+
             }
         }
 

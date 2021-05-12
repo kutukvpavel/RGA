@@ -39,9 +39,11 @@
 		</Style>
 	</Window.Styles>
 	<Grid ColumnDefinitions="auto,*" RowDefinitions="auto,*, auto">
-		<Expander Grid.Row="1" Grid.Column="0" ExpandDirection="Right" IsExpanded="False" Padding="0,10,0,0">
+		<Expander Grid.Row="1" Grid.RowSpan="2" Grid.Column="0" ExpandDirection="Right" IsExpanded="True" Padding="0,10,0,0">
 			<ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Visible" Padding="0,0,10,0">
 				<StackPanel Orientation="Vertical">
+					<CheckBox x:Name="chkHorizontalGradient" Margin="0,0,20,10" Click="OnHorizontalGradientChecked">Horizontal
+Gradient</CheckBox>
 					<TextBlock>Time Axis Interval</TextBlock>
 					<Slider Minimum="1.5" Maximum="10" x:Name="TimeAxisSlider" PropertyChanged="OnTimeAxisSliderChanged" Value="3"></Slider>
 					<TextBlock>Background</TextBlock>
@@ -66,16 +68,20 @@
 			</ScrollViewer>
 		</Expander>
 		<StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2">
+			<Slider x:Name="sldHideStart" Minimum="0" Maximum="1" SmallChange="0.01" Width="100"
+					Value="{Binding #Spectrum3D.HideFirstPercentOfResults, Mode=TwoWay}"></Slider>
+			<Slider x:Name="sldHideEnd" Minimum="0" Maximum="1" SmallChange="0.01" Width="100"
+					Value="{Binding #Spectrum3D.HideLastPercentOfResults, Mode=TwoWay}"></Slider>
 			<Button Content="Top View" Background="LightBlue" Button.Click="OnTopViewClick"></Button>
 			<Button Content="3D View" Background="LightGreen" Button.Click="OnRestore3DViewClick"></Button>
 			<Button IsVisible="False" Content="Dump Data" Button.Click="OnDumpDataClick"></Button>
 			<CheckBox x:Name="chkLog10">Log10</CheckBox>
 			<CheckBox IsVisible="False" IsChecked="{Binding #Spectrum3D.RenderContinuous, Mode=TwoWay}" Checked="OnRenderChecked" />
-			<Label ClipToBounds="True" VerticalContentAlignment="Center" Margin="0,3,0,3" FontSize="16"
+			<Label ClipToBounds="True" VerticalContentAlignment="Center" Margin="0,3,0,3" FontSize="14"
 				x:Name="GLLabel" BorderThickness="1" BorderBrush="Black">
 				GL
 			</Label>
-			<Label VerticalContentAlignment="Center" Margin="10,3,0,3" FontSize="16"
+			<Label VerticalContentAlignment="Center" Margin="10,3,0,3" FontSize="14"
 				   x:Name="CoordsLabel">
 				Coords...
 			</Label>
