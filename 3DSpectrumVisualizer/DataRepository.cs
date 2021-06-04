@@ -49,6 +49,7 @@ namespace _3DSpectrumVisualizer
         public string Folder { get; }
         public string Filter { get; set; } = "*.csv";
         public List<ScanResult> Results { get; } = new List<ScanResult>();
+        public SKPath TemperatureProfile { get; } = new SKPath();
         public SKPaint PaintFill { get; set; } = new SKPaint() 
         { 
             Color = FallbackColor, 

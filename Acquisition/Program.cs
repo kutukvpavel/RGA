@@ -1,44 +1,35 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Threading;
-using CsvHelper;
-using CsvHelper.Configuration;
+﻿using CsvHelper;
+using System;
 using System.Globalization;
+using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Acquisition
 {
     public class Program
     {
-        public static string BackupSubfolderName { get; set; } = "backup";
-        public static string FileNameFormat { get; set; } = "Scan_{0:yyyy-MM-dd_HH-mm-ss}.csv";
-        public static string AMUForamt { get; set; } = "F2";
-        public static string IntensityFormat { get; set; } = "E4";
-
         private static bool CancellationRequested = false;
         private static string StartAMU = "1";
         private static string EndAMU = "65";
+        private static NamedPipeService Pipe = NamedPipeService.Instance;
 
         public static string GapStartAMU { get; private set; } = null;
         public static string GapEndAMU { get; private set; } = null;
-
         public static Head Device { get; private set; }
-
-        public static string WorkingDirectory { get => Environment.CurrentDirectory; }
-
-        public static CsvConfiguration Configuration = new CsvConfiguration(CultureInfo.InvariantCulture);
 
         static void Main(string[] args)
         {
+            //Init
             Console.CancelKeyPress += Console_CancelKeyPress;
+            InitDevice(args[0]);
+            InitPipe(Configuration.PipeName);
+            VerifyDirectoryExists(Configuration.WorkingDirectory);
+            VerifyDirectoryExists(Configuration.WorkingDirectory, Configuration.BackupSubfolderName);
+            VerifyDirectoryExists(Configuration.WorkingDirectory, Configuration.InfoSubfolderName);
             Console.WriteLine("RGA Acquisition Helper v1.0 started!");
-
-            Device = new Head(new Port(new RJCP.IO.Ports.SerialPortStream(args[0])));
-            Device.TerminalLog += (s, t) => { Console.WriteLine(t); };
-            Device.ScanCompleted += Device_ScanCompleted;
-            Device.ExceptionLog += (s, e) => { Console.WriteLine(e.LogString); };
-
+            //CLI
             try
             {
                 CommandSet.SetStartAMU.Parameter = args[1];
@@ -51,7 +42,6 @@ namespace Acquisition
             {
 
             }
-
             bool gap = false;
             if (GapStartAMU != null && GapEndAMU != null)
             {
@@ -59,7 +49,7 @@ namespace Acquisition
                 StartAMU = args[1];
                 EndAMU = args[2];
             }
-
+            //Acquisition cycle
             try
             {
 #if DEBUG_STEP
@@ -98,6 +88,14 @@ namespace Acquisition
             }
         }
 
+        #region Misc
+
+        private static void VerifyDirectoryExists(params string[] path)
+        {
+            var d = Path.Combine(path);
+            if (!Directory.Exists(d)) Directory.CreateDirectory(d);
+        }
+
         private static void ToggleAroundGap()
         {
             if (CommandSet.SetEndAMU.Parameter == EndAMU)
@@ -118,6 +116,18 @@ namespace Acquisition
             e.Cancel = true;
         }
 
+        #endregion
+
+        #region Mass Spectrum
+
+        private static void InitDevice(string port)
+        {
+            Device = new Head(new Port(new RJCP.IO.Ports.SerialPortStream(port)));
+            Device.TerminalLog += (s, t) => { Console.WriteLine(t); };
+            Device.ScanCompleted += Device_ScanCompleted;
+            Device.ExceptionLog += (s, e) => { Console.WriteLine(e.LogString); };
+        }
+
         private static void Device_ScanCompleted(object sender, EventArgs e)
         {
             Console.WriteLine("\nScan completed.");
@@ -126,18 +136,18 @@ namespace Acquisition
             var y = Device.LastScanResult.SkipLast(1).Select(x => x / (double)Device.CdemGain);
             y = totalPressure == 0 ? y.Select(x => x / 10000.0) : y.Select(x => x / totalPressure);
             double increment = 1.0 / Device.PointsPerAMU;
-            var now = string.Format(FileNameFormat, DateTime.Now);
+            var now = string.Format(Configuration.FileNameFormat, DateTime.Now);
             var t = new Thread(() =>
             {
-                using TextWriter tw = new StreamWriter(Path.Combine(WorkingDirectory, now));
-                using CsvWriter cw = new CsvWriter(tw, Configuration);
+                using TextWriter tw = new StreamWriter(Path.Combine(Configuration.WorkingDirectory, now));
+                using CsvWriter cw = new CsvWriter(tw, Configuration.CsvConfig);
                 cw.NextRecord();
                 cw.NextRecord();
                 double x = Device.StartAMU;
                 foreach (var item in y)
                 {
-                    cw.WriteField(x.ToString(AMUForamt, CultureInfo.InvariantCulture));
-                    cw.WriteField(item.ToString(IntensityFormat, CultureInfo.InvariantCulture));
+                    cw.WriteField(x.ToString(Configuration.AMUForamt, CultureInfo.InvariantCulture));
+                    cw.WriteField(item.ToString(Configuration.IntensityFormat, CultureInfo.InvariantCulture));
                     x += increment;
                     cw.NextRecord();
                 }
@@ -145,18 +155,16 @@ namespace Acquisition
             t.Start();
             t = new Thread(() =>
             {
-                string p = Path.Combine(WorkingDirectory, BackupSubfolderName, now);
-                string d = Path.GetDirectoryName(p);
-                if (!Directory.Exists(d)) Directory.CreateDirectory(d);
+                string p = Path.Combine(Configuration.WorkingDirectory, Configuration.BackupSubfolderName, now);
                 using TextWriter tw = new StreamWriter(p);
-                using CsvWriter cw = new CsvWriter(tw, Configuration);
+                using CsvWriter cw = new CsvWriter(tw, Configuration.CsvConfig);
                 cw.NextRecord();
                 cw.NextRecord();
                 double x = Device.StartAMU;
                 for (int i = 0; i < Device.LastScanResult.Length; i++)
                 {
-                    cw.WriteField(x.ToString(AMUForamt, CultureInfo.InvariantCulture));
-                    cw.WriteField(Device.LastScanResult[i].ToString(IntensityFormat, CultureInfo.InvariantCulture));
+                    cw.WriteField(x.ToString(Configuration.AMUForamt, CultureInfo.InvariantCulture));
+                    cw.WriteField(Device.LastScanResult[i].ToString(Configuration.IntensityFormat, CultureInfo.InvariantCulture));
                     x += increment;
                     cw.NextRecord();
                 }
@@ -172,5 +180,56 @@ namespace Acquisition
             Console.WriteLine("Resulting state: " + Enum.GetName(typeof(HeadState), Device.State));
 #endif
         }
+
+        #endregion
+
+        #region Temperature and Gases
+
+        private static void InitPipe(string name)
+        {
+            Pipe.TemperatureReceived += Pipe_TemperatureReceived;
+            Pipe.UVStateReceived += Pipe_UVStateReceived;
+            Pipe.GasStateReceived += Pipe_GasStateReceived;
+            Pipe.Initialize(name);
+        }
+
+        private static void Pipe_GasStateReceived(object sender, string e)
+        {
+            AppendLine(Configuration.GasFileName, e);
+        }
+
+        private static void Pipe_UVStateReceived(object sender, bool e)
+        {
+            AppendLine(Configuration.UVFileName, e.ToString(CultureInfo.InvariantCulture));
+        }
+
+        private static void Pipe_TemperatureReceived(object sender, float e)
+        {
+            AppendLine(Configuration.TemperatureFileName, 
+                e.ToString(Configuration.TemperatureFormat, CultureInfo.InvariantCulture));
+        }
+
+        private static void AppendLine(string fileName, string payload)
+        {
+            var t = DateTime.Now.ToLongTimeString();
+            Task.Factory.StartNew(() =>
+            {
+                try
+                {
+                    using FileStream s = new FileStream(Path.Combine(
+                        Configuration.WorkingDirectory,
+                        Configuration.InfoSubfolderName,
+                        fileName), FileMode.Append, FileAccess.Write, FileShare.Read);
+                    using TextWriter w = new StreamWriter(s);
+                    w.WriteLine(Configuration.InfoLineFormat, t, payload);
+                }
+                catch (Exception)
+                {
+                    Console.WriteLine("ERROR: Can't append an info file!");
+                }
+            });
+        }
+
+        #endregion
     }
 }
