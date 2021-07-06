@@ -211,17 +211,32 @@ namespace Acquisition
 
         private static void AppendLine(string fileName, string payload)
         {
-            var t = DateTime.Now.ToLongTimeString();
+            var t = DateTime.Now.ToString(CultureInfo.InvariantCulture);
             Task.Factory.StartNew(() =>
             {
                 try
                 {
-                    using FileStream s = new FileStream(Path.Combine(
+                    var p = Path.Combine(
                         Configuration.WorkingDirectory,
                         Configuration.InfoSubfolderName,
-                        fileName), FileMode.Append, FileAccess.Write, FileShare.Read);
+                        fileName);
+                    int retry = 3;
+                    FileStream s = null;
+                    while (retry-- > 0)
+                    {
+                        try
+                        {
+                            s = new FileStream(p, FileMode.Append, FileAccess.Write, FileShare.Read);
+                            break;
+                        }
+                        catch (IOException)
+                        {
+                            Console.WriteLine("Warning: IOException encountered for an info file.");
+                        }
+                    }
                     using TextWriter w = new StreamWriter(s);
                     w.WriteLine(Configuration.InfoLineFormat, t, payload);
+                    s.Dispose();
                 }
                 catch (Exception)
                 {

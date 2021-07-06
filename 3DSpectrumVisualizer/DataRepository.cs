@@ -15,6 +15,11 @@ namespace _3DSpectrumVisualizer
 {
     public class DataRepository
     {
+        public static string InfoSplitter { get; set; } = " | ";
+        public static string InfoSubfolder { get; set; } = "info";
+        public static string TemperatureFileName { get; set; } = "Temperature.txt";
+        public static string UVFileName { get; set; } = "UV.txt";
+        public static string GasFileName { get; set; } = "Gas.txt";
         public static bool UseHorizontalGradient { get; set; } = false;
         public static int AMURoundingDigits { get; set; } = 1;
         public static ParallelOptions ParallelOptions { get; set; } = new ParallelOptions()
@@ -45,11 +50,11 @@ namespace _3DSpectrumVisualizer
         #region Properties
 
         public object UpdateSynchronizingObject { get; set; } = new object();
-        //public bool Throttle { get; set; } = false;
         public string Folder { get; }
         public string Filter { get; set; } = "*.csv";
         public List<ScanResult> Results { get; } = new List<ScanResult>();
         public SKPath TemperatureProfile { get; } = new SKPath();
+        public SKPath UVProfile { get; } = new SKPath();
         public SKPaint PaintFill { get; set; } = new SKPaint() 
         { 
             Color = FallbackColor, 
@@ -136,6 +141,7 @@ namespace _3DSpectrumVisualizer
             if (!lockTaken) return;
             try
             {
+                //Scan files
                 var newFiles = Directory.EnumerateFiles(Folder, Filter, SearchOption.TopDirectoryOnly)
                     .AsParallel().Select(x => new FileInfo(x)).Where(x => x.CreationTimeUtc > _LastFileCreationTime)
                     .OrderBy(x => x.Name);
@@ -155,6 +161,32 @@ namespace _3DSpectrumVisualizer
                     {
                         Results.Add(new ScanResult());
                     }
+                }
+                //Info files
+                float? t;
+                var l = TryReadLine(ref _TempStream, _TempPath, out t);
+                if (l != null)
+                {
+                    float val = float.Parse(l);
+                    if (TemperatureProfile.PointCount > 0)
+                    {
+                        TemperatureProfile.LineTo(t.Value, val);
+                    }
+                    else
+                    {
+                        TemperatureProfile.MoveTo(t.Value, val);
+                    }
+                }
+                l = TryReadLine(ref _UVStream, _UVPath, out t);
+                if (l != null)
+                {
+                    bool val = bool.Parse(l);
+                    
+                }
+                l = TryReadLine(ref _GasStream, _GasPath, out t);
+                if (l != null)
+                {
+
                 }
             }
             catch (Exception)
@@ -209,8 +241,56 @@ namespace _3DSpectrumVisualizer
 
         #region Private
 
+        private string _TempPath;
+        private string _UVPath;
+        private string _GasPath;
+        private FileStream _TempStream;
+        private FileStream _UVStream;
+        private FileStream _GasStream;
         private DateTime _LastFileCreationTime = DateTime.MinValue;
         private readonly System.Timers.Timer _PollTimer;
+        private string TryReadLine(ref FileStream s, string path, out float? time)
+        {
+            time = null;
+            try
+            {
+                if (VerifyInfoStreamOpen(ref s, path))
+                {
+                    using TextReader r = new StreamReader(_TempStream);
+                    var l = r.ReadLine();
+                    if (l == null) return null;
+                    var split = l.Split(InfoSplitter);
+                    time = (float)(DateTime.Parse(split[0], CultureInfo.InvariantCulture) - StartTime).TotalSeconds;
+                    return split[1];
+                }
+            }
+            catch (Exception)
+            {
+                
+            }
+            return null;
+        }
+        private bool VerifyInfoStreamOpen(ref FileStream s, string path)
+        {
+            if (s == null)
+            {
+                if (!File.Exists(path)) return false;
+                int retry = 3;
+                while (retry-- > 0)
+                {
+                    try
+                    {
+                        s = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                        break;
+                    }
+                    catch (IOException)
+                    {
+
+                    }
+                }
+            }
+            return true;
+        }
         private void _PollTimer_Elapsed(object sender, ElapsedEventArgs e)
         {
             UpdateData();
