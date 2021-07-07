@@ -15,6 +15,7 @@ namespace _3DSpectrumVisualizer
 {
     public class DataRepository
     {
+        #region Static
         public static string InfoSplitter { get; set; } = " | ";
         public static string InfoSubfolder { get; set; } = "info";
         public static string TemperatureFileName { get; set; } = "Temperature.txt";
@@ -32,7 +33,16 @@ namespace _3DSpectrumVisualizer
             SKColor.Parse("#00FAF4F4"),
             SKColor.Parse("#8F7B7B7B")
         };
+        public static SKPaint RegionPaintTemplate { get; set; } = new SKPaint()
+        {
+            BlendMode = SKBlendMode.DstOver,
+            Color = SKColor.Parse("#fff"),
+            IsAntialias = true,
+            Style = SKPaintStyle.StrokeAndFill,
+            StrokeWidth = 2.0f
+        };
         private static SKPointXEqualityComparer XEqualityComparer = new SKPointXEqualityComparer();
+        #endregion
 
         public DataRepository(string folder, int pollPeriod = 3000)
         {
@@ -54,7 +64,8 @@ namespace _3DSpectrumVisualizer
         public string Filter { get; set; } = "*.csv";
         public List<ScanResult> Results { get; } = new List<ScanResult>();
         public SKPath TemperatureProfile { get; } = new SKPath();
-        public SKPath UVProfile { get; } = new SKPath();
+        public List<UVRegion> UVProfile { get; } = new List<UVRegion>();
+        public List<GasRegion> GasProfile { get; } = new List<GasRegion>();
         public SKPaint PaintFill { get; set; } = new SKPaint() 
         { 
             Color = FallbackColor, 
@@ -83,6 +94,21 @@ namespace _3DSpectrumVisualizer
             }
         }
         public SKShader Shader { get; private set; }
+        public SKPaint UVRegionPaint { get; set; } = new SKPaint()
+        {
+            BlendMode = RegionPaintTemplate.BlendMode,
+            Color = SKColor.Parse("#4C5700FF"),
+            IsAntialias = RegionPaintTemplate.IsAntialias,
+            Style = RegionPaintTemplate.Style,
+            StrokeWidth = RegionPaintTemplate.StrokeWidth
+        };
+        public Dictionary<string, SKColor> GasRegionColor { get; } = new Dictionary<string, SKColor>()
+        {
+            { "NO2", SKColor.Parse("#4EFF6200") },
+            { "O2", SKColor.Parse("#5800FF0B") },
+            { "He", SKColor.Parse("#64FAFF00") },
+            { "CO2", SKColor.Parse("#5500EFFF") }
+        };
         public ICollection<SKColor> ColorScheme { get; set; } = new SKColor[0];
         public DateTime StartTime { get; private set; }
         public DateTime EndTime { get; private set; }
@@ -181,12 +207,45 @@ namespace _3DSpectrumVisualizer
                 if (l != null)
                 {
                     bool val = bool.Parse(l);
-                    
+                    if (_LastUVState ^ val)
+                    {
+                        if (val)
+                        {
+                            UVProfile.Add(new UVRegion(this, t.Value));
+                        }
+                        else
+                        {
+                            UVProfile.Last().EndTimeOffset = t.Value;
+                        }
+                    }
+                    else
+                    {
+                        if (val) UVProfile.Last().EndTimeOffset = t.Value;
+                    }
+                    _LastUVState = val;
                 }
                 l = TryReadLine(ref _GasStream, _GasPath, out t);
                 if (l != null)
                 {
-
+                    GasProfile.Last().EndTimeOffset = t.Value;
+                    GasRegion reg = null;
+                    if (GasRegionColor.ContainsKey(l))
+                    {
+                        if (!_GasPaintCache.ContainsKey(l)) _GasPaintCache.Add(l, new SKPaint()
+                        {
+                            BlendMode = RegionPaintTemplate.BlendMode,
+                            Color = GasRegionColor[l],
+                            IsAntialias = RegionPaintTemplate.IsAntialias,
+                            Style = RegionPaintTemplate.Style,
+                            StrokeWidth = RegionPaintTemplate.StrokeWidth
+                        });
+                        reg = new GasRegion(this, t.Value, l, _GasPaintCache[l]);
+                    }
+                    else
+                    {
+                        reg = new GasRegion(this, t.Value, l);
+                    }
+                    GasProfile.Add(reg);
                 }
             }
             catch (Exception)
@@ -241,6 +300,9 @@ namespace _3DSpectrumVisualizer
 
         #region Private
 
+        private Dictionary<string, SKPaint> _GasPaintCache = new Dictionary<string, SKPaint>();
+        private int _LastGasIndex = -1;
+        private bool _LastUVState = false;
         private string _TempPath;
         private string _UVPath;
         private string _GasPath;
@@ -507,5 +569,41 @@ namespace _3DSpectrumVisualizer
         {
             return obj.X.GetHashCode();
         }
+    }
+
+    public class UVRegion
+    {
+        public UVRegion(DataRepository parent, float startTimeOffset, float endTimeOffset = 0)
+        {
+            Parent = parent;
+            StartTimeOffset = startTimeOffset;
+            EndTimeOffset = endTimeOffset;
+        }
+
+        public float StartTimeOffset { get; }
+        public float EndTimeOffset { get; set; }
+        public DataRepository Parent { get; }
+
+        public static SKRect GetRect(UVRegion reg, float y1, float y2)
+        {
+            return new SKRect(reg.StartTimeOffset, y2, reg.EndTimeOffset, y1);
+        }
+    }
+
+    public class GasRegion : UVRegion
+    {
+        public GasRegion(DataRepository parent, float timeOffset, string name)
+            : this(parent, timeOffset, name, DataRepository.RegionPaintTemplate)
+        {
+           
+        }
+        public GasRegion(DataRepository parent, float timeOffset, string name, SKPaint paint) 
+            : base(parent, timeOffset)
+        {
+            Name = name;
+        }
+
+        public string Name { get; }
+        public SKPaint Paint { get; }
     }
 }

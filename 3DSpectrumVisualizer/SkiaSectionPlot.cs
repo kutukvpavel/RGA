@@ -5,6 +5,7 @@ using System.Text;
 using Avalonia.Input;
 using Avalonia;
 using System.Linq;
+using MoreLinq;
 
 namespace _3DSpectrumVisualizer
 {
@@ -18,6 +19,21 @@ namespace _3DSpectrumVisualizer
         }
 
         #region Properties
+        public SKPaint FontPaint { get; set; } = new SKPaint()
+        { Color = SKColor.Parse("#ECE2E2"), StrokeWidth = 2, TextSize = 14.0f, TextScaleX = 1 };
+
+        public new SKColor Background
+        {
+            get => base.Background;
+            set
+            {
+                var grayscale = value.Red * 0.299 + value.Green * 0.587 + value.Blue * 0.114;
+                FontPaint.Color = SKColor.Parse(grayscale > 167 ? "#000000" : "#FFFFFF");
+                base.Background = value;
+            }
+        }
+
+        public float TimeAxisInterval { get; set; } = 5;
 
         public int AMURoundingDigits { get; set; } = 1;
 
@@ -35,6 +51,26 @@ namespace _3DSpectrumVisualizer
 
         public float YScaling { get; set; } = 1;
 
+        private float _HideLast = 0;
+        private float _HideFirst = 0;
+        public float HideFirstPercentOfResults
+        {
+            get => _HideFirst;
+            set
+            {
+                _HideFirst = value;
+                InvalidateVisual();
+            }
+        }
+        public float HideLastPercentOfResults
+        {
+            get => _HideLast;
+            set
+            {
+                _HideLast = value;
+                InvalidateVisual();
+            }
+        }
         #endregion
 
         public void Autoscale()
@@ -133,6 +169,10 @@ namespace _3DSpectrumVisualizer
             float XSc;
             float YSc;
             float AMU;
+            private SKPaint FontPaint;
+            private float TimeAxisInterval;
+            private float ResultsBegin;
+            private float ResultsEnd;
             IEnumerable<DataRepository> Data;
 
             public DrawSectionPlot(SkiaSectionPlot parent) : base(parent)
@@ -143,6 +183,10 @@ namespace _3DSpectrumVisualizer
                 YSc = -parent.YScaling;
                 AMU = MathF.Round(parent.AMU, parent.AMURoundingDigits);
                 Data = parent.DataRepositories;
+                FontPaint = parent.FontPaint;
+                TimeAxisInterval = parent.TimeAxisInterval;
+                ResultsBegin = parent.HideFirstPercentOfResults;
+                ResultsEnd = parent.HideLastPercentOfResults;
             }
 
             protected override void RenderCanvas(SKCanvas canvas)
@@ -152,10 +196,14 @@ namespace _3DSpectrumVisualizer
                 {
                     RenderTimeAxis(canvas);
                 }
+                using (SKAutoCanvasRestore ar = new SKAutoCanvasRestore(canvas))
+                {
+                    RenderRegions(canvas);
+                }
+                canvas.Translate(XTr, YTr);
+                canvas.Scale(XSc, YSc);
                 foreach (var item in Data)
                 {
-                    canvas.Translate(XTr, YTr);
-                    canvas.Scale(XSc, YSc);
                     canvas.DrawPath(
                         item.LogarithmicIntensity ? item.Sections[AMU].LogPath : item.Sections[AMU].LinearPath,
                         item.SectionPaint
@@ -164,6 +212,25 @@ namespace _3DSpectrumVisualizer
             }
 
             private void RenderTimeAxis(SKCanvas canvas)
+            {
+                int step = (int)MathF.Ceiling(FontPaint.TextSize * TimeAxisInterval); //in seconds, since default Y unit is 1S
+                int ticks = (int)Math.Floor(canvas.LocalClipBounds.Width / step);
+                var min = Data.Min(x => x.StartTime);
+                var margin = canvas.LocalClipBounds.Height - FontPaint.TextSize * 1.1f;
+                for (int i = 0; i < ticks; i++)
+                {
+                    var x = i * step;
+                    var s = min.AddSeconds(-XTr / XSc + x / XSc).ToLongTimeString();
+                    canvas.DrawText(s, x, margin, FontPaint);
+                }
+            }
+
+            private void RenderRegions(SKCanvas canvas)
+            {
+
+            }
+
+            private void RenderTemperatureProfile(SKCanvas canvas)
             {
 
             }

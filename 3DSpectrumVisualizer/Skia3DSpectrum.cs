@@ -290,6 +290,16 @@ namespace _3DSpectrumVisualizer
                     canvas.DrawText(s, marginEnd, y, FontPaint);
                 }
             }
+
+            private void RenderRegions(SKCanvas canvas)
+            {
+
+            }
+
+            private void RenderTemperatureProfile(SKCanvas canvas)
+            {
+
+            }
         }
 
         #endregion
