@@ -3,12 +3,12 @@ using Avalonia.Data.Converters;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Rendering.SceneGraph;
+using MoreLinq;
 using SkiaSharp;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using MoreLinq;
 
 namespace _3DSpectrumVisualizer
 {
@@ -24,7 +24,10 @@ namespace _3DSpectrumVisualizer
 
         #region Properties
         public SKPaint FontPaint { get; set; } = new SKPaint() 
-        { Color = SKColor.Parse("#ECE2E2"), StrokeWidth = 2, TextSize = 0.7f, TextScaleX = 1 };
+        { 
+            Color = SKColor.Parse("#ECE2E2"), StrokeWidth = 2, TextSize = 0.7f, TextScaleX = 1,
+            IsAntialias = true
+        };
         public IEnumerable<DataRepository> DataRepositories { get; set; } = new List<DataRepository>();
         public new SKColor Background
         {
@@ -90,7 +93,7 @@ namespace _3DSpectrumVisualizer
                 return c;
             }
         }
-        public float TimeAxisInterval { get; set; } = 5;
+        public float TimeAxisInterval { get; set; } = 2.5f;
 
         #endregion
 
@@ -209,6 +212,8 @@ namespace _3DSpectrumVisualizer
                 canvas.Clear(BackgroundColor);
                 canvas.Translate(XTranslate, YTranslate);
                 canvas.Scale(Scaling);
+                //Regions
+
                 //Axes
                 if (!Data.Any()) return;
                 var dataMaxLen = Data.MaxBy(x => x.Right).FirstOrDefault();
@@ -216,8 +221,10 @@ namespace _3DSpectrumVisualizer
                 var dataMaxDuration = Data.Max(x => x.Duration);
                 var yOffset = dataMaxDuration * ScanSpacing / 2;
                 View3D.Save();
-                View3D.TranslateX(-dataMaxLen.MidX); //
+                View3D.TranslateX(-dataMaxLen.MidX);
                 View3D.TranslateY(yOffset);
+                if (Data.Any(x => x.LogarithmicIntensity))
+                    View3D.TranslateZ(-(float)Math.Log10(Data.Min(x => x.Min)) * ZScaling);
                 using (SKAutoCanvasRestore ar = new SKAutoCanvasRestore(canvas))
                 {
                     View3D.ApplyToCanvas(canvas);
@@ -259,7 +266,6 @@ namespace _3DSpectrumVisualizer
 
             private void RenderMassAxis(SKCanvas canvas, DataRepository dataMaxLen, float dataMaxDuration)
             {
-                //var axisLabels = string.Join(' ', Enumerable.Range(0, (int)MathF.Ceiling(dataMaxLen.Right)));
                 var shift = FontPaint.TextSize * FontPaint.TextScaleX / 3;
                 var marginStart = -FontPaint.TextSize * 1.1f;
                 var marginEnd = -marginStart + dataMaxDuration * (1 - ResultsEnd) * ScanSpacing;

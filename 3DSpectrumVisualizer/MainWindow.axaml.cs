@@ -110,7 +110,9 @@ namespace _3DSpectrumVisualizer
                 try
                 {
                     Spectrum3D.TimeAxisInterval = (float)(double)e.NewValue;
+                    SectionPlot.TimeAxisInterval = Spectrum3D.TimeAxisInterval / 1.5f;
                     Spectrum3D.InvalidateVisual();
+                    SectionPlot.InvalidateVisual();
                 }
                 catch (Exception)
                 {

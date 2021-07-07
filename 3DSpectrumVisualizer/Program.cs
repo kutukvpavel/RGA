@@ -52,6 +52,7 @@ namespace _3DSpectrumVisualizer
                     dr.PaintStroke.Color = ColorSchemes[i][0];
                     dr.ColorScheme = ColorSchemes[i];
                 }
+                dr.InitializeInfoPathes();
                 Repositories.Add(dr);
             }
             var mainWindow = new MainWindow();

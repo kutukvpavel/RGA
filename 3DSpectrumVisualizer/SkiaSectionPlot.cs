@@ -1,11 +1,11 @@
-﻿using SkiaSharp;
+﻿using Avalonia;
+using Avalonia.Input;
+using MoreLinq;
+using SkiaSharp;
 using System;
 using System.Collections.Generic;
-using System.Text;
-using Avalonia.Input;
-using Avalonia;
 using System.Linq;
-using MoreLinq;
+using System.Text;
 
 namespace _3DSpectrumVisualizer
 {
@@ -20,7 +20,10 @@ namespace _3DSpectrumVisualizer
 
         #region Properties
         public SKPaint FontPaint { get; set; } = new SKPaint()
-        { Color = SKColor.Parse("#ECE2E2"), StrokeWidth = 2, TextSize = 14.0f, TextScaleX = 1 };
+        { 
+            Color = SKColor.Parse("#ECE2E2"), StrokeWidth = 1, TextSize = 14.0f, TextScaleX = 1,
+            IsAntialias = true
+        };
 
         public new SKColor Background
         {
@@ -33,7 +36,7 @@ namespace _3DSpectrumVisualizer
             }
         }
 
-        public float TimeAxisInterval { get; set; } = 5;
+        public float TimeAxisInterval { get; set; } = 2;
 
         public int AMURoundingDigits { get; set; } = 1;
 
@@ -73,6 +76,8 @@ namespace _3DSpectrumVisualizer
         }
         #endregion
 
+        #region Public Methods
+
         public void Autoscale()
         {
             AutoscaleX(false);
@@ -99,6 +104,8 @@ namespace _3DSpectrumVisualizer
             YTranslate = min * YScaling;
             if (invalidate) InvalidateVisual();
         }
+
+        #endregion
 
         #region Private
 
@@ -164,16 +171,16 @@ namespace _3DSpectrumVisualizer
 
         private class DrawSectionPlot : CustomDrawOp
         {
-            float XTr;
-            float YTr;
-            float XSc;
-            float YSc;
-            float AMU;
+            private float XTr;
+            private float YTr;
+            private float XSc;
+            private float YSc;
+            private float AMU;
             private SKPaint FontPaint;
             private float TimeAxisInterval;
             private float ResultsBegin;
             private float ResultsEnd;
-            IEnumerable<DataRepository> Data;
+            private IEnumerable<DataRepository> Data;
 
             public DrawSectionPlot(SkiaSectionPlot parent) : base(parent)
             {
@@ -194,12 +201,14 @@ namespace _3DSpectrumVisualizer
                 canvas.Clear(BackgroundColor);
                 using (SKAutoCanvasRestore ar = new SKAutoCanvasRestore(canvas))
                 {
-                    RenderTimeAxis(canvas);
-                }
-                using (SKAutoCanvasRestore ar = new SKAutoCanvasRestore(canvas))
-                {
+                    canvas.Translate(XTr, 0);
+                    canvas.Scale(XSc, 1);
                     RenderRegions(canvas);
+                    canvas.Translate(0, YTr);
+                    canvas.Scale(1, -canvas.LocalClipBounds.Height / Data.Max(x => x.TemperatureProfile.Bounds.Height));
+                    RenderTemperatureProfile(canvas);
                 }
+                RenderTimeAxis(canvas);
                 canvas.Translate(XTr, YTr);
                 canvas.Scale(XSc, YSc);
                 foreach (var item in Data)
@@ -213,26 +222,39 @@ namespace _3DSpectrumVisualizer
 
             private void RenderTimeAxis(SKCanvas canvas)
             {
-                int step = (int)MathF.Ceiling(FontPaint.TextSize * TimeAxisInterval); //in seconds, since default Y unit is 1S
-                int ticks = (int)Math.Floor(canvas.LocalClipBounds.Width / step);
+                int step = (int)MathF.Ceiling(FontPaint.TextSize * FontPaint.TextScaleX * TimeAxisInterval * 5);
+                int ticks = (int)Math.Ceiling(canvas.LocalClipBounds.Width / step);
                 var min = Data.Min(x => x.StartTime);
-                var margin = canvas.LocalClipBounds.Height - FontPaint.TextSize * 1.1f;
                 for (int i = 0; i < ticks; i++)
                 {
-                    var x = i * step;
+                    var x = i * step + FontPaint.StrokeWidth;
                     var s = min.AddSeconds(-XTr / XSc + x / XSc).ToLongTimeString();
-                    canvas.DrawText(s, x, margin, FontPaint);
+                    canvas.DrawText(s, x + FontPaint.StrokeWidth * 3, FontPaint.TextSize, FontPaint);
+                    canvas.DrawLine(x, 0, x, canvas.LocalClipBounds.Height, FontPaint);
                 }
             }
 
             private void RenderRegions(SKCanvas canvas)
             {
-
+                foreach (var item in Data)
+                {
+                    foreach (var reg in item.UVProfile)
+                    {
+                        canvas.DrawRect(IRegion.GetRect(reg, 0, canvas.LocalClipBounds.Height), item.UVRegionPaint);
+                    }
+                    foreach (var reg in item.GasProfile)
+                    {
+                        canvas.DrawRect(IRegion.GetRect(reg, 0, canvas.LocalClipBounds.Height), reg.Paint);
+                    }
+                }
             }
 
             private void RenderTemperatureProfile(SKCanvas canvas)
             {
-
+                foreach (var item in Data)
+                {
+                    canvas.DrawPath(item.TemperatureProfile, item.TemperaturePaint);
+                }
             }
         }
 
