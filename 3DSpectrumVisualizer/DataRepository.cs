@@ -627,4 +627,10 @@ namespace _3DSpectrumVisualizer
         public string Name { get; }
         public SKPaint Paint { get; }
     }
+
+    public class ColorScheme
+    {
+        public ICollection<SKColor> Colors { get; set; }
+        public float[] Positions { get; set; }
+    }
 }
