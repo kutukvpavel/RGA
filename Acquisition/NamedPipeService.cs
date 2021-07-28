@@ -11,7 +11,11 @@ namespace Acquisition
         public static NamedPipeService Instance { get; } = new NamedPipeService();
         public static int UVGpioIndex { get; set; } = 2;
         public static int GasGpioOffset { get; set; } = 5;
-        public static Dictionary<int, string> GasNames { get; set; } = new Dictionary<int, string>();
+        public static Dictionary<int, string> GasNames { get; set; } = new Dictionary<int, string>()
+        {
+            { 0, "Example 0" },
+            { 1, "Example 1" }
+        };
 
         public event EventHandler<float> TemperatureReceived;
         public event EventHandler<bool> UVStateReceived;

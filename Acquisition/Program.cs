@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using LLibrary;
+using System.Collections.Generic;
 
 namespace Acquisition
 {
@@ -17,6 +18,8 @@ namespace Acquisition
         private static NamedPipeService Pipe = NamedPipeService.Instance;
         private static L Logger = new L();
 
+
+        public static Dictionary<double, double> Background { get; private set; } = new Dictionary<double, double>();
         public static string GapStartAMU { get; private set; } = null;
         public static string GapEndAMU { get; private set; } = null;
         public static Head Device { get; private set; }
@@ -30,6 +33,7 @@ namespace Acquisition
             VerifyDirectoryExists(Configuration.WorkingDirectory);
             VerifyDirectoryExists(Configuration.WorkingDirectory, Configuration.BackupSubfolderName);
             VerifyDirectoryExists(Configuration.WorkingDirectory, Configuration.InfoSubfolderName);
+            InitBackgroundRemoval();
             Console.WriteLine("RGA Acquisition Helper v1.0 started!");
             //CLI
             try
@@ -128,6 +132,50 @@ namespace Acquisition
 
         #region Mass Spectrum
 
+        private static void InitBackgroundRemoval()
+        {
+            try
+            {
+                string p = Path.Combine(Configuration.WorkingDirectory, Configuration.BackgroundFolderName);
+                if (!Directory.Exists(p)) return;
+                var f = Directory.GetFiles(p, Configuration.BackgroundSearchPattern);
+                if (f.Length > 0)
+                {
+                    var buf = new Dictionary<double, List<double>>();
+                    foreach (var item in f)
+                    {
+                        using TextReader r = new StreamReader(item);
+                        using CsvReader cr = new CsvReader(r, Configuration.CsvConfig);
+                        cr.Read();
+                        cr.ReadHeader();
+                        while (cr.Read())
+                        {
+                            try
+                            {
+                                double amu = cr.GetField<double>(0);
+                                double val = cr.GetField<double>(1);
+                                if (!buf.ContainsKey(amu))
+                                {
+                                    buf.Add(amu, new List<double>(f.Length));
+                                }
+                                buf[amu].Add(val);
+                            }
+                            catch (Exception ex)
+                            {
+                                Log("Can't parse background line:", ex);
+                            }
+                        }
+                    }
+                    Background = buf.ToDictionary(x => x.Key, x => x.Value.Average());
+                }
+            }
+            catch (Exception ex)
+            {
+                Log("Can't parse background:", ex);
+                Background = new Dictionary<double, double>();
+            }
+        }
+
         private static void InitDevice(string port)
         {
             Device = new Head(new Port(new RJCP.IO.Ports.SerialPortStream(port)));
@@ -154,8 +202,9 @@ namespace Acquisition
                 double x = Device.StartAMU;
                 foreach (var item in y)
                 {
+                    double v = item - (Background.ContainsKey(x) ? Background[x] : 0);
                     cw.WriteField(x.ToString(Configuration.AMUForamt, CultureInfo.InvariantCulture));
-                    cw.WriteField(item.ToString(Configuration.IntensityFormat, CultureInfo.InvariantCulture));
+                    cw.WriteField(v.ToString(Configuration.IntensityFormat, CultureInfo.InvariantCulture));
                     x += increment;
                     cw.NextRecord();
                 }
@@ -243,8 +292,10 @@ namespace Acquisition
                             Log("Warning: IOException encountered for an info file.", ex);
                         }
                     }
-                    using TextWriter w = new StreamWriter(s);
-                    w.WriteLine(Configuration.InfoLineFormat, t, payload);
+                    using (TextWriter w = new StreamWriter(s))
+                    {
+                        w.WriteLine(Configuration.InfoLineFormat, t, payload);
+                    }
                     s.Dispose();
                 }
                 catch (Exception ex)

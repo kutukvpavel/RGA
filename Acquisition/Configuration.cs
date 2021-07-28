@@ -21,5 +21,7 @@ namespace Acquisition
         public static string PipeName { get; set; } = "LabPID_Profile_Broadcast";
         public static string WorkingDirectory { get => Environment.CurrentDirectory; }
         public static CsvConfiguration CsvConfig { get; } = new CsvConfiguration(CultureInfo.InvariantCulture);
+        public static string BackgroundFolderName { get; set; } = "background";
+        public static string BackgroundSearchPattern { get; set; } = "*.csv";
     }
 }
