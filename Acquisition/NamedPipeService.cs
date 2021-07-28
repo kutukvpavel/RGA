@@ -38,8 +38,9 @@ namespace Acquisition
                 _Client.ServerMessage += _Client_ServerMessage;
                 return true;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Program.Log("Unable to initialize named pipe client:", ex);
                 return false;
             }
         }
@@ -65,9 +66,9 @@ namespace Acquisition
                         break;
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-
+                Program.Log("Unable to parse a pipe message:", ex);
             }
         }
     }

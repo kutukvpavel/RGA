@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using LLibrary;
 
 namespace Acquisition
 {
@@ -14,6 +15,7 @@ namespace Acquisition
         private static string StartAMU = "1";
         private static string EndAMU = "65";
         private static NamedPipeService Pipe = NamedPipeService.Instance;
+        private static L Logger = new L();
 
         public static string GapStartAMU { get; private set; } = null;
         public static string GapEndAMU { get; private set; } = null;
@@ -90,6 +92,12 @@ namespace Acquisition
 
         #region Misc
 
+        public static void Log(string info, object exception = null)
+        {
+            Console.WriteLine(info);
+            Logger.Info(info);
+            if (exception != null) Logger.Error(exception);
+        }
         private static void VerifyDirectoryExists(params string[] path)
         {
             var d = Path.Combine(path);
@@ -187,6 +195,7 @@ namespace Acquisition
 
         private static void InitPipe(string name)
         {
+            NamedPipeService.GasNames = Serializer.Deserialize(Serializer.GasNamesSerializationName, NamedPipeService.GasNames);
             Pipe.TemperatureReceived += Pipe_TemperatureReceived;
             Pipe.UVStateReceived += Pipe_UVStateReceived;
             Pipe.GasStateReceived += Pipe_GasStateReceived;
@@ -229,18 +238,18 @@ namespace Acquisition
                             s = new FileStream(p, FileMode.Append, FileAccess.Write, FileShare.Read);
                             break;
                         }
-                        catch (IOException)
+                        catch (IOException ex)
                         {
-                            Console.WriteLine("Warning: IOException encountered for an info file.");
+                            Log("Warning: IOException encountered for an info file.", ex);
                         }
                     }
                     using TextWriter w = new StreamWriter(s);
                     w.WriteLine(Configuration.InfoLineFormat, t, payload);
                     s.Dispose();
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-                    Console.WriteLine("ERROR: Can't append an info file!");
+                    Log("ERROR: Can't append an info file!", ex);
                 }
             });
         }

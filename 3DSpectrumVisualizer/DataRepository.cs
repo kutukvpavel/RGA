@@ -322,7 +322,6 @@ namespace _3DSpectrumVisualizer
         #region Private
 
         private Dictionary<string, SKPaint> _GasPaintCache = new Dictionary<string, SKPaint>();
-        private int _LastGasIndex = -1;
         private bool _LastUVState = false;
         private string _TempPath;
         private string _UVPath;
