@@ -48,8 +48,8 @@ namespace _3DSpectrumVisualizer
                 };
                 if (ColorSchemes.Count > i)
                 {
-                    dr.PaintFill.Color = ColorSchemes[i][0];
-                    dr.PaintStroke.Color = ColorSchemes[i][0];
+                    dr.PaintFill.Color = ColorSchemes[i][0].Color;
+                    dr.PaintStroke.Color = ColorSchemes[i][0].Color;
                     dr.ColorScheme = ColorSchemes[i];
                 }
                 dr.InitializeInfoPathes();
@@ -68,17 +68,17 @@ namespace _3DSpectrumVisualizer
 
         public static ColorScheme ColorSchemes { get; private set; } = new ColorScheme()
         {
-            new SKColorObservableCollection()
+            new GradientColorObservableCollection()
             {
-                SKColor.Parse("#C50D17F4"),
-                SKColor.Parse("#C013E90F"),
-                SKColor.Parse("#C5EF0F12")
+                new GradientColor(SKColor.Parse("#C50D17F4"), 0),
+                new GradientColor(SKColor.Parse("#C013E90F"), 0.5f),
+                new GradientColor(SKColor.Parse("#C5EF0F12"), 1)
             },
-            new SKColorObservableCollection()
+            new GradientColorObservableCollection()
             {
-                SKColor.Parse("#C3E511E9"),
-                SKColor.Parse("#C8F1DC0F"),
-                SKColor.Parse("#D40DECDD")
+                new GradientColor(SKColor.Parse("#C3E511E9"), 0),
+                new GradientColor(SKColor.Parse("#C8F1DC0F"), 0.5f),
+                new GradientColor(SKColor.Parse("#D40DECDD"), 1)
             }
         };
 
@@ -148,6 +148,19 @@ namespace _3DSpectrumVisualizer
             writer.WriteValue(value.ToString());
         }
     }
+
+    /*public class GradientColorJsonConverter : JsonConverter<GradientColor>
+    {
+        public override GradientColor ReadJson(JsonReader reader, Type objectType, GradientColor existingValue, bool hasExistingValue, JsonSerializer serializer)
+        {
+            return (GradientColor)serializer.Deserialize(reader);
+        }
+
+        public override void WriteJson(JsonWriter writer, GradientColor value, JsonSerializer serializer)
+        {
+            serializer.Serialize(writer, value);
+        }
+    }*/
 
     #endregion
 }

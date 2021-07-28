@@ -62,8 +62,12 @@ Gradient</CheckBox>
 							</DataTemplate>
 						</ListBox.ItemTemplate>
 					</ListBox>
-					<colorpicker:ColorButton PropertyChanged="OnColorSchemeEdited" Margin="0,10,0,0"
+					<TextBlock Margin="0,10,0,10">Edit Color:</TextBlock>
+					<colorpicker:ColorButton PropertyChanged="OnColorSchemeEdited"
 						Color="{Binding #lstColors.SelectedItem, Converter={x:Static local:ColorScheme.ColorConverter}}"></colorpicker:ColorButton>
+					<Slider Value="{Binding #lstColors.SelectedItem.Position}"
+							Maximum="1" Minimum="0" SmallChange="0.01" PropertyChanged="OnPositionSchemeEdited">
+					</Slider>
 				</StackPanel>
 			</ScrollViewer>
 		</Expander>

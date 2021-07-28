@@ -109,7 +109,7 @@ namespace _3DSpectrumVisualizer
             { "He", SKColor.Parse("#36FAFF00") },
             { "CO2", SKColor.Parse("#2E00EFFF") }
         };
-        public ICollection<SKColor> ColorScheme { get; set; } = new SKColor[0];
+        public ICollection<GradientColor> ColorScheme { get; set; } = new GradientColor[0];
         public SKPaint TemperaturePaint { get; set; } = new SKPaint()
         {
             Color = FallbackColor,
@@ -282,16 +282,20 @@ namespace _3DSpectrumVisualizer
             float max = LogarithmicIntensity ? MathF.Log10(Max) : Max;
             if (ColorScheme.Count > 1)
             {
+                SKColor[] colors = ColorScheme.Select(x => x.Color).ToArray();
+                float[] positions = ColorScheme.Select(x => x.Position).ToArray();
                 Shader = SKShader.CreateLinearGradient(
                     UseHorizontalGradient ? new SKPoint(Left, 0) : new SKPoint(0, min),
                     UseHorizontalGradient ? new SKPoint(Right, 0) : new SKPoint(0, max),
-                    ColorScheme.ToArray(),
+                    colors,
+                    positions,
                     SKShaderTileMode.Clamp
                     );
                 _SectionPaintBuffer.Shader = UseHorizontalGradient ?
                     SKShader.CreateColor(FallbackColor) :
                     SKShader.CreateLinearGradient(new SKPoint(0, min), new SKPoint(0, max),
-                        ColorScheme.Select(x => new SKColor(x.Red, x.Green, x.Blue)).ToArray(),
+                        colors.Select(x => x.WithAlpha(0xFF)).ToArray(),
+                        positions,
                         SKShaderTileMode.Clamp);
             }
             else
@@ -626,11 +630,5 @@ namespace _3DSpectrumVisualizer
 
         public string Name { get; }
         public SKPaint Paint { get; }
-    }
-
-    public class ColorScheme
-    {
-        public ICollection<SKColor> Colors { get; set; }
-        public float[] Positions { get; set; }
     }
 }

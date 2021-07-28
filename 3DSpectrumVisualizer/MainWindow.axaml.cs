@@ -121,6 +121,29 @@ namespace _3DSpectrumVisualizer
             }
         }
 
+        private void OnPositionSchemeEdited(object sender, AvaloniaPropertyChangedEventArgs e)
+        {
+            if (!IsInitialized) return;
+            if (e.Property == Slider.ValueProperty)
+            {
+                if (e.NewValue == null || !e.IsEffectiveValueChange || LstColors.SelectedIndex < 0) return;
+                try
+                {
+                    Program.ColorSchemes.SelectedItem[LstColors.SelectedIndex].Position = (float)(double)e.NewValue;
+                    foreach (var item in Program.Repositories)
+                    {
+                        item.RecalculateShader();
+                    }
+                    Spectrum3D.InvalidateVisual();
+                    SectionPlot.InvalidateVisual();
+                }
+                catch (Exception)
+                {
+
+                }
+            }
+        }
+
         private void OnColorSchemeEdited(object sender, AvaloniaPropertyChangedEventArgs e)
         {
             if (!IsInitialized) return;
@@ -129,7 +152,7 @@ namespace _3DSpectrumVisualizer
                 if (e.NewValue == null || !e.IsEffectiveValueChange || LstColors.SelectedIndex < 0) return;
                 try
                 {
-                    Program.ColorSchemes.SelectedItem[LstColors.SelectedIndex] = SKColor.Parse(((Color)e.NewValue).ToString());
+                    Program.ColorSchemes.SelectedItem[LstColors.SelectedIndex].Color = SKColor.Parse(((Color)e.NewValue).ToString());
                     foreach (var item in Program.Repositories)
                     {
                         item.RecalculateShader();
