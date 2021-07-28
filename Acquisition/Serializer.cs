@@ -9,7 +9,7 @@ namespace Acquisition
 {
     public static class Serializer
     {
-        public const string GasNamesSerializationName = "gases";
+        public const string SettingsFileName = "acquisition_settings";
         public const string JsonExtension = ".json";
 
         public static void Serialize<T>(T obj, string name, JsonConverter converter = null)

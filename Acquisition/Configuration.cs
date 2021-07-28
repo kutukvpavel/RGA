@@ -3,25 +3,35 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using CsvHelper.Configuration;
+using Newtonsoft.Json;
 
 namespace Acquisition
 {
-    public static class Configuration
+    public class Configuration
     {
-        public static string BackupSubfolderName { get; set; } = "backup";
-        public static string InfoSubfolderName { get; set; } = "info";
-        public static string FileNameFormat { get; set; } = "Scan_{0:yyyy-MM-dd_HH-mm-ss}.csv";
-        public static string TemperatureFileName { get; set; } = "Temp.txt";
-        public static string GasFileName { get; set; } = "Gas.txt";
-        public static string UVFileName { get; set; } = "UV.txt";
-        public static string InfoLineFormat { get; set; } = "{0} | {1}";
-        public static string TemperatureFormat { get; set; } = "F1";
-        public static string AMUForamt { get; set; } = "F2";
-        public static string IntensityFormat { get; set; } = "E4";
-        public static string PipeName { get; set; } = "LabPID_Profile_Broadcast";
+        public string BackupSubfolderName { get; set; } = "backup";
+        public string InfoSubfolderName { get; set; } = "info";
+        public string FileNameFormat { get; set; } = "Scan_{0:yyyy-MM-dd_HH-mm-ss}.csv";
+        public string TemperatureFileName { get; set; } = "Temp.txt";
+        public string GasFileName { get; set; } = "Gas.txt";
+        public string UVFileName { get; set; } = "UV.txt";
+        public string InfoLineFormat { get; set; } = "{0} | {1}";
+        public string TemperatureFormat { get; set; } = "F1";
+        public string AMUForamt { get; set; } = "F2";
+        public string IntensityFormat { get; set; } = "E4";
+        public string PipeName { get; set; } = "LabPID_Profile_Broadcast";
+        [JsonIgnore]
         public static string WorkingDirectory { get => Environment.CurrentDirectory; }
+        [JsonIgnore]
         public static CsvConfiguration CsvConfig { get; } = new CsvConfiguration(CultureInfo.InvariantCulture);
-        public static string BackgroundFolderName { get; set; } = "background";
-        public static string BackgroundSearchPattern { get; set; } = "*.csv";
+        public string BackgroundFolderName { get; set; } = "background";
+        public string BackgroundSearchPattern { get; set; } = "*.csv";
+        public int UVGpioIndex { get; set; } = 0;
+        public int GasGpioOffset { get; set; } = 5;
+        public Dictionary<int, string> GasNames { get; set; } = new Dictionary<int, string>()
+        {
+            { 0, "Example 0" },
+            { 1, "Example 1" }
+        };
     }
 }

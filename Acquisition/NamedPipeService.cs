@@ -9,17 +9,15 @@ namespace Acquisition
     public class NamedPipeService
     {
         public static NamedPipeService Instance { get; } = new NamedPipeService();
-        public static int UVGpioIndex { get; set; } = 2;
-        public static int GasGpioOffset { get; set; } = 5;
-        public static Dictionary<int, string> GasNames { get; set; } = new Dictionary<int, string>()
-        {
-            { 0, "Example 0" },
-            { 1, "Example 1" }
-        };
+
+        public Dictionary<int, string> GasNames { get; set; } = new Dictionary<int, string>();
+        public int UVGpioIndex { get; set; } = 0;
+        public int GasGpioOffset { get; set; } = 5;
 
         public event EventHandler<float> TemperatureReceived;
         public event EventHandler<bool> UVStateReceived;
-        public event EventHandler<string> GasStateReceived; 
+        public event EventHandler<string> GasStateReceived;
+        public event EventHandler<string> LogEvent;
 
         private NamedPipeClient<string> _Client;
 
@@ -53,12 +51,18 @@ namespace Acquisition
         {
             try
             {
+                LogEvent?.Invoke(this, message);
+            }
+            catch (Exception)
+            { }
+            try
+            {
                 char t = message[0];
                 var v = message.Remove(0, 1);
                 switch (t)
                 {
                     case 'C':
-                        var split = v.Split('\n').Select(x => x.Trim('\r', '\n')).ToArray();
+                        var split = v.Split('\n').Select(x => x.Trim('\r', '\n').Replace(" ", "")).ToArray();
                         UVStateReceived?.Invoke(this, split[1][UVGpioIndex] != '0');
                         int i = split[1].IndexOf('1', GasGpioOffset);
                         if (GasNames.ContainsKey(i)) GasStateReceived?.Invoke(this, GasNames[i]);

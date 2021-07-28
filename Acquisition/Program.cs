@@ -17,8 +17,8 @@ namespace Acquisition
         private static string EndAMU = "65";
         private static NamedPipeService Pipe = NamedPipeService.Instance;
         private static L Logger = new L();
-
-
+        private static Configuration Config;
+        
         public static Dictionary<double, double> Background { get; private set; } = new Dictionary<double, double>();
         public static string GapStartAMU { get; private set; } = null;
         public static string GapEndAMU { get; private set; } = null;
@@ -26,13 +26,23 @@ namespace Acquisition
 
         static void Main(string[] args)
         {
-            //Init
             Console.CancelKeyPress += Console_CancelKeyPress;
+            //Load Settings
+            try
+            {
+                Config = Serializer.Deserialize(Serializer.SettingsFileName, Config);
+            }
+            catch (Exception ex)
+            {
+                Log("Can't deserilize settings file:", ex);
+                Config = new Configuration();
+            }
+            //Init
             InitDevice(args[0]);
-            InitPipe(Configuration.PipeName);
+            InitPipe(Config.PipeName);
             VerifyDirectoryExists(Configuration.WorkingDirectory);
-            VerifyDirectoryExists(Configuration.WorkingDirectory, Configuration.BackupSubfolderName);
-            VerifyDirectoryExists(Configuration.WorkingDirectory, Configuration.InfoSubfolderName);
+            VerifyDirectoryExists(Configuration.WorkingDirectory, Config.BackupSubfolderName);
+            VerifyDirectoryExists(Configuration.WorkingDirectory, Config.InfoSubfolderName);
             InitBackgroundRemoval();
             Console.WriteLine("RGA Acquisition Helper v1.0 started!");
             //CLI
@@ -136,9 +146,9 @@ namespace Acquisition
         {
             try
             {
-                string p = Path.Combine(Configuration.WorkingDirectory, Configuration.BackgroundFolderName);
+                string p = Path.Combine(Configuration.WorkingDirectory, Config.BackgroundFolderName);
                 if (!Directory.Exists(p)) return;
-                var f = Directory.GetFiles(p, Configuration.BackgroundSearchPattern);
+                var f = Directory.GetFiles(p, Config.BackgroundSearchPattern);
                 if (f.Length > 0)
                 {
                     var buf = new Dictionary<double, List<double>>();
@@ -192,7 +202,7 @@ namespace Acquisition
             var y = Device.LastScanResult.SkipLast(1).Select(x => x / (double)Device.CdemGain);
             y = totalPressure == 0 ? y.Select(x => x / 10000.0) : y.Select(x => x / totalPressure);
             double increment = 1.0 / Device.PointsPerAMU;
-            var now = string.Format(Configuration.FileNameFormat, DateTime.Now);
+            var now = string.Format(Config.FileNameFormat, DateTime.Now);
             var t = new Thread(() =>
             {
                 using TextWriter tw = new StreamWriter(Path.Combine(Configuration.WorkingDirectory, now));
@@ -203,8 +213,8 @@ namespace Acquisition
                 foreach (var item in y)
                 {
                     double v = item - (Background.ContainsKey(x) ? Background[x] : 0);
-                    cw.WriteField(x.ToString(Configuration.AMUForamt, CultureInfo.InvariantCulture));
-                    cw.WriteField(v.ToString(Configuration.IntensityFormat, CultureInfo.InvariantCulture));
+                    cw.WriteField(x.ToString(Config.AMUForamt, CultureInfo.InvariantCulture));
+                    cw.WriteField(v.ToString(Config.IntensityFormat, CultureInfo.InvariantCulture));
                     x += increment;
                     cw.NextRecord();
                 }
@@ -212,7 +222,7 @@ namespace Acquisition
             t.Start();
             t = new Thread(() =>
             {
-                string p = Path.Combine(Configuration.WorkingDirectory, Configuration.BackupSubfolderName, now);
+                string p = Path.Combine(Configuration.WorkingDirectory, Config.BackupSubfolderName, now);
                 using TextWriter tw = new StreamWriter(p);
                 using CsvWriter cw = new CsvWriter(tw, Configuration.CsvConfig);
                 cw.NextRecord();
@@ -220,8 +230,8 @@ namespace Acquisition
                 double x = Device.StartAMU;
                 for (int i = 0; i < Device.LastScanResult.Length; i++)
                 {
-                    cw.WriteField(x.ToString(Configuration.AMUForamt, CultureInfo.InvariantCulture));
-                    cw.WriteField(Device.LastScanResult[i].ToString(Configuration.IntensityFormat, CultureInfo.InvariantCulture));
+                    cw.WriteField(x.ToString(Config.AMUForamt, CultureInfo.InvariantCulture));
+                    cw.WriteField(Device.LastScanResult[i].ToString(Config.IntensityFormat, CultureInfo.InvariantCulture));
                     x += increment;
                     cw.NextRecord();
                 }
@@ -244,7 +254,10 @@ namespace Acquisition
 
         private static void InitPipe(string name)
         {
-            NamedPipeService.GasNames = Serializer.Deserialize(Serializer.GasNamesSerializationName, NamedPipeService.GasNames);
+            Pipe.GasNames = Config.GasNames;
+            Pipe.GasGpioOffset = Config.GasGpioOffset;
+            Pipe.UVGpioIndex = Config.UVGpioIndex;
+            Pipe.LogEvent += (x, y) => { Log("Pipe message received: " + y); };
             Pipe.TemperatureReceived += Pipe_TemperatureReceived;
             Pipe.UVStateReceived += Pipe_UVStateReceived;
             Pipe.GasStateReceived += Pipe_GasStateReceived;
@@ -253,18 +266,18 @@ namespace Acquisition
 
         private static void Pipe_GasStateReceived(object sender, string e)
         {
-            AppendLine(Configuration.GasFileName, e);
+            AppendLine(Config.GasFileName, e);
         }
 
         private static void Pipe_UVStateReceived(object sender, bool e)
         {
-            AppendLine(Configuration.UVFileName, e.ToString(CultureInfo.InvariantCulture));
+            AppendLine(Config.UVFileName, e.ToString(CultureInfo.InvariantCulture));
         }
 
         private static void Pipe_TemperatureReceived(object sender, float e)
         {
-            AppendLine(Configuration.TemperatureFileName, 
-                e.ToString(Configuration.TemperatureFormat, CultureInfo.InvariantCulture));
+            AppendLine(Config.TemperatureFileName, 
+                e.ToString(Config.TemperatureFormat, CultureInfo.InvariantCulture));
         }
 
         private static void AppendLine(string fileName, string payload)
@@ -276,7 +289,7 @@ namespace Acquisition
                 {
                     var p = Path.Combine(
                         Configuration.WorkingDirectory,
-                        Configuration.InfoSubfolderName,
+                        Config.InfoSubfolderName,
                         fileName);
                     int retry = 3;
                     FileStream s = null;
@@ -294,7 +307,7 @@ namespace Acquisition
                     }
                     using (TextWriter w = new StreamWriter(s))
                     {
-                        w.WriteLine(Configuration.InfoLineFormat, t, payload);
+                        w.WriteLine(Config.InfoLineFormat, t, payload);
                     }
                     s.Dispose();
                 }
