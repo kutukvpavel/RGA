@@ -19,6 +19,7 @@ namespace _3DSpectrumVisualizer
     public class MainWindow : Window
     {
         public static IValueConverter AMUValueConverter { get; set; }
+        public static IValueConverter PositionValueConverter { get; set; } = new RootValueConverter(3);
 
         public MainWindow()
         {
@@ -129,7 +130,6 @@ namespace _3DSpectrumVisualizer
                 if (e.NewValue == null || !e.IsEffectiveValueChange || LstColors.SelectedIndex < 0) return;
                 try
                 {
-                    Program.ColorSchemes.SelectedItem[LstColors.SelectedIndex].Position = (float)(double)e.NewValue;
                     foreach (var item in Program.Repositories)
                     {
                         item.RecalculateShader();

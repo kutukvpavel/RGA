@@ -4,7 +4,7 @@
 		xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 		xmlns:local="clr-namespace:_3DSpectrumVisualizer"
 		xmlns:colorpicker="clr-namespace:AvaloniaColorPicker;assembly=AvaloniaColorPicker"
-		mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="500"
+		mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="800"
 		Width="1000" Height="600" WindowState="Maximized"
 		x:Class="_3DSpectrumVisualizer.MainWindow"
 		Title="RGA 3D Spectrum Visualizer" Icon="avares://3DSpectrumVisualizer/Assets/chart-icon.ico"
@@ -65,8 +65,11 @@ Gradient</CheckBox>
 					<TextBlock Margin="0,10,0,10">Edit Color:</TextBlock>
 					<colorpicker:ColorButton PropertyChanged="OnColorSchemeEdited"
 						Color="{Binding #lstColors.SelectedItem, Converter={x:Static local:ColorScheme.ColorConverter}}"></colorpicker:ColorButton>
-					<Slider Value="{Binding #lstColors.SelectedItem.Position}"
-							Maximum="1" Minimum="0" SmallChange="0.01" PropertyChanged="OnPositionSchemeEdited">
+					<Slider Value="{Binding #lstColors.SelectedItem.Position,
+							Mode=TwoWay, Converter={x:Static local:MainWindow.PositionValueConverter}}" 
+							x:Name="sldPosition"
+							Maximum="1" Minimum="0" SmallChange="0.01"
+							PropertyChanged="OnPositionSchemeEdited">
 					</Slider>
 				</StackPanel>
 			</ScrollViewer>

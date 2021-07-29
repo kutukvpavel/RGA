@@ -93,14 +93,31 @@ namespace _3DSpectrumVisualizer
 
         public void AutoscaleY(bool invalidate = true)
         {
-            float max = DataRepositories.Max(x => x.Max);
-            float min = DataRepositories.Min(x => x.Min);
-            if (DataRepositories.Any(x => x.LogarithmicIntensity))
+            float max = DataRepositories.Max(x =>
             {
-                max = MathF.Log10(max);
-                min = MathF.Log10(min);
-            }
-            YScaling = (float)Bounds.Height * 0.98f / (max - min);
+                if (x.Sections.ContainsKey(AMU))
+                {
+                    var path = x.LogarithmicIntensity ? x.Sections[AMU].LogPath : x.Sections[AMU].LinearPath;
+                    return path.Bounds.Top;
+                }
+                else
+                {
+                    return 0;
+                }
+            });
+            float min = DataRepositories.Min(x =>
+            {
+                if (x.Sections.ContainsKey(AMU))
+                {
+                    var path = x.LogarithmicIntensity ? x.Sections[AMU].LogPath : x.Sections[AMU].LinearPath;
+                    return path.Bounds.Bottom;
+                }
+                else
+                {
+                    return 0;
+                }
+            });
+            YScaling = (float)Bounds.Height * 0.9f / (max - min);
             YTranslate = min * YScaling;
             if (invalidate) InvalidateVisual();
         }
