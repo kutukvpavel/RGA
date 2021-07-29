@@ -98,7 +98,7 @@ namespace _3DSpectrumVisualizer
                 if (x.Sections.ContainsKey(AMU))
                 {
                     var path = x.LogarithmicIntensity ? x.Sections[AMU].LogPath : x.Sections[AMU].LinearPath;
-                    return path.Bounds.Top;
+                    return path.Bounds.Bottom;
                 }
                 else
                 {
@@ -110,7 +110,7 @@ namespace _3DSpectrumVisualizer
                 if (x.Sections.ContainsKey(AMU))
                 {
                     var path = x.LogarithmicIntensity ? x.Sections[AMU].LogPath : x.Sections[AMU].LinearPath;
-                    return path.Bounds.Bottom;
+                    return path.Bounds.Top;
                 }
                 else
                 {

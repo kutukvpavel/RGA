@@ -17,7 +17,7 @@ namespace Acquisition
         private static string EndAMU = "65";
         private static NamedPipeService Pipe = NamedPipeService.Instance;
         private static L Logger = new L();
-        private static Configuration Config;
+        private static Configuration Config = new Configuration();
         
         public static Dictionary<double, double> Background { get; private set; } = new Dictionary<double, double>();
         public static string GapStartAMU { get; private set; } = null;

@@ -35,11 +35,11 @@ namespace Acquisition
                     object o;
                     if (converter == null)
                     {
-                        o = JsonConvert.DeserializeObject(File.ReadAllText(p));
+                        o = JsonConvert.DeserializeObject<T>(File.ReadAllText(p));
                     }
                     else
                     {
-                        o = JsonConvert.DeserializeObject(File.ReadAllText(p), typeof(T), converter);
+                        o = JsonConvert.DeserializeObject<T>(File.ReadAllText(p), converter);
                     }
                     if (o == null) throw new JsonSerializationException();
                     return (T)o;
