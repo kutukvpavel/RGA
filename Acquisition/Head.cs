@@ -10,6 +10,7 @@ namespace Acquisition
         Initialized,
         IonizerON,
         DetectorON,
+        ReadyToScan,
         StartScan,
         Scanning,
         PowerDown
@@ -110,7 +111,7 @@ namespace Acquisition
                     {
                         LastScanResult = _ScanResult.ToArray();
                         _ScanResult.Clear();
-                        State = HeadState.DetectorON;
+                        State = HeadState.ReadyToScan;
                     }
                 }
                 if (State != HeadState.Scanning) ScanCompleted?.Invoke(this, new EventArgs());

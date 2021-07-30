@@ -18,7 +18,7 @@ namespace _3DSpectrumVisualizer
         #region Static
         public static string InfoSplitter { get; set; } = " | ";
         public static string InfoSubfolder { get; set; } = "info";
-        public static string TemperatureFileName { get; set; } = "Temperature.txt";
+        public static string TemperatureFileName { get; set; } = "Temp.txt";
         public static string UVFileName { get; set; } = "UV.txt";
         public static string GasFileName { get; set; } = "Gas.txt";
         public static bool UseHorizontalGradient { get; set; } = false;

@@ -85,7 +85,7 @@ namespace Acquisition
                 {
                     StateMachine();
                     Thread.Sleep(500);
-                    if (Device.State == HeadState.DetectorON)
+                    if (Device.State == HeadState.ReadyToScan)
                     {
                         Console.WriteLine("Starting new scan...");
                         if (CancellationRequested) break;

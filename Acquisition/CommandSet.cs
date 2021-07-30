@@ -21,8 +21,14 @@ namespace Acquisition
     {
         public static readonly string QueryParameter = "?";
         public static readonly string DefaultParameter = "*";
+        public static readonly int NoiseFloor = 3;
 
         #region Callbacks
+
+        public static bool ParseNoiseFloor(Command cmd, Head h, string resp)
+        {
+            return int.Parse(resp) == NoiseFloor;
+        }
 
         public static bool ParseStatusByte(Command cmd, Head h, string resp)
         {
@@ -109,7 +115,8 @@ namespace Acquisition
         public static Command QueryHVCalibrated = new Command("MV", ParseHVCalibrated, QueryParameter);
         public static Command QueryCdemGain = new Command("MG", ParseCdemGain, QueryParameter);
         public static Command ResetRS232Error = new Command("EC", null, QueryParameter);
-        public static Command SetNoiseFloor = new Command("NF", null, 7);
+        public static Command SetNoiseFloor = new Command("NF", null, NoiseFloor, true);
+        public static Command QueryNoiseFloor = new Command("NF", ParseNoiseFloor, QueryParameter);
 
         public static readonly Dictionary<HeadState, CommandSequence> Sequences = new Dictionary<HeadState, CommandSequence>()
         {
@@ -143,13 +150,14 @@ namespace Acquisition
             },
             {
                 HeadState.DetectorON,
-                new CommandSequence(HeadState.PowerUp, HeadState.DetectorON)
+                new CommandSequence(HeadState.PowerUp, HeadState.ReadyToScan)
                 {
                     ShutDownMassFilter,
                     StatusQuery,
                     FilamentCurrentQuery,
                     HighVoltageQuery,
-                    SetNoiseFloor
+                    SetNoiseFloor,
+                    QueryNoiseFloor
                 }
             },
             {
