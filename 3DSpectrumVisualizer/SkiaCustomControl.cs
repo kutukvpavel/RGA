@@ -45,8 +45,7 @@ namespace _3DSpectrumVisualizer
             {
                 if (CustomDrawOp.BackgroundColor == value) return;
                 CustomDrawOp.BackgroundColor = value;
-                RaisePropertyChanged(_BackgroundProperty, new Avalonia.Data.Optional<SKColor>(),
-                    new Avalonia.Data.BindingValue<SKColor>(value));
+                SetValue(_BackgroundProperty, value);
             }
         }
         public object UpdateSynchronizingObject { get; set; } = new object();

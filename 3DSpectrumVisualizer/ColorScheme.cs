@@ -12,6 +12,7 @@ using Newtonsoft.Json.Serialization;
 
 namespace _3DSpectrumVisualizer
 {
+    [JsonArray]
     public class ColorScheme : ObservableCollection<GradientColorObservableCollection>, INotifyPropertyChanged
     {
         private int _SelectedIndex = 0;

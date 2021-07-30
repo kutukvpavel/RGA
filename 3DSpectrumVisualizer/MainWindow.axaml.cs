@@ -4,7 +4,6 @@ using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.Input;
-using System.Diagnostics;
 using CsvHelper;
 using CsvHelper.Configuration;
 using System.IO;
@@ -12,14 +11,16 @@ using System.Globalization;
 using SkiaSharp;
 using System.Linq;
 using Avalonia.Data.Converters;
+using Avalonia.Threading;
 using System;
 
 namespace _3DSpectrumVisualizer
 {
     public class MainWindow : Window
     {
-        public static IValueConverter AMUValueConverter { get; set; }
-        public static IValueConverter PositionValueConverter { get; set; } = new RootValueConverter(3);
+        public static IValueConverter AMUValueConverter { get; set; } 
+            = new FuncValueConverter<double, string>(x => MathF.Round((float) x, 1).ToString("F1"));
+        public static IValueConverter PositionValueConverter { get; set; }
 
         public MainWindow()
         {
@@ -27,23 +28,29 @@ namespace _3DSpectrumVisualizer
 #if DEBUG
             this.AttachDevTools();
 #endif
-            GLLabel.Background = SkiaCustomControl.OpenGLEnabled ? Brushes.Lime : Brushes.OrangeRed;
-            var backgroundColorButton = this.FindControl<AvaloniaColorPicker.ColorButton>("BackgroundPicker");
-            backgroundColorButton.Color = (Color)Skia3DSpectrum.ColorConverter.Convert(
-                Spectrum3D.Background, typeof(Color), null, CultureInfo.CurrentCulture);
-        }
-
-        public void InvalidateSpectrum(object sender, EventArgs e)
-        {
-            Spectrum3D.InvalidateVisual();
-            SectionPlot.InvalidateVisual();
+            this.Opened += (s, e) =>
+            {
+                GLLabel.Background = SkiaCustomControl.OpenGLEnabled ? Brushes.Lime : Brushes.OrangeRed;
+                Spectrum3D.Background = Program.Config.SpectraBackground;
+                Spectrum3D.TimeAxisInterval = Program.Config.LastTimeAxisInterval;
+                SectionPlot.AMU = Program.Config.LastAMUSection;
+                Last3DCoords = Program.Config.Last3DCoords;
+                OnRestore3DViewClick(this, null);
+            };
+            this.Closing += (s, e) =>
+            {
+                Program.Config.LastAMUSection = SectionPlot.AMU;
+                Program.Config.LastTimeAxisInterval = Spectrum3D.TimeAxisInterval;
+                Program.Config.SpectraBackground = Spectrum3D.Background;
+                OnTopViewClick(this, null);
+                Program.Config.Last3DCoords = Last3DCoords;
+            };
         }
 
         private static CsvConfiguration DumpConfig = new CsvConfiguration(CultureInfo.CurrentCulture)
         {
             Delimiter = CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator == "," ? ";" : ","
         };
-        private const string BackgroundSerializationName = "background";
 
         private Skia3DSpectrum Spectrum3D;
         private CheckBox LogarithmicIntensity;
@@ -52,11 +59,12 @@ namespace _3DSpectrumVisualizer
         private ListBox LstColors;
         private bool ViewStateTop = false;
         private Slider LightEmulation;
-        private float[] Last3DCorrds = new float[] { 10, 10, 15, 0, 45, 4, 0.01f, 0.1f };
         private SkiaSectionPlot SectionPlot;
         private Label SectionCoords;
         private Slider SectionAMUSlider;
         private CheckBox HorizontalGradient;
+        private Label LoadingLabel;
+        private float[] Last3DCoords;
 
         private void InitializeComponent()
         {
@@ -66,8 +74,6 @@ namespace _3DSpectrumVisualizer
             Spectrum3D.DataRepositories = Program.Repositories;
             Spectrum3D.PropertyChanged += Spectrum3D_PropertyChanged;
             Spectrum3D.PointerPressed += Spectrum3D_PointerPressed;
-            Spectrum3D.Background = Program.Deserialize(BackgroundSerializationName, SKColor.Parse("#0E0D0D"),
-                Program.ColorSerializationConverter);
             GLLabel = this.FindControl<Label>("GLLabel");
             CoordsLabel = this.FindControl<Label>("CoordsLabel");
             LstColors = this.FindControl<ListBox>("lstColors");
@@ -83,11 +89,32 @@ namespace _3DSpectrumVisualizer
             SectionAMUSlider = this.FindControl<Slider>("SectionAMUSlider");
             SectionAMUSlider.PropertyChanged += SectionAMUSlider_PropertyChanged;
             HorizontalGradient = this.FindControl<CheckBox>("chkHorizontalGradient");
+            LoadingLabel = this.FindControl<Label>("lblLoading");
         }
 
-        private void OnClosing(object sender, System.ComponentModel.CancelEventArgs e)
+        public void RepoInitCallback(object s, EventArgs e)
         {
-            Program.Serialize(Spectrum3D.Background, BackgroundSerializationName, Program.ColorSerializationConverter);
+            Dispatcher.UIThread.Post(() =>
+            {
+                LoadingLabel.Background = Brushes.Yellow;
+            });
+        }
+
+        public void RepoLoadedCallback(object s, EventArgs e)
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                bool allLog = Program.Repositories.All(x => x.LogarithmicIntensity);
+                bool allLin = Program.Repositories.All(x => !x.LogarithmicIntensity);
+                LogarithmicIntensity.IsChecked = (allLog ^ allLin) ? (bool?)allLog : null;
+                LoadingLabel.IsVisible = false;
+            });
+        }
+
+        public void InvalidateSpectrum(object sender, EventArgs e)
+        {
+            Spectrum3D.InvalidateVisual();
+            SectionPlot.InvalidateVisual();
         }
 
         #region UI events
@@ -152,7 +179,8 @@ namespace _3DSpectrumVisualizer
                 if (e.NewValue == null || !e.IsEffectiveValueChange || LstColors.SelectedIndex < 0) return;
                 try
                 {
-                    Program.ColorSchemes.SelectedItem[LstColors.SelectedIndex].Color = SKColor.Parse(((Color)e.NewValue).ToString());
+                    Program.Config.ColorSchemes.SelectedItem[LstColors.SelectedIndex].Color 
+                        = SKColor.Parse(((Color)e.NewValue).ToString());
                     foreach (var item in Program.Repositories)
                     {
                         item.RecalculateShader();
@@ -201,6 +229,7 @@ namespace _3DSpectrumVisualizer
 
         private void OnLogarithmicChecked(object sender, RoutedEventArgs e)
         {
+            if (LogarithmicIntensity.IsChecked == null) return;
             bool c = (bool)LogarithmicIntensity.IsChecked;
             foreach (var item in Program.Repositories)
             {
@@ -219,9 +248,7 @@ namespace _3DSpectrumVisualizer
                 if (e.NewValue == null || !e.IsEffectiveValueChange) return;
                 try
                 {
-                    DataRepository.LightGradient[1] = new SKColor(
-                        DataRepository.LightGradient[1].Red, DataRepository.LightGradient[1].Green,
-                        DataRepository.LightGradient[1].Blue, (byte)(double)e.NewValue);
+                    DataRepository.LightGradient[1] = DataRepository.LightGradient[1].WithAlpha((byte)(double)e.NewValue);
                     foreach (var item in Program.Repositories)
                     {
                         item.RecalculateShader();
@@ -287,14 +314,14 @@ namespace _3DSpectrumVisualizer
 
         private void OnRestore3DViewClick(object sender, RoutedEventArgs e)
         {
-            Spectrum3D.XTranslate = Last3DCorrds[0];
-            Spectrum3D.YTranslate = Last3DCorrds[1];
-            Spectrum3D.XRotate = Last3DCorrds[2];
-            Spectrum3D.YRotate = Last3DCorrds[3];
-            Spectrum3D.ZRotate = Last3DCorrds[4];
-            Spectrum3D.ScalingFactor = Last3DCorrds[5];
-            Spectrum3D.ZScalingFactor = Last3DCorrds[6];
-            Spectrum3D.ScanSpacing = Last3DCorrds[7];
+            Spectrum3D.XTranslate = Last3DCoords[0];
+            Spectrum3D.YTranslate = Last3DCoords[1];
+            Spectrum3D.XRotate = Last3DCoords[2];
+            Spectrum3D.YRotate = Last3DCoords[3];
+            Spectrum3D.ZRotate = Last3DCoords[4];
+            Spectrum3D.ScalingFactor = Last3DCoords[5];
+            Spectrum3D.ZScalingFactor = Last3DCoords[6];
+            Spectrum3D.ScanSpacing = Last3DCoords[7];
             Spectrum3D.InvalidateVisual();
             ViewStateTop = false;
         }
@@ -303,7 +330,7 @@ namespace _3DSpectrumVisualizer
         {
             if (!ViewStateTop)
             {
-                Last3DCorrds = new float[] {
+                Last3DCoords = new float[] {
                     Spectrum3D.XTranslate,
                     Spectrum3D.YTranslate,
                     Spectrum3D.XRotate,

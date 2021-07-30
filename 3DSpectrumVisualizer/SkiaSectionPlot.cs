@@ -15,10 +15,20 @@ namespace _3DSpectrumVisualizer
         {
             PointerMoved += SkiaSectionPlot_PointerMoved;
             PointerWheelChanged += SkiaSectionPlot_PointerWheelChanged;
-            
+            AMUProperty.Changed.Subscribe((e) =>
+            {
+                if (!IsInitialized) return;
+                if (e.IsEffectiveValueChange && e.NewValue.HasValue)
+                {
+                    _AMU = e.NewValue.Value;
+                }
+            });
         }
 
         #region Properties
+        public AvaloniaProperty<float> AMUProperty = AvaloniaProperty.Register<SkiaSectionPlot, float>("AMU",
+            defaultBindingMode: Avalonia.Data.BindingMode.TwoWay);
+
         public SKPaint FontPaint { get; set; } = new SKPaint()
         { 
             Color = SKColor.Parse("#ECE2E2"), StrokeWidth = 1, TextSize = 14.0f, TextScaleX = 1,
@@ -42,7 +52,16 @@ namespace _3DSpectrumVisualizer
 
         public bool DisableRendering { get; set; } = false;
 
-        public float AMU { get; set; } = 1;
+        private float _AMU = 1;
+        public float AMU
+        {
+            get => _AMU;
+            set
+            {
+                _AMU = value;
+                SetValue(AMUProperty, _AMU);
+            }
+        }
 
         public IEnumerable<DataRepository> DataRepositories { get; set; } = new List<DataRepository>();
 

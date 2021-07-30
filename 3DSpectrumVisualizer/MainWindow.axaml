@@ -7,8 +7,7 @@
 		mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="800"
 		Width="1000" Height="600" WindowState="Maximized"
 		x:Class="_3DSpectrumVisualizer.MainWindow"
-		Title="RGA 3D Spectrum Visualizer" Icon="avares://3DSpectrumVisualizer/Assets/chart-icon.ico"
-		Closing="OnClosing">
+		Title="RGA 3D Spectrum Visualizer" Icon="avares://3DSpectrumVisualizer/Assets/chart-icon.ico">
 	<Window.Styles>
 		<Style Selector="Slider">
 			<Setter Property="Margin" Value="3"></Setter>
@@ -42,18 +41,21 @@
 		<Expander Grid.Row="1" Grid.RowSpan="2" Grid.Column="0" ExpandDirection="Right" IsExpanded="True" Padding="0,10,0,0">
 			<ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Visible" Padding="0,0,10,0">
 				<StackPanel Orientation="Vertical">
-					<CheckBox x:Name="chkHorizontalGradient" Margin="0,0,20,10" Click="OnHorizontalGradientChecked">Horizontal
+					<CheckBox x:Name="chkHorizontalGradient" Margin="0,0,20,10" 
+							  IsChecked="{x:Static local:DataRepository.UseHorizontalGradient}"
+							  Click="OnHorizontalGradientChecked">Horizontal
 Gradient</CheckBox>
 					<TextBlock>Time Axis Interval</TextBlock>
-					<Slider Minimum="1.5" Maximum="10" x:Name="TimeAxisSlider" PropertyChanged="OnTimeAxisSliderChanged" Value="3"></Slider>
+					<Slider Minimum="1.5" Maximum="10" x:Name="TimeAxisSlider" PropertyChanged="OnTimeAxisSliderChanged" 
+							Value="{Binding #Spectrum3D.TimeAxisInterval}"></Slider>
 					<TextBlock>Background</TextBlock>
 					<colorpicker:ColorButton x:Name="BackgroundPicker" Margin="0,10,0,10" PropertyChanged="OnBackgroundEdited"
 						Color="{Binding #Spectrum3D.Background, Converter={x:Static local:SkiaCustomControl.ColorConverter}}"></colorpicker:ColorButton>
 					<TextBlock>Lighting Emulation</TextBlock>
 					<Slider x:Name="sldLight" Maximum="255" PropertyChanged="OnLightSliderChanged"></Slider>
 					<TextBlock Margin="0,0,0,10">Color Scheme</TextBlock>
-					<NumericUpDown Minimum="1" DataContext="{x:Static local:Program.ColorSchemes}" Maximum="{Binding Count}" Value="{Binding SelectedIndex, Mode=TwoWay}"></NumericUpDown>
-					<ListBox x:Name="lstColors" DataContext="{x:Static local:Program.ColorSchemes}" Items="{Binding SelectedItem}">
+					<NumericUpDown Minimum="1" DataContext="{x:Static local:Program.Config}" Maximum="{Binding ColorSchemes.Count}" Value="{Binding ColorSchemes.SelectedIndex, Mode=TwoWay}"></NumericUpDown>
+					<ListBox x:Name="lstColors" DataContext="{x:Static local:Program.Config}" Items="{Binding ColorSchemes.SelectedItem}">
 						<ListBox.ItemTemplate>
 							<DataTemplate>
 								<Border Background="{Binding, Converter={x:Static local:ColorScheme.BrushConverter}}">
@@ -66,7 +68,7 @@ Gradient</CheckBox>
 					<colorpicker:ColorButton PropertyChanged="OnColorSchemeEdited"
 						Color="{Binding #lstColors.SelectedItem, Converter={x:Static local:ColorScheme.ColorConverter}}"></colorpicker:ColorButton>
 					<Slider Value="{Binding #lstColors.SelectedItem.Position,
-							Mode=TwoWay, Converter={x:Static local:MainWindow.PositionValueConverter}}" 
+							Mode=TwoWay, Converter={x:Static local:MainWindow.PositionValueConverter}}"
 							x:Name="sldPosition"
 							Maximum="1" Minimum="0" SmallChange="0.01"
 							PropertyChanged="OnPositionSchemeEdited">
@@ -75,6 +77,10 @@ Gradient</CheckBox>
 			</ScrollViewer>
 		</Expander>
 		<StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2">
+			<Label VerticalContentAlignment="Center" Background="OrangeRed" Margin="0,3,3,3"
+				   BorderBrush="Black" BorderThickness="1" x:Name="lblLoading">
+				Loading...
+			</Label>
 			<Slider x:Name="sldHideStart" Minimum="0" Maximum="1" SmallChange="0.01" Width="100"
 					Value="{Binding #Spectrum3D.HideFirstPercentOfResults, Mode=TwoWay}"></Slider>
 			<Slider x:Name="sldHideEnd" Minimum="0" Maximum="1" SmallChange="0.01" Width="100"
@@ -82,7 +88,7 @@ Gradient</CheckBox>
 			<Button Content="Top View" Background="LightBlue" Button.Click="OnTopViewClick"></Button>
 			<Button Content="3D View" Background="LightGreen" Button.Click="OnRestore3DViewClick"></Button>
 			<Button IsVisible="False" Content="Dump Data" Button.Click="OnDumpDataClick"></Button>
-			<CheckBox x:Name="chkLog10">Log10</CheckBox>
+			<CheckBox x:Name="chkLog10" IsThreeState="True">Log10</CheckBox>
 			<CheckBox IsVisible="False" IsChecked="{Binding #Spectrum3D.RenderContinuous, Mode=TwoWay}" Checked="OnRenderChecked" />
 			<Label ClipToBounds="True" VerticalContentAlignment="Center" Margin="0,3,0,3" FontSize="14"
 				x:Name="GLLabel" BorderThickness="1" BorderBrush="Black">
@@ -95,8 +101,10 @@ Gradient</CheckBox>
 		</StackPanel>
 		<local:Skia3DSpectrum x:Name="Spectrum3D" Grid.Row="1" Grid.Column="1"></local:Skia3DSpectrum>
 		<Expander ExpandDirection="Up" Grid.Row="2" Grid.Column="1"
-				  IsExpanded="{Binding !#SpectrumSection.DisableRendering, Mode=TwoWay}"
-				  Header="Single AMU Section" x:Name="SpectrumSectionExpander">
+				  IsExpanded="{Binding !#SpectrumSection.DisableRendering, Mode=TwoWay}" x:Name="SpectrumSectionExpander">
+			<Expander.Header>
+				<TextBlock>Single AMU Section</TextBlock>
+			</Expander.Header>
 			<DockPanel>
 				<DockPanel DockPanel.Dock="Top" LastChildFill="True">
 					<CheckBox x:Name="chkSnap" DockPanel.Dock="Right" Margin="10,0,10,0">0.1 AMU Ticks</CheckBox>
@@ -104,7 +112,7 @@ Gradient</CheckBox>
 					<TextBlock DockPanel.Dock="Left" Margin="5,10,10,10" FontSize="16"
 							   Text="{Binding #SectionAMUSlider.Value, Converter={x:Static local:MainWindow.AMUValueConverter}}"></TextBlock>
 					<Slider SmallChange="0.1" LargeChange="1" DockPanel.Dock="Left" Minimum="1" Maximum="65"
-							Value="{Binding #SpectrumSection.AMU, Mode=OneWayToSource}" x:Name="SectionAMUSlider"
+							Value="{Binding #SpectrumSection.AMU, Mode=TwoWay}" x:Name="SectionAMUSlider"
 							TickFrequency="1" IsSnapToTickEnabled="{Binding !#chkSnap.IsChecked}"></Slider>
 				</DockPanel>
 				<StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal">

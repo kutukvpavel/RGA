@@ -1,0 +1,155 @@
+﻿using SkiaSharp;
+using System;
+using System.Collections.Generic;
+using System.Text;
+using Newtonsoft.Json;
+using System.IO;
+using System.Linq;
+
+namespace _3DSpectrumVisualizer
+{
+    public class Configuration
+    {
+        public static event EventHandler<Exception> LogException;
+        public static JsonSerializerSettings SerializerSettings { get; set; } = new JsonSerializerSettings()
+        {
+            ObjectCreationHandling = ObjectCreationHandling.Replace,
+            Converters = new JsonConverter[] { new SKColorJsonConverter(), new SKColorDictionaryJsonConverter<string>() }
+        };
+
+        public const string SerializationFileName = "settings";
+        public const string JsonExtension = ".json";
+
+        public ColorScheme ColorSchemes { get; set; } = new ColorScheme()
+        {
+            new GradientColorObservableCollection()
+            {
+                new GradientColor(SKColor.Parse("#C50D17F4"), 0),
+                new GradientColor(SKColor.Parse("#C013E90F"), 0.5f),
+                new GradientColor(SKColor.Parse("#C5EF0F12"), 1)
+            },
+            new GradientColorObservableCollection()
+            {
+                new GradientColor(SKColor.Parse("#C3E511E9"), 0),
+                new GradientColor(SKColor.Parse("#C8F1DC0F"), 0.5f),
+                new GradientColor(SKColor.Parse("#D40DECDD"), 1)
+            }
+        };
+
+        [JsonConverter(typeof(SKColorDictionaryJsonConverter<string>))]
+        public Dictionary<string, SKColor> GasRegionColor { get; set; } = new Dictionary<string, SKColor>()
+        {
+            { "NO2", SKColor.Parse("#2EFF6200") },
+            { "O2", SKColor.Parse("#3300FF0B") },
+            { "He", SKColor.Parse("#36FAFF00") },
+            { "CO2", SKColor.Parse("#2E00EFFF") }
+        };
+
+        [JsonProperty(ItemConverterType = typeof(SKColorJsonConverter))]
+        public SKColor[] UVRegionColors { get; set; } = new SKColor[] { SKColor.Parse("#38B088FF") };
+
+        [JsonProperty(ItemConverterType = typeof(SKColorJsonConverter))]
+        public SKColor[] TemperatureProfileColors { get; set; } = new SKColor[] { SKColor.Parse("#F20B15F7") };
+
+        [JsonConverter(typeof(SKColorJsonConverter))]
+        public SKColor FallbackColor { get; set; } = SKColor.Parse("#F20B15F7");
+
+        [JsonProperty(ItemConverterType = typeof(SKColorJsonConverter))]
+        public SKColor[] LightGradient { get; set; } = new SKColor[]
+        {
+            SKColor.Parse("#00FAF4F4"),
+            SKColor.Parse("#8F7B7B7B")
+        };
+
+        [JsonConverter(typeof(SKColorJsonConverter))]
+        public SKColor SpectraBackground { get; set; } = SKColor.Parse("#0E0D0D");
+
+        public string InfoSplitter { get; set; } = " | ";
+        public string InfoSubfolder { get; set; } = "info";
+        public string TemperatureFileName { get; set; } = "Temp.txt";
+        public string UVFileName { get; set; } = "UV.txt";
+        public string GasFileName { get; set; } = "Gas.txt";
+        public int GradientPositionSliderLawPower { get; set; } = 2;
+        public int AMURoundingDigits { get; set; } = 1;
+        public string RepositoryFileFilter { get; set; } = "*.csv";
+        public float[] Last3DCoords { get; set; } = new float[] { 10, 10, 15, 0, 45, 4, 0.01f, 0.1f };
+        public float LastAMUSection { get; set; } = 18;
+        public byte LastLightSliderPosition { get; set; } = 128;
+        public bool[] UseLogIntensity { get; set; } = new bool[] { false };
+        public bool UseHorizontalGradient { get; set; } = false;
+        public float LastTimeAxisInterval { get; set; } = 2.5f;
+
+        public void Save()
+        {
+            Serialize(this, SerializationFileName, SerializerSettings);
+        }
+
+        public static Configuration Load()
+        {
+            return Deserialize(SerializationFileName, new Configuration(), SerializerSettings);
+        }
+        public static void Serialize<T>(T obj, string name, JsonSerializerSettings settings)
+        {
+            try
+            {
+                var p = Path.Combine(Environment.CurrentDirectory, name + JsonExtension);
+                File.WriteAllText(p, JsonConvert.SerializeObject(obj, Formatting.Indented, settings));
+            }
+            catch (Exception ex)
+            {
+                LogException?.Invoke(null, ex);
+            }
+        }
+
+        public static T Deserialize<T>(string name, T def, JsonSerializerSettings settings)
+        {
+            try
+            {
+                var p = Path.Combine(Environment.CurrentDirectory, name + JsonExtension);
+                if (File.Exists(p))
+                {
+                    object o = JsonConvert.DeserializeObject(File.ReadAllText(p), typeof(T), settings);
+                    if (o == null) throw new JsonSerializationException("Deserialization result is null.");
+                    return (T)o;
+                }
+            }
+            catch (Exception ex)
+            {
+                LogException?.Invoke(null, ex);
+            }
+            return def;
+        }
+    }
+
+    #region Serialization
+
+
+    public class SKColorJsonConverter : JsonConverter<SKColor>
+    {
+        public override SKColor ReadJson(JsonReader reader, Type objectType, SKColor existingValue, bool hasExistingValue, JsonSerializer serializer)
+        {
+            return SKColor.Parse((string)reader.Value);
+        }
+
+        public override void WriteJson(JsonWriter writer, SKColor value, JsonSerializer serializer)
+        {
+            writer.WriteValue(value.ToString());
+        }
+    }
+
+    public class SKColorDictionaryJsonConverter<TKey> : JsonConverter<Dictionary<TKey, SKColor>>
+    {
+        public override Dictionary<TKey, SKColor> ReadJson(JsonReader reader, Type objectType, Dictionary<TKey, SKColor> existingValue, bool hasExistingValue, JsonSerializer serializer)
+        {
+            return JsonConvert.DeserializeObject<Dictionary<TKey, string>>((string)reader.Value)
+                .ToDictionary(x => x.Key, x => SKColor.Parse(x.Value));
+        }
+
+        public override void WriteJson(JsonWriter writer, Dictionary<TKey, SKColor> value, JsonSerializer serializer)
+        {
+            writer.WriteValue(JsonConvert.SerializeObject(value.ToDictionary(x => x.Key, x => x.Value.ToString())));
+        }
+    }
+
+    #endregion
+}

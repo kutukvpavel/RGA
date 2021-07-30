@@ -23,6 +23,9 @@ namespace _3DSpectrumVisualizer
         }
 
         #region Properties
+        public AvaloniaProperty<float> TimeAxisIntervalProperty =
+            AvaloniaProperty.Register<Skia3DSpectrum, float>("TimeAxisInterval");
+
         public SKPaint FontPaint { get; set; } = new SKPaint() 
         { 
             Color = SKColor.Parse("#ECE2E2"), StrokeWidth = 2, TextSize = 0.7f, TextScaleX = 1,
@@ -93,7 +96,16 @@ namespace _3DSpectrumVisualizer
                 return c;
             }
         }
-        public float TimeAxisInterval { get; set; } = 2.5f;
+        private float _TimeAxisInterval = 2.5f;
+        public float TimeAxisInterval
+        {
+            get => _TimeAxisInterval;
+            set
+            {
+                _TimeAxisInterval = value;
+                SetValue(TimeAxisIntervalProperty, _TimeAxisInterval);
+            }
+        }
 
         #endregion
 

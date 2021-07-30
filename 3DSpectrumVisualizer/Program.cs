@@ -10,11 +10,23 @@ using System.IO;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using Avalonia.Data.Converters;
+using System.Threading.Tasks;
+using LLibrary;
 
 namespace _3DSpectrumVisualizer
 {
     public class Program
     {
+
+        public static event EventHandler RepositoriesParsed;
+        public static event EventHandler RepositoriesInitialized;
+
+        public static List<DataRepository> Repositories { get; } = new List<DataRepository>();
+        public static object UpdateSynchronizingObject { get; } = new object();
+        public static Configuration Config { get; private set; }
+
+        private static L Log = new L();
+
         // Initialization code. Don't use any Avalonia, third-party APIs or any
         // SynchronizationContext-reliant code before AppMain is called: things aren't initialized
         // yet and stuff might break.
@@ -30,137 +42,81 @@ namespace _3DSpectrumVisualizer
 
         public static void AppMain(Application app, string[] args)
         {
-            MainWindow.AMUValueConverter = new FuncValueConverter<double, string>(x => MathF.Round((float)x, 1).ToString("F1"));
-            DataRepository.AMURoundingDigits = 1;
-            ColorSchemes = Deserialize(ColorSerializationName, ColorSchemes, ColorSerializationConverter);
-            string filter = "*.csv";
-            if (args[0].StartsWith("-f"))
-            {
-                filter = args[0].Split(':')[1];
-                args = args.Skip(1).ToArray();
-            }
-            for (int i = 0; i < args.Length; i++)
-            {
-                var dr = new DataRepository(args[i]) 
-                { 
-                    Filter = filter, 
-                    UpdateSynchronizingObject = Program.UpdateSynchronizingObject
-                };
-                if (ColorSchemes.Count > i)
-                {
-                    dr.PaintFill.Color = ColorSchemes[i][0].Color;
-                    dr.PaintStroke.Color = ColorSchemes[i][0].Color;
-                    dr.ColorScheme = ColorSchemes[i];
-                }
-                dr.InitializeInfoPathes();
-                Repositories.Add(dr);
-            }
+            Configuration.LogException += LogException;
+            Config = Configuration.Load();
+            InitStaticSettings();
             var mainWindow = new MainWindow();
-            foreach (var item in Repositories)
+            if (app.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime lt)
             {
-                item.DataAdded += mainWindow.InvalidateSpectrum;
-                item.UpdateData();
-                item.Enabled = true;
+                lt.MainWindow = mainWindow;
             }
-            app.Run(mainWindow);
-            Serialize(ColorSchemes, ColorSerializationName, ColorSerializationConverter);
-        }
-
-        public static ColorScheme ColorSchemes { get; private set; } = new ColorScheme()
-        {
-            new GradientColorObservableCollection()
+            RepositoriesInitialized += mainWindow.RepoInitCallback;
+            RepositoriesParsed += mainWindow.RepoLoadedCallback;
+            var initTask = new Task(() =>
             {
-                new GradientColor(SKColor.Parse("#C50D17F4"), 0),
-                new GradientColor(SKColor.Parse("#C013E90F"), 0.5f),
-                new GradientColor(SKColor.Parse("#C5EF0F12"), 1)
-            },
-            new GradientColorObservableCollection()
-            {
-                new GradientColor(SKColor.Parse("#C3E511E9"), 0),
-                new GradientColor(SKColor.Parse("#C8F1DC0F"), 0.5f),
-                new GradientColor(SKColor.Parse("#D40DECDD"), 1)
-            }
-        };
-
-        public static List<DataRepository> Repositories { get; } = new List<DataRepository>();
-
-        public static object UpdateSynchronizingObject { get; } = new object();
-
-        #region Serialization
-
-        public static void Serialize<T>(T obj, string name, JsonConverter converter = null)
-        {
-            try
-            {
-                var p = Path.Combine(Environment.CurrentDirectory, name + JsonExtension);
-                File.WriteAllText(p, JsonConvert.SerializeObject(obj, converter));
-            }
-            catch (Exception)
-            {
-
-            }
-        }
-
-        public static T Deserialize<T>(string name, T def, JsonConverter converter = null)
-        {
-            try
-            {
-                var p = Path.Combine(Environment.CurrentDirectory, name + JsonExtension);
-                if (File.Exists(p))
+                for (int i = 0; i < args.Length; i++)
                 {
-                    object o;
-                    if (converter == null)
+                    var dr = new DataRepository(args[i])
                     {
-                        o = JsonConvert.DeserializeObject(File.ReadAllText(p));
-                    }
-                    else
+                        Filter = Config.RepositoryFileFilter,
+                        UpdateSynchronizingObject = Program.UpdateSynchronizingObject,
+                        GasRegionColor = Config.GasRegionColor,
+                        LogarithmicIntensity = (Config.UseLogIntensity.Length > i) ? 
+                            Config.UseLogIntensity[i] : Config.UseLogIntensity[0]
+                    };
+                    dr.UVRegionPaint.Color = (Config.UVRegionColors.Length > i) ? 
+                        Config.UVRegionColors[i] : Config.UVRegionColors[0];
+                    dr.TemperaturePaint.Color = (Config.TemperatureProfileColors.Length > i) ? 
+                        Config.TemperatureProfileColors[i] : Config.TemperatureProfileColors[0];
+                    if (Config.ColorSchemes.Count > i)
                     {
-                        o = JsonConvert.DeserializeObject(File.ReadAllText(p), typeof(T), converter);
+                        dr.PaintFill.Color = Config.ColorSchemes[i][0].Color;
+                        dr.PaintStroke.Color = Config.ColorSchemes[i][0].Color;
+                        dr.ColorScheme = Config.ColorSchemes[i];
                     }
-                    if (o == null) throw new JsonSerializationException();
-                    return (T)o;
+                    dr.InitializeInfoPathes();
+                    Repositories.Add(dr);
                 }
-            }
-            catch (Exception ex)
-            {
-
-            }
-            return def;
+                RepositoriesInitialized?.Invoke(null, null);
+                foreach (var item in Repositories)
+                {
+                    item.DataAdded += mainWindow.InvalidateSpectrum;
+                    item.UpdateData();
+                    item.Enabled = true;
+                }
+                RepositoriesParsed?.Invoke(null, null);
+            });
+            mainWindow.Opened += (s, e) => initTask.Start();
+            app.Run(mainWindow);
+            CollectSettings();
+            Config.Save();
         }
 
-        public const string ColorSerializationName = "colors";
-        public const string JsonExtension = ".json";
-        /*public static readonly JsonSerializerOptions SerializerOptions =
-            new JsonSerializerOptions() { PropertyNameCaseInsensitive = true };*/
+        private static void InitStaticSettings()
+        {
+            DataRepository.AMURoundingDigits = Config.AMURoundingDigits;
+            DataRepository.FallbackColor = Config.FallbackColor;
+            DataRepository.GasFileName = Config.GasFileName;
+            DataRepository.InfoSplitter = Config.InfoSplitter;
+            DataRepository.InfoSubfolder = Config.InfoSubfolder;
+            DataRepository.LightGradient = Config.LightGradient;
+            DataRepository.TemperatureFileName = Config.TemperatureFileName;
+            DataRepository.UVFileName = Config.UVFileName;
+            DataRepository.LightGradient[1] = DataRepository.LightGradient[1].WithAlpha(Config.LastLightSliderPosition);
+            DataRepository.UseHorizontalGradient = Config.UseHorizontalGradient;
+            MainWindow.PositionValueConverter = new RootValueConverter(Config.GradientPositionSliderLawPower);
+        }
 
-        public static JsonConverter ColorSerializationConverter = new SKColorJsonConverter();
+        private static void CollectSettings()
+        {
+            Config.UseHorizontalGradient = DataRepository.UseHorizontalGradient;
+            Config.LastLightSliderPosition = DataRepository.LightGradient[1].Alpha;
+            Config.UseLogIntensity = Repositories.Select(x => x.LogarithmicIntensity).ToArray();
+        }
+
+        public static void LogException(object s, Exception e)
+        {
+            Log.Error($"Exception from object '{s.GetType().FullName}': {e}");
+        }
     }
-
-    public class SKColorJsonConverter : JsonConverter<SKColor>
-    {
-        public override SKColor ReadJson(JsonReader reader, Type objectType, SKColor existingValue, bool hasExistingValue, JsonSerializer serializer)
-        {
-            return SKColor.Parse((string)reader.Value);
-        }
-
-        public override void WriteJson(JsonWriter writer, SKColor value, JsonSerializer serializer)
-        {
-            writer.WriteValue(value.ToString());
-        }
-    }
-
-    /*public class GradientColorJsonConverter : JsonConverter<GradientColor>
-    {
-        public override GradientColor ReadJson(JsonReader reader, Type objectType, GradientColor existingValue, bool hasExistingValue, JsonSerializer serializer)
-        {
-            return (GradientColor)serializer.Deserialize(reader);
-        }
-
-        public override void WriteJson(JsonWriter writer, GradientColor value, JsonSerializer serializer)
-        {
-            serializer.Serialize(writer, value);
-        }
-    }*/
-
-    #endregion
 }

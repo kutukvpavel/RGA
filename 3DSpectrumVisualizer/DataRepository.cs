@@ -16,23 +16,19 @@ namespace _3DSpectrumVisualizer
     public class DataRepository
     {
         #region Static
-        public static string InfoSplitter { get; set; } = " | ";
-        public static string InfoSubfolder { get; set; } = "info";
-        public static string TemperatureFileName { get; set; } = "Temp.txt";
-        public static string UVFileName { get; set; } = "UV.txt";
-        public static string GasFileName { get; set; } = "Gas.txt";
+        public static string InfoSplitter { get; set; }
+        public static string InfoSubfolder { get; set; }
+        public static string TemperatureFileName { get; set; }
+        public static string UVFileName { get; set; }
+        public static string GasFileName { get; set; }
         public static bool UseHorizontalGradient { get; set; } = false;
-        public static int AMURoundingDigits { get; set; } = 1;
+        public static int AMURoundingDigits { get; set; }
         public static ParallelOptions ParallelOptions { get; set; } = new ParallelOptions()
         {
-            MaxDegreeOfParallelism = 4
+            MaxDegreeOfParallelism = Environment.ProcessorCount
         };
-        public static SKColor FallbackColor { get; set; } = SKColor.Parse("#F20B15F7");
-        public static SKColor[] LightGradient { get; set; } = new SKColor[]
-        {
-            SKColor.Parse("#00FAF4F4"),
-            SKColor.Parse("#8F7B7B7B")
-        };
+        public static SKColor FallbackColor { get; set; }
+        public static SKColor[] LightGradient { get; set; }
         public static SKPaint RegionPaintTemplate { get; set; } = new SKPaint()
         {
             Color = SKColor.Parse("#fff"),
@@ -60,7 +56,7 @@ namespace _3DSpectrumVisualizer
 
         public object UpdateSynchronizingObject { get; set; } = new object();
         public string Folder { get; }
-        public string Filter { get; set; } = "*.csv";
+        public string Filter { get; set; }
         public List<ScanResult> Results { get; } = new List<ScanResult>();
         public SKPath TemperatureProfile { get; } = new SKPath();
         public List<UVRegion> UVProfile { get; } = new List<UVRegion>();
@@ -97,18 +93,11 @@ namespace _3DSpectrumVisualizer
         public SKPaint UVRegionPaint { get; set; } = new SKPaint()
         {
             BlendMode = RegionPaintTemplate.BlendMode,
-            Color = SKColor.Parse("#38B088FF"),
             IsAntialias = RegionPaintTemplate.IsAntialias,
             Style = RegionPaintTemplate.Style,
             StrokeWidth = RegionPaintTemplate.StrokeWidth
         };
-        public Dictionary<string, SKColor> GasRegionColor { get; } = new Dictionary<string, SKColor>()
-        {
-            { "NO2", SKColor.Parse("#2EFF6200") },
-            { "O2", SKColor.Parse("#3300FF0B") },
-            { "He", SKColor.Parse("#36FAFF00") },
-            { "CO2", SKColor.Parse("#2E00EFFF") }
-        };
+        public Dictionary<string, SKColor> GasRegionColor { get; set; } = new Dictionary<string, SKColor>();
         public ICollection<GradientColor> ColorScheme { get; set; } = new GradientColor[0];
         public SKPaint TemperaturePaint { get; set; } = new SKPaint()
         {
@@ -204,8 +193,8 @@ namespace _3DSpectrumVisualizer
                 }
                 //Info files
                 float? t;
-                var l = TryReadLine(ref _TempStream, _TempPath, out t);
-                if (l != null)
+                string l;
+                while ((l = TryReadLine(ref _TempStream, _TempPath, out t)) != null)
                 {
                     float val = float.Parse(l);
                     if (TemperatureProfile.PointCount > 0)
@@ -218,8 +207,7 @@ namespace _3DSpectrumVisualizer
                     }
                     raiseDataAdded = true;
                 }
-                l = TryReadLine(ref _UVStream, _UVPath, out t);
-                if (l != null)
+                while ((l = TryReadLine(ref _UVStream, _UVPath, out t)) != null)
                 {
                     bool val = bool.Parse(l);
                     if (_LastUVState ^ val)
@@ -240,8 +228,7 @@ namespace _3DSpectrumVisualizer
                     _LastUVState = val;
                     raiseDataAdded = true;
                 }
-                l = TryReadLine(ref _GasStream, _GasPath, out t);
-                if (l != null)
+                while ((l = TryReadLine(ref _GasStream, _GasPath, out t)) != null)
                 {
                     GasProfile.Last().EndTimeOffset = t.Value;
                     GasRegion reg = null;
