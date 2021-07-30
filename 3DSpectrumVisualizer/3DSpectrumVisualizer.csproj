@@ -8,6 +8,8 @@
 	<Product>Mass Spectrum 3D Visualizer</Product>
 	<Platforms>AnyCPU;x64</Platforms>
 	<ApplicationIcon>Assets\chart-icon.ico</ApplicationIcon>
+	<SatelliteResourceLanguages>ru;en-US</SatelliteResourceLanguages>
+	<ResourceLanguages>ru;en-US</ResourceLanguages>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
 	<WarningLevel>2</WarningLevel>
