@@ -168,6 +168,7 @@ namespace _3DSpectrumVisualizer
             bool raiseDataAdded = false;
             bool lockTaken = Monitor.TryEnter(UpdateSynchronizingObject, 10);
             if (!lockTaken) return;
+            string l = null;
             try
             {
                 //Scan files
@@ -193,7 +194,6 @@ namespace _3DSpectrumVisualizer
                 }
                 //Info files
                 float? t;
-                string l;
                 while ((l = TryReadLine(ref _TempStream, _TempPath, out t)) != null)
                 {
                     float val = float.Parse(l);
@@ -252,9 +252,10 @@ namespace _3DSpectrumVisualizer
                     raiseDataAdded = true;
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-
+                Program.LogException(this, ex);
+                if (l != null) Program.LogInfo(this, l);
             }
             finally
             {

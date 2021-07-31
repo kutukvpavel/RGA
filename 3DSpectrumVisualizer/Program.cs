@@ -121,5 +121,10 @@ namespace _3DSpectrumVisualizer
         {
             Log.Error($"Exception from object '{s.GetType().FullName}': {e}");
         }
+
+        public static void LogInfo(object s, string i)
+        {
+            Log.Info($"Info from object '{s.GetType().FullName}': {i}");
+        }
     }
 }
