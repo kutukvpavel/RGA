@@ -1,18 +1,19 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Data.Converters;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
-using Avalonia.Input;
+using Avalonia.Threading;
 using CsvHelper;
 using CsvHelper.Configuration;
-using System.IO;
-using System.Globalization;
 using SkiaSharp;
-using System.Linq;
-using Avalonia.Data.Converters;
-using Avalonia.Threading;
 using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Linq;
 
 namespace _3DSpectrumVisualizer
 {
@@ -33,7 +34,6 @@ namespace _3DSpectrumVisualizer
                 GLLabel.Background = SkiaCustomControl.OpenGLEnabled ? Brushes.Lime : Brushes.OrangeRed;
                 Spectrum3D.Background = Program.Config.SpectraBackground;
                 Spectrum3D.TimeAxisInterval = Program.Config.LastTimeAxisInterval;
-                SectionPlot.AMU = Program.Config.LastAMUSection;
                 Last3DCoords = Program.Config.Last3DCoords;
                 OnRestore3DViewClick(this, null);
             };
@@ -46,6 +46,8 @@ namespace _3DSpectrumVisualizer
                 Program.Config.Last3DCoords = Last3DCoords;
             };
         }
+
+        #region Private
 
         private static CsvConfiguration DumpConfig = new CsvConfiguration(CultureInfo.CurrentCulture)
         {
@@ -92,6 +94,8 @@ namespace _3DSpectrumVisualizer
             LoadingLabel = this.FindControl<Label>("lblLoading");
         }
 
+        #endregion
+
         public void RepoInitCallback(object s, EventArgs e)
         {
             Dispatcher.UIThread.Post(() =>
@@ -107,6 +111,9 @@ namespace _3DSpectrumVisualizer
                 bool allLog = Program.Repositories.All(x => x.LogarithmicIntensity);
                 bool allLin = Program.Repositories.All(x => !x.LogarithmicIntensity);
                 LogarithmicIntensity.IsChecked = (allLog ^ allLin) ? (bool?)allLog : null;
+                SectionPlot.AMU = Program.Config.LastAMUSection;
+                SectionPlot.AutoscaleX(false);
+                SectionPlot.AutoscaleYForAllSections();
                 LoadingLabel.IsVisible = false;
             });
         }
@@ -118,6 +125,54 @@ namespace _3DSpectrumVisualizer
         }
 
         #region UI events
+
+        private async void OnExportSectionClick(object sender, RoutedEventArgs e)
+        {
+            if (!Program.Repositories.Any(x => x.Sections.ContainsKey(SectionPlot.AMU))) return;
+            SaveFileDialog sd = new SaveFileDialog()
+            {
+                DefaultExtension = "csv",
+                Filters = new List<FileDialogFilter>() 
+                { new FileDialogFilter() { Extensions = new List<string>() { "csv" }, Name = "Comma-separated values" } }
+            };
+            if (Directory.Exists(Program.Config.LastExportDir)) sd.Directory = Program.Config.LastExportDir;
+            string path = await sd.ShowAsync(this);
+            if (path == null) return;
+            try
+            {
+                using TextWriter tw = new StreamWriter(path, false);
+                using CsvWriter cw = new CsvWriter(tw, DumpConfig);
+                int len = Program.Repositories.Max(x => x.Sections[SectionPlot.AMU].LinearPath.PointCount);
+                foreach (var item in Program.Repositories)
+                {
+                    cw.WriteField(item.Folder.Split(Path.DirectorySeparatorChar).LastOrDefault());
+                    cw.WriteField("");
+                }
+                cw.NextRecord();
+                for (int i = 0; i < len; i++)
+                {
+                    foreach (var item in Program.Repositories)
+                    {
+                        if (item.Sections[SectionPlot.AMU].LinearPath.PointCount > i)
+                        {
+                            var p = item.Sections[SectionPlot.AMU].LinearPath[i];
+                            cw.WriteField(p.X.ToString(Program.Config.ExportXFormat));
+                            cw.WriteField(p.Y.ToString(Program.Config.ExportYFormat));
+                        }
+                        else
+                        {
+                            cw.WriteField("");
+                            cw.WriteField("");
+                        }
+                    }
+                    cw.NextRecord();
+                }
+            }
+            catch (Exception ex)
+            {
+                Program.LogException(this, ex);
+            }
+        }
 
         private void SectionAMUSlider_PropertyChanged(object sender, AvaloniaPropertyChangedEventArgs e)
         {

@@ -78,6 +78,9 @@ namespace _3DSpectrumVisualizer
         public bool[] UseLogIntensity { get; set; } = new bool[] { false };
         public bool UseHorizontalGradient { get; set; } = false;
         public float LastTimeAxisInterval { get; set; } = 2.5f;
+        public string LastExportDir { get; set; }
+        public string ExportYFormat { get; set; } = "E4";
+        public string ExportXFormat { get; set; } = "F1";
 
         public void Save()
         {
@@ -88,6 +91,8 @@ namespace _3DSpectrumVisualizer
         {
             return Deserialize(SerializationFileName, new Configuration(), SerializerSettings);
         }
+
+        #region Serialization
         public static void Serialize<T>(T obj, string name, JsonSerializerSettings settings)
         {
             try
@@ -120,9 +125,6 @@ namespace _3DSpectrumVisualizer
             return def;
         }
     }
-
-    #region Serialization
-
 
     public class SKColorJsonConverter : JsonConverter<SKColor>
     {

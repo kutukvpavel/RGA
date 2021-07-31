@@ -20,7 +20,7 @@ namespace _3DSpectrumVisualizer
                 if (!IsInitialized) return;
                 if (e.IsEffectiveValueChange && e.NewValue.HasValue)
                 {
-                    _AMU = e.NewValue.Value;
+                    AMU = e.NewValue.Value;
                 }
             });
         }
@@ -28,6 +28,8 @@ namespace _3DSpectrumVisualizer
         #region Properties
         public AvaloniaProperty<float> AMUProperty = AvaloniaProperty.Register<SkiaSectionPlot, float>("AMU",
             defaultBindingMode: Avalonia.Data.BindingMode.TwoWay);
+        public AvaloniaProperty<bool> AMUPresent = AvaloniaProperty.Register<SkiaSectionPlot, bool>("AMUPresent",
+            defaultBindingMode: Avalonia.Data.BindingMode.OneWay, defaultValue: false);
 
         public SKPaint FontPaint { get; set; } = new SKPaint()
         { 
@@ -58,8 +60,10 @@ namespace _3DSpectrumVisualizer
             get => _AMU;
             set
             {
+                if (_AMU == value) return;
                 _AMU = value;
                 SetValue(AMUProperty, _AMU);
+                SetValue(AMUPresent, DataRepositories.Any(x => x.Sections.ContainsKey(_AMU)));
             }
         }
 
@@ -136,9 +140,14 @@ namespace _3DSpectrumVisualizer
                     return 0;
                 }
             });
-            YScaling = (float)Bounds.Height * 0.9f / (max - min);
-            YTranslate = min * YScaling;
-            if (invalidate) InvalidateVisual();
+            AutoscalingYEngine(min, max, invalidate);
+        }
+
+        public void AutoscaleYForAllSections(bool invalidate = true)
+        {
+            float max = DataRepositories.Max(x => x.Max);
+            float min = DataRepositories.Min(x => x.Min);
+            AutoscalingYEngine(min, max, invalidate);
         }
 
         #endregion
@@ -146,6 +155,13 @@ namespace _3DSpectrumVisualizer
         #region Private
 
         private Point _LastPoint;
+
+        private void AutoscalingYEngine(float min, float max, bool invalidate)
+        {
+            YScaling = (float)Bounds.Height * 0.9f / (max - min);
+            YTranslate = min * YScaling;
+            if (invalidate) InvalidateVisual();
+        }
 
         protected override string UpdateCoordinatesString()
         {
