@@ -168,7 +168,6 @@ namespace _3DSpectrumVisualizer
             bool raiseDataAdded = false;
             bool lockTaken = Monitor.TryEnter(UpdateSynchronizingObject, 10);
             if (!lockTaken) return;
-            string l = null;
             try
             {
                 //Scan files
@@ -194,68 +193,92 @@ namespace _3DSpectrumVisualizer
                 }
                 //Info files
                 float? t;
+                string l = null;
                 while ((l = TryReadLine(ref _TempStream, _TempPath, out t)) != null)
                 {
-                    float val = float.Parse(l);
-                    if (TemperatureProfile.PointCount > 0)
+                    try
                     {
-                        TemperatureProfile.LineTo(t.Value, val);
-                    }
-                    else
-                    {
-                        TemperatureProfile.MoveTo(t.Value, val);
-                    }
-                    raiseDataAdded = true;
-                }
-                while ((l = TryReadLine(ref _UVStream, _UVPath, out t)) != null)
-                {
-                    bool val = bool.Parse(l);
-                    if (_LastUVState ^ val)
-                    {
-                        if (val)
+                        float val = float.Parse(l, CultureInfo.InvariantCulture);
+                        if (TemperatureProfile.PointCount > 0)
                         {
-                            UVProfile.Add(new UVRegion(this, t.Value));
+                            TemperatureProfile.LineTo(t.Value, val);
                         }
                         else
                         {
-                            UVProfile.Last().EndTimeOffset = t.Value;
+                            TemperatureProfile.MoveTo(t.Value, val);
                         }
+                        raiseDataAdded = true;
                     }
-                    else
+                    catch (Exception ex)
                     {
-                        if (val) UVProfile.Last().EndTimeOffset = t.Value;
+                        Program.LogException(this, ex);
+                        if (l != null) Program.LogInfo(this, l);
                     }
-                    _LastUVState = val;
-                    raiseDataAdded = true;
+                }
+                while ((l = TryReadLine(ref _UVStream, _UVPath, out t)) != null)
+                {
+                    try
+                    {
+                        bool val = bool.Parse(l);
+                        if (_LastUVState ^ val)
+                        {
+                            if (val)
+                            {
+                                UVProfile.Add(new UVRegion(this, t.Value));
+                            }
+                            else
+                            {
+                                UVProfile.Last().EndTimeOffset = t.Value;
+                            }
+                        }
+                        else
+                        {
+                            if (val) UVProfile.Last().EndTimeOffset = t.Value;
+                        }
+                        _LastUVState = val;
+                        raiseDataAdded = true;
+                    }
+                    catch (Exception ex)
+                    {
+                        Program.LogException(this, ex);
+                        if (l != null) Program.LogInfo(this, l);
+                    }
                 }
                 while ((l = TryReadLine(ref _GasStream, _GasPath, out t)) != null)
                 {
-                    GasProfile.Last().EndTimeOffset = t.Value;
-                    GasRegion reg = null;
-                    if (GasRegionColor.ContainsKey(l))
+                    try
                     {
-                        if (!_GasPaintCache.ContainsKey(l)) _GasPaintCache.Add(l, new SKPaint()
+                        GasProfile.Last().EndTimeOffset = t.Value;
+                        GasRegion reg = null;
+                        if (GasRegionColor.ContainsKey(l))
                         {
-                            BlendMode = RegionPaintTemplate.BlendMode,
-                            Color = GasRegionColor[l],
-                            IsAntialias = RegionPaintTemplate.IsAntialias,
-                            Style = RegionPaintTemplate.Style,
-                            StrokeWidth = RegionPaintTemplate.StrokeWidth
-                        });
-                        reg = new GasRegion(this, t.Value, l, _GasPaintCache[l]);
+                            if (!_GasPaintCache.ContainsKey(l)) _GasPaintCache.Add(l, new SKPaint()
+                            {
+                                BlendMode = RegionPaintTemplate.BlendMode,
+                                Color = GasRegionColor[l],
+                                IsAntialias = RegionPaintTemplate.IsAntialias,
+                                Style = RegionPaintTemplate.Style,
+                                StrokeWidth = RegionPaintTemplate.StrokeWidth
+                            });
+                            reg = new GasRegion(this, t.Value, l, _GasPaintCache[l]);
+                        }
+                        else
+                        {
+                            reg = new GasRegion(this, t.Value, l);
+                        }
+                        GasProfile.Add(reg);
+                        raiseDataAdded = true;
                     }
-                    else
+                    catch (Exception ex)
                     {
-                        reg = new GasRegion(this, t.Value, l);
+                        Program.LogException(this, ex);
+                        if (l != null) Program.LogInfo(this, l);
                     }
-                    GasProfile.Add(reg);
-                    raiseDataAdded = true;
                 }
             }
             catch (Exception ex)
             {
                 Program.LogException(this, ex);
-                if (l != null) Program.LogInfo(this, l);
             }
             finally
             {

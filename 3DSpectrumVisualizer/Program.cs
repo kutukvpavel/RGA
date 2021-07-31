@@ -1,17 +1,11 @@
-using System;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using SkiaSharp;
-using System.Linq;
-using System.IO;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
-using Avalonia.Data.Converters;
-using System.Threading.Tasks;
 using LLibrary;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace _3DSpectrumVisualizer
 {
