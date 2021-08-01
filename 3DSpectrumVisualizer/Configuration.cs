@@ -81,6 +81,8 @@ namespace _3DSpectrumVisualizer
         public string LastExportDir { get; set; }
         public string ExportYFormat { get; set; } = "E4";
         public string ExportXFormat { get; set; } = "F1";
+        public string ExportUVTrueString { get; set; } = "1";
+        public string ExportUVFalseString { get; set; } = "0";
 
         public void Save()
         {

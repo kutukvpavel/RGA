@@ -1,4 +1,6 @@
 ﻿using Avalonia.Data.Converters;
+using CsvHelper;
+using CsvHelper.Configuration;
 using MoreLinq;
 using SkiaSharp;
 using System;
@@ -16,6 +18,11 @@ namespace _3DSpectrumVisualizer
     public class DataRepository
     {
         #region Static
+
+        public static CsvConfiguration ExportCsvConfig { get; set; } = new CsvConfiguration(CultureInfo.CurrentCulture)
+        {
+            Delimiter = CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator == "," ? ";" : ","
+        };
         public static string InfoSplitter { get; set; }
         public static string InfoSubfolder { get; set; }
         public static string TemperatureFileName { get; set; }
@@ -37,6 +44,74 @@ namespace _3DSpectrumVisualizer
             StrokeWidth = 2.0f
         };
         private static SKPointXEqualityComparer XEqualityComparer = new SKPointXEqualityComparer();
+
+        public static void ExportSections(IList<DataRepository> repos, float amu, string path)
+        {
+            using TextWriter tw = new StreamWriter(path, false);
+            using CsvWriter cw = new CsvWriter(tw, ExportCsvConfig);
+            int len = repos.Max(x => x.Sections[amu].LinearPath.PointCount);
+            foreach (var item in repos)
+            {
+                cw.WriteField(item.Folder.Split(Path.DirectorySeparatorChar).LastOrDefault());
+                cw.WriteField($"AMU = {amu:F1}");
+                cw.WriteField("Temperature");
+                cw.WriteField("UV");
+                cw.WriteField("Gas");
+            }
+            cw.NextRecord();
+            int[] tempIndex = new int[repos.Count];
+            for (int i = 0; i < len; i++)
+            {
+                try
+                {
+                    for (int j = 0; j < repos.Count; j++)
+                    {
+                        var item = repos[j];
+                        if (item.Sections[amu].LinearPath.PointCount > i)
+                        {
+                            var p = item.Sections[amu].LinearPath[i];
+                            //Time and value
+                            cw.WriteField(p.X.ToString(Program.Config.ExportXFormat));
+                            cw.WriteField(p.Y.ToString(Program.Config.ExportYFormat));
+                            //Temperature
+                            var offset = (item.Results[i].CreationTime - item.StartTime).TotalSeconds;
+                            string t = "";
+                            try
+                            {
+                                if (item.TemperatureProfile.Points[tempIndex[j]].X <= offset)
+                                {
+                                    while (item.TemperatureProfile.Points[tempIndex[j]].X < offset) tempIndex[j]++;
+                                    t = item.TemperatureProfile.Points[tempIndex[j]].Y.ToString("F1");
+                                }
+                            }
+                            catch (IndexOutOfRangeException)
+                            { }
+                            cw.WriteField(t);
+                            //UV
+                            DateTime rt = item.Results[i].CreationTime;
+                            cw.WriteField(item.HitTestUVRegion(rt) ? 
+                                Program.Config.ExportUVTrueString : Program.Config.ExportUVFalseString);
+                            //Gas
+                            t = item.HitTestGasRegion(rt);
+                            cw.WriteField(t ?? "");
+                        }
+                        else
+                        {
+                            for (int k = 0; k < 5; k++)
+                            {
+                                cw.WriteField("");
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Program.LogException(repos, ex);
+                }
+                cw.NextRecord();
+            }
+        }
+
         #endregion
 
         public DataRepository(string folder, int pollPeriod = 3000)
@@ -192,6 +267,7 @@ namespace _3DSpectrumVisualizer
                     }
                 }
                 //Info files
+                if (Results.Count == 0) return; //Do not read info files before we have a valid StartTime
                 float? t;
                 string l = null;
                 while ((l = TryReadLine(ref _TempStream, _TempPath, out t)) != null)
@@ -326,6 +402,27 @@ namespace _3DSpectrumVisualizer
             }
             PaintFill.Shader = Shader;
             PaintStroke.Shader = Shader;
+        }
+
+        public bool HitTestUVRegion(DateTime point)
+        {
+            if (UVProfile.Count == 0) return false;
+            return UVProfile.Any(x => (StartTime.AddSeconds(x.StartTimeOffset) <= point)
+                && (StartTime.AddSeconds(x.EndTimeOffset) >= point));
+        }
+
+        public string HitTestGasRegion(DateTime point)
+        {
+            if (GasProfile.Count == 0) return null;
+            try
+            {
+                return GasProfile.First(x => (StartTime.AddSeconds(x.StartTimeOffset) <= point)
+                    && (StartTime.AddSeconds(x.EndTimeOffset) >= point)).Name;
+            }
+            catch (InvalidOperationException)
+            {
+                return null;
+            }
         }
 
         #endregion

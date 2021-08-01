@@ -237,7 +237,7 @@ namespace _3DSpectrumVisualizer
             public DrawSectionPlot(SkiaSectionPlot parent) : base(parent)
             {
                 XTr = parent.XTranslate;
-                YTr = parent.YTranslate + (float)parent.Bounds.Height * 0.99f;
+                YTr = parent.YTranslate + (float)parent.Bounds.Height * 0.95f;
                 XSc = parent.XScaling;
                 YSc = -parent.YScaling;
                 AMU = MathF.Round(parent.AMU, parent.AMURoundingDigits);
@@ -256,8 +256,10 @@ namespace _3DSpectrumVisualizer
                     canvas.Translate(XTr, 0);
                     canvas.Scale(XSc, 1);
                     RenderRegions(canvas);
-                    canvas.Translate(0, YTr);
-                    canvas.Scale(1, -canvas.LocalClipBounds.Height / Data.Max(x => x.TemperatureProfile.Bounds.Height));
+                    var h = canvas.LocalClipBounds.Height * 0.95f;
+                    var s = h / Data.Max(x => x.TemperatureProfile.Bounds.Height) * 0.95f;
+                    canvas.Translate(0, h + Data.Min(x => x.TemperatureProfile.Bounds.Top) * s);
+                    canvas.Scale(1, -s);
                     RenderTemperatureProfile(canvas);
                 }
                 RenderTimeAxis(canvas);

@@ -14,6 +14,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace _3DSpectrumVisualizer
 {
@@ -49,11 +50,8 @@ namespace _3DSpectrumVisualizer
 
         #region Private
 
-        private static CsvConfiguration DumpConfig = new CsvConfiguration(CultureInfo.CurrentCulture)
-        {
-            Delimiter = CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator == "," ? ";" : ","
-        };
-
+        private int ExportSectionReentrancyTracker = 0;
+        private Button ExportSectionButton;
         private Skia3DSpectrum Spectrum3D;
         private CheckBox LogarithmicIntensity;
         private Label GLLabel;
@@ -92,9 +90,12 @@ namespace _3DSpectrumVisualizer
             SectionAMUSlider.PropertyChanged += SectionAMUSlider_PropertyChanged;
             HorizontalGradient = this.FindControl<CheckBox>("chkHorizontalGradient");
             LoadingLabel = this.FindControl<Label>("lblLoading");
+            ExportSectionButton = this.FindControl<Button>("btnExportSection");
         }
 
         #endregion
+
+        #region Public Methods
 
         public void RepoInitCallback(object s, EventArgs e)
         {
@@ -124,6 +125,8 @@ namespace _3DSpectrumVisualizer
             SectionPlot.InvalidateVisual();
         }
 
+        #endregion
+
         #region UI events
 
         private async void OnExportSectionClick(object sender, RoutedEventArgs e)
@@ -132,45 +135,32 @@ namespace _3DSpectrumVisualizer
             SaveFileDialog sd = new SaveFileDialog()
             {
                 DefaultExtension = "csv",
-                Filters = new List<FileDialogFilter>() 
+                Filters = new List<FileDialogFilter>()
                 { new FileDialogFilter() { Extensions = new List<string>() { "csv" }, Name = "Comma-separated values" } }
             };
             if (Directory.Exists(Program.Config.LastExportDir)) sd.Directory = Program.Config.LastExportDir;
             string path = await sd.ShowAsync(this);
             if (path == null) return;
+            ExportSectionReentrancyTracker++;
+            var buttonContent = ExportSectionButton.Content;
+            var buttonBrush = ExportSectionButton.Background;
+            ExportSectionButton.Content = "Exporting...";
+            ExportSectionButton.Background = Brushes.Gray;
             try
             {
-                using TextWriter tw = new StreamWriter(path, false);
-                using CsvWriter cw = new CsvWriter(tw, DumpConfig);
-                int len = Program.Repositories.Max(x => x.Sections[SectionPlot.AMU].LinearPath.PointCount);
-                foreach (var item in Program.Repositories)
-                {
-                    cw.WriteField(item.Folder.Split(Path.DirectorySeparatorChar).LastOrDefault());
-                    cw.WriteField("");
-                }
-                cw.NextRecord();
-                for (int i = 0; i < len; i++)
-                {
-                    foreach (var item in Program.Repositories)
-                    {
-                        if (item.Sections[SectionPlot.AMU].LinearPath.PointCount > i)
-                        {
-                            var p = item.Sections[SectionPlot.AMU].LinearPath[i];
-                            cw.WriteField(p.X.ToString(Program.Config.ExportXFormat));
-                            cw.WriteField(p.Y.ToString(Program.Config.ExportYFormat));
-                        }
-                        else
-                        {
-                            cw.WriteField("");
-                            cw.WriteField("");
-                        }
-                    }
-                    cw.NextRecord();
-                }
+                await Task.Run(() => DataRepository.ExportSections(Program.Repositories, SectionPlot.AMU, path));
             }
             catch (Exception ex)
             {
                 Program.LogException(this, ex);
+            }
+            finally
+            {
+                if (--ExportSectionReentrancyTracker == 0)
+                {
+                    ExportSectionButton.Content = buttonContent;
+                    ExportSectionButton.Background = buttonBrush;
+                }
             }
         }
 
@@ -344,7 +334,7 @@ namespace _3DSpectrumVisualizer
                 for (int i = 0; i < Program.Repositories.Count; i++)
                 {
                     using TextWriter w = new StreamWriter(@$"E:\dump{i}.csv");
-                    using CsvWriter c = new CsvWriter(w, DumpConfig);
+                    using CsvWriter c = new CsvWriter(w, DataRepository.ExportCsvConfig);
                     foreach (var item in Program.Repositories[i].Results)
                     {
                         foreach (var point in item.Path2D.Points)

@@ -117,8 +117,8 @@ Gradient</CheckBox>
 				</DockPanel>
 				<StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal">
 					<Button Background="#FABDA5" Button.Click="OnExportSectionClick" 
-							IsEnabled="{Binding #SpectrumSection.AMUPresent}">
-						Export...
+							IsEnabled="{Binding #SpectrumSection.AMUPresent}" x:Name="btnExportSection">
+						Export
 					</Button>
 					<Button Background="#ADE6B7" Button.Click="OnSectionAutoscaleYClick">Auto Y</Button>
 					<Button Background="#ADE2E6" Button.Click="OnSectionAutoscaleXClick">Auto X</Button>
