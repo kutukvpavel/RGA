@@ -17,7 +17,9 @@ namespace Acquisition
             try
             {
                 var p = Path.Combine(Environment.CurrentDirectory, name + JsonExtension);
-                File.WriteAllText(p, converter == null ? JsonConvert.SerializeObject(obj) : JsonConvert.SerializeObject(obj, converter));
+                File.WriteAllText(p, converter == null ? 
+                    JsonConvert.SerializeObject(obj, Formatting.Indented) : 
+                    JsonConvert.SerializeObject(obj, Formatting.Indented, converter));
             }
             catch (Exception ex)
             {

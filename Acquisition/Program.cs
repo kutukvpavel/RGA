@@ -50,9 +50,10 @@ namespace Acquisition
             {
                 CommandSet.SetStartAMU.Parameter = args[1];
                 CommandSet.SetEndAMU.Parameter = args[2];
-                CommandSet.TurnHVON.Parameter = args[3];
-                GapStartAMU = args[4];
-                GapEndAMU = args[5];
+                CommandSet.SetPointsPerAMU.Parameter = args[3];
+                CommandSet.TurnHVON.Parameter = args[4];
+                GapStartAMU = args[5];
+                GapEndAMU = args[6];
             }
             catch (IndexOutOfRangeException)
             {
@@ -68,19 +69,6 @@ namespace Acquisition
             //Acquisition cycle
             try
             {
-#if DEBUG_STEP
-                Console.WriteLine("Press enter to start...");
-                ConsoleKey lastKey = ConsoleKey.Enter;
-                while (lastKey == ConsoleKey.Enter || lastKey == ConsoleKey.Spacebar)
-                {
-                    StateMachine();
-                    Console.WriteLine("Confirm execution of the next sequence...");
-                    lastKey = Console.ReadKey().Key;
-                    if (lastKey == ConsoleKey.Spacebar) Device.StartScan();
-                }
-                Console.WriteLine("Aborted.");
-                Device.AbortScan();
-#else
                 while (true)
                 {
                     StateMachine();
@@ -96,7 +84,6 @@ namespace Acquisition
                         Device.StartScan();
                     }
                 }
-#endif
             }
             finally
             {
