@@ -45,6 +45,7 @@ namespace Acquisition
             VerifyDirectoryExists(Configuration.WorkingDirectory, Config.InfoSubfolderName);
             InitBackgroundRemoval();
             Console.WriteLine("RGA Acquisition Helper v1.0 started!");
+            Log($"Background data found for {Background.Count} AMUs.");
             //CLI
             try
             {
@@ -187,7 +188,7 @@ namespace Acquisition
             int l = Device.LastScanResult.Length - 1;
             double totalPressure = Device.LastScanResult[l];
             var y = Device.LastScanResult.SkipLast(1).Select(x => x / (double)Device.CdemGain);
-            y = totalPressure == 0 ? y.Select(x => x / 10000.0) : y.Select(x => x / totalPressure);
+            y = totalPressure == 0 ? y.Select(x => x / Config.CdemEnabledAdditionalDivisionFactor) : y.Select(x => x / totalPressure);
             double increment = 1.0 / Device.PointsPerAMU;
             var now = string.Format(Config.FileNameFormat, DateTime.Now);
             var t = new Thread(() =>
@@ -199,8 +200,9 @@ namespace Acquisition
                 double x = Device.StartAMU;
                 foreach (var item in y)
                 {
-                    double v = item - (Background.ContainsKey(x) ? Background[x] : 0);
-                    cw.WriteField(x.ToString(Config.AMUForamt, CultureInfo.InvariantCulture));
+                    double xBkg = Math.Round(x, Config.BackgroundAMURoundingDigits);
+                    double v = item - (Background.ContainsKey(xBkg) ? Background[xBkg] : 0);
+                    cw.WriteField(x.ToString(Config.AMUFormat, CultureInfo.InvariantCulture));
                     cw.WriteField(v.ToString(Config.IntensityFormat, CultureInfo.InvariantCulture));
                     x += increment;
                     cw.NextRecord();
@@ -217,7 +219,7 @@ namespace Acquisition
                 double x = Device.StartAMU;
                 for (int i = 0; i < Device.LastScanResult.Length; i++)
                 {
-                    cw.WriteField(x.ToString(Config.AMUForamt, CultureInfo.InvariantCulture));
+                    cw.WriteField(x.ToString(Config.AMUFormat, CultureInfo.InvariantCulture));
                     cw.WriteField(Device.LastScanResult[i].ToString(Config.IntensityFormat, CultureInfo.InvariantCulture));
                     x += increment;
                     cw.NextRecord();

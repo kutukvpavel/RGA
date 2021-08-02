@@ -17,7 +17,7 @@ namespace Acquisition
         public string UVFileName { get; set; } = "UV.txt";
         public string InfoLineFormat { get; set; } = "{0} | {1}";
         public string TemperatureFormat { get; set; } = "F1";
-        public string AMUForamt { get; set; } = "F2";
+        public string AMUFormat { get; set; } = "F2";
         public string IntensityFormat { get; set; } = "E4";
         public string PipeName { get; set; } = "LabPID_Profile_Broadcast";
         [JsonIgnore]
@@ -33,5 +33,7 @@ namespace Acquisition
             { 0, "Example 0" },
             { 1, "Example 1" }
         };
+        public double CdemEnabledAdditionalDivisionFactor { get; set; } = 1;
+        public int BackgroundAMURoundingDigits { get; set; } = 2;
     }
 }

@@ -2,7 +2,8 @@
   "profiles": {
     "Acquisition": {
       "commandName": "Project",
-      "commandLineArgs": "COM17"
+      "commandLineArgs": "COM31",
+      "workingDirectory": "E:\\Doc\\EXP_ZNO_30_JUL"
     }
   }
 }

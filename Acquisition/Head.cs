@@ -196,7 +196,7 @@ namespace Acquisition
 
         public void SetCdemGain(int g)
         {
-            CdemGain = g;
+            CdemGain = g * 1000; //MG commands returns CDEM gain in units of thousands
         }
 
         public void SetTotalScanPoints(int p)
