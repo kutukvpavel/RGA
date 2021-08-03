@@ -19,6 +19,7 @@ namespace _3DSpectrumVisualizer
     {
         #region Static
 
+        public static float ColorPositionSliderPrecision { get; set; }
         public static CsvConfiguration ExportCsvConfig { get; set; } = new CsvConfiguration(CultureInfo.CurrentCulture)
         {
             Delimiter = CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator == "," ? ";" : ","
@@ -44,6 +45,8 @@ namespace _3DSpectrumVisualizer
             StrokeWidth = 2.0f
         };
         private static SKPointXEqualityComparer XEqualityComparer = new SKPointXEqualityComparer();
+        private static Func<GradientColor, float> ColorPosSelector =
+            new Func<GradientColor, float>(x => x.Position);
 
         public static void ExportSections(IList<DataRepository> repos, float amu, string path)
         {
@@ -186,6 +189,7 @@ namespace _3DSpectrumVisualizer
         public float Duration { get => (float)(EndTime - StartTime).TotalSeconds; }
         public float AverageScanTime { get; private set; } = 0;
         public float Min { get; private set; } = 1;
+        public float PositiveMin { get; private set; } = 1;
         public float Max { get; private set; } = 0;
         public float Left { get; private set; } = 1;
         public float Right { get; private set; } = 0;
@@ -365,12 +369,23 @@ namespace _3DSpectrumVisualizer
 
         public void RecalculateShader()
         {
-            float min = LogarithmicIntensity ? MathF.Log10(Min) : Min;
+            float min = LogarithmicIntensity ? MathF.Log10(PositiveMin) : Min;
             float max = LogarithmicIntensity ? MathF.Log10(Max) : Max;
-            if (ColorScheme.Count > 1)
+            if (ColorScheme.Count > 1 || float.IsNaN(min) || float.IsNaN(max))
             {
                 SKColor[] colors = ColorScheme.Select(x => x.Color).ToArray();
-                float[] positions = ColorScheme.Select(x => x.Position).ToArray();
+                float[] positions = ColorScheme.Select(LogarithmicIntensity ? 
+                    (x => {
+                        float negativeValuesColorPositionEdge = (PositiveMin - Min) / (Max - Min);
+                        float ratio = Max / PositiveMin;
+                        float diff = x.Position - negativeValuesColorPositionEdge;
+                        if (diff <= 0) 
+                            return MathF.Log10(ColorPositionSliderPrecision * (ratio - 1) + 1) 
+                            / MathF.Log10(ratio) * (1 + diff / negativeValuesColorPositionEdge);
+                        return MathF.Log10((x.Position - negativeValuesColorPositionEdge) * (ratio - 1) + 1) 
+                            / MathF.Log10(ratio);
+                    })
+                    : ColorPosSelector).ToArray();
                 Shader = SKShader.CreateLinearGradient(
                     UseHorizontalGradient ? new SKPoint(Left, 0) : new SKPoint(0, min),
                     UseHorizontalGradient ? new SKPoint(Right, 0) : new SKPoint(0, max),
@@ -513,12 +528,17 @@ namespace _3DSpectrumVisualizer
                 AverageScanTime = Duration / (Results.Count + 1);
             }
             var sr = new ScanResult(File.ReadLines(item.FullName), item.Name, ct);
-            var b = sr.Path2D.TightBounds;
+            var b = sr.Path2D.Bounds;
             bool updateShader = false;
             bool updateMassAxis = false;
             if (b.Bottom > Max)
             {
                 Max = b.Bottom;
+                updateShader = true;
+            }
+            if (sr.PositiveTopBound < PositiveMin)
+            {
+                PositiveMin = sr.PositiveTopBound;
                 updateShader = true;
             }
             if (b.Top < Min)
@@ -593,6 +613,7 @@ namespace _3DSpectrumVisualizer
             Parse(rawLines);
         }
 
+        public float PositiveTopBound { get; private set; } = 1;
         public SKPath Path2D { get; private set; }
         public SKPath LogPath2D { get; private set; }
         public string Name { get; }
@@ -620,16 +641,17 @@ namespace _3DSpectrumVisualizer
                                 NumberStyles.AllowLeadingSign, 
                                 CurrentCulture))
                                 .ToArray();
+                            if (temp[1] > 0 && temp[1] < PositiveTopBound) PositiveTopBound = temp[1];
                             if (Path2D.Points.Length > 0)
                             {
+                                Path2D.LineTo(temp[0], temp[1]);
                                 if (temp[1] <= 0)
                                 {
-                                    Path2D.LineTo(temp[0], Path2D.LastPoint.Y);
+                                    //Path2D.LineTo(temp[0], Path2D.LastPoint.Y);
                                     LogPath2D.LineTo(temp[0], LogPath2D.LastPoint.Y);
                                 }
                                 else
                                 {
-                                    Path2D.LineTo(temp[0], temp[1]);
                                     LogPath2D.LineTo(temp[0], MathF.Log10(temp[1]));
                                 }
                             }
@@ -681,7 +703,8 @@ namespace _3DSpectrumVisualizer
         public void AddPoint(float x, float y)
         {
             LinearPath.LineTo(x, y);
-            LogPath.LineTo(x, MathF.Log10(y));
+            float ly = MathF.Log10(y);
+            if (!float.IsNaN(ly)) LogPath.LineTo(x, ly);
         }
     }
 

@@ -18,9 +18,6 @@ namespace _3DSpectrumVisualizer
         public static List<DataRepository> Repositories { get; } = new List<DataRepository>();
         public static object UpdateSynchronizingObject { get; } = new object();
         public static Configuration Config { get; private set; }
-/*#if DEBUG
-        = new Configuration(); //For the XAML designer
-#endif*/
 
         private static L Log = new L();
 
@@ -101,6 +98,7 @@ namespace _3DSpectrumVisualizer
             DataRepository.UVFileName = Config.UVFileName;
             DataRepository.LightGradient[1] = DataRepository.LightGradient[1].WithAlpha(Config.LastLightSliderPosition);
             DataRepository.UseHorizontalGradient = Config.UseHorizontalGradient;
+            DataRepository.ColorPositionSliderPrecision = Config.ColorPositionSliderPrecision;
             MainWindow.PositionValueConverter = new RootValueConverter(Config.GradientPositionSliderLawPower);
         }
 

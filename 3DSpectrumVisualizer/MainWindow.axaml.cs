@@ -20,8 +20,10 @@ namespace _3DSpectrumVisualizer
 {
     public class MainWindow : Window
     {
-        public static IValueConverter AMUValueConverter { get; set; } 
-            = new FuncValueConverter<double, string>(x => MathF.Round((float) x, 1).ToString("F1"));
+        public static IValueConverter AMUStringValueConverter { get; set; } 
+            = new FuncValueConverter<double, string>(x => x.ToString("F1"));
+        public static IValueConverter AMURoundingValueConverter { get; set; }
+            = new RoundingValueConverter(1);
         public static IValueConverter PositionValueConverter { get; set; }
 
         public MainWindow()
@@ -32,6 +34,8 @@ namespace _3DSpectrumVisualizer
 #endif
             this.Opened += (s, e) =>
             {
+                ColorPositionSlider.SmallChange = Program.Config.ColorPositionSliderPrecision;
+                AutoupdateXScaleCheckbox.IsChecked = Program.Config.AutoupdateXScale;
                 GLLabel.Background = SkiaCustomControl.OpenGLEnabled ? Brushes.Lime : Brushes.OrangeRed;
                 Spectrum3D.Background = Program.Config.SpectraBackground;
                 Spectrum3D.TimeAxisInterval = Program.Config.LastTimeAxisInterval;
@@ -40,6 +44,7 @@ namespace _3DSpectrumVisualizer
             };
             this.Closing += (s, e) =>
             {
+                Program.Config.AutoupdateXScale = AutoupdateXScaleCheckbox.IsChecked.Value;
                 Program.Config.LastAMUSection = SectionPlot.AMU;
                 Program.Config.LastTimeAxisInterval = Spectrum3D.TimeAxisInterval;
                 Program.Config.SpectraBackground = Spectrum3D.Background;
@@ -65,6 +70,8 @@ namespace _3DSpectrumVisualizer
         private CheckBox HorizontalGradient;
         private Label LoadingLabel;
         private float[] Last3DCoords;
+        private CheckBox AutoupdateXScaleCheckbox;
+        private Slider ColorPositionSlider;
 
         private void InitializeComponent()
         {
@@ -91,6 +98,8 @@ namespace _3DSpectrumVisualizer
             HorizontalGradient = this.FindControl<CheckBox>("chkHorizontalGradient");
             LoadingLabel = this.FindControl<Label>("lblLoading");
             ExportSectionButton = this.FindControl<Button>("btnExportSection");
+            AutoupdateXScaleCheckbox = this.FindControl<CheckBox>("chkAutoX");
+            ColorPositionSlider = this.FindControl<Slider>("sldPosition");
         }
 
         #endregion
@@ -121,6 +130,7 @@ namespace _3DSpectrumVisualizer
 
         public void InvalidateSpectrum(object sender, EventArgs e)
         {
+            if (AutoupdateXScaleCheckbox.IsChecked == true) SectionPlot.AutoscaleX(false);
             Spectrum3D.InvalidateVisual();
             SectionPlot.InvalidateVisual();
         }

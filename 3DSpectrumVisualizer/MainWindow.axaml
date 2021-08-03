@@ -70,7 +70,7 @@ Gradient</CheckBox>
 					<Slider Value="{Binding #lstColors.SelectedItem.Position,
 							Mode=TwoWay, Converter={x:Static local:MainWindow.PositionValueConverter}}"
 							x:Name="sldPosition"
-							Maximum="1" Minimum="0" SmallChange="0.01"
+							Maximum="1" Minimum="0" SmallChange="0.005"
 							PropertyChanged="OnPositionSchemeEdited">
 					</Slider>
 				</StackPanel>
@@ -110,10 +110,10 @@ Gradient</CheckBox>
 					<CheckBox x:Name="chkSnap" DockPanel.Dock="Right" Margin="10,0,10,0">0.1 AMU Ticks</CheckBox>
 					<TextBlock DockPanel.Dock="Left" Margin="10,10,0,10" FontSize="16">AMU: </TextBlock>
 					<TextBlock DockPanel.Dock="Left" Margin="5,10,10,10" FontSize="16"
-							   Text="{Binding #SectionAMUSlider.Value, Converter={x:Static local:MainWindow.AMUValueConverter}}"></TextBlock>
+							   Text="{Binding #SectionAMUSlider.Value, Mode=OneWay, Converter={x:Static local:MainWindow.AMUStringValueConverter}}"></TextBlock>
 					<Slider SmallChange="0.1" LargeChange="1" DockPanel.Dock="Left" Minimum="1" Maximum="65"
-							Value="{Binding #SpectrumSection.AMU, Mode=TwoWay}" x:Name="SectionAMUSlider"
-							TickFrequency="1" IsSnapToTickEnabled="{Binding !#chkSnap.IsChecked}"></Slider>
+							Value="{Binding #SpectrumSection.AMU, Mode=TwoWay, Converter={x:Static local:MainWindow.AMURoundingValueConverter}}" 
+							x:Name="SectionAMUSlider" TickFrequency="1" IsSnapToTickEnabled="{Binding !#chkSnap.IsChecked}"></Slider>
 				</DockPanel>
 				<StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal">
 					<Button Background="#FABDA5" Button.Click="OnExportSectionClick" 
@@ -122,6 +122,7 @@ Gradient</CheckBox>
 					</Button>
 					<Button Background="#ADE6B7" Button.Click="OnSectionAutoscaleYClick">Auto Y</Button>
 					<Button Background="#ADE2E6" Button.Click="OnSectionAutoscaleXClick">Auto X</Button>
+					<CheckBox x:Name="chkAutoX">Autoupdate X Scale</CheckBox>
 					<Label x:Name="lblSectionCoords" FontSize="16" DockPanel.Dock="Bottom" MinHeight="30"
 						   Margin="3">Coords...</Label>
 				</StackPanel>

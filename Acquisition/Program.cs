@@ -18,6 +18,7 @@ namespace Acquisition
         private static NamedPipeService Pipe = NamedPipeService.Instance;
         private static L Logger = new L();
         private static Configuration Config = new Configuration();
+        private static MovingAverageContainer Average;
         
         public static Dictionary<double, double> Background { get; private set; } = new Dictionary<double, double>();
         public static string GapStartAMU { get; private set; } = null;
@@ -31,12 +32,14 @@ namespace Acquisition
             try
             {
                 Config = Serializer.Deserialize(Serializer.SettingsFileName, Config);
+                if (Config.MovingAverageWindowWidth < 1) Config.MovingAverageWindowWidth = 1;
             }
             catch (Exception ex)
             {
                 Log("Can't deserilize settings file:", ex);
                 Config = new Configuration();
             }
+            Average = new MovingAverageContainer(Config.MovingAverageWindowWidth);
             //Init
             InitDevice(args[0]);
             InitPipe(Config.PipeName);
@@ -164,7 +167,7 @@ namespace Acquisition
                             }
                         }
                     }
-                    Background = buf.ToDictionary(x => x.Key, x => x.Value.Average());
+                    Background = buf.ToDictionary(x => x.Key, x => x.Value.Average() * Config.BackgroundScaling);
                 }
             }
             catch (Exception ex)
@@ -185,9 +188,10 @@ namespace Acquisition
         private static void Device_ScanCompleted(object sender, EventArgs e)
         {
             Console.WriteLine("\nScan completed.");
-            int l = Device.LastScanResult.Length - 1;
-            double totalPressure = Device.LastScanResult[l];
-            var y = Device.LastScanResult.SkipLast(1).Select(x => x / (double)Device.CdemGain);
+            Average.Enqueue(Device.LastScanResult);
+            var a = Average.CurrentAverage.Select(x => x / Device.CdemGain).ToArray();
+            var y = a.SkipLast(1);
+            double totalPressure = a.Last();
             y = totalPressure == 0 ? y.Select(x => x / Config.CdemEnabledAdditionalDivisionFactor) : y.Select(x => x / totalPressure);
             double increment = 1.0 / Device.PointsPerAMU;
             var now = string.Format(Config.FileNameFormat, DateTime.Now);

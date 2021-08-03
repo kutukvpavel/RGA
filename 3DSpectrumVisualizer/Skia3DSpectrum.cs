@@ -236,7 +236,7 @@ namespace _3DSpectrumVisualizer
                 View3D.TranslateX(-dataMaxLen.MidX);
                 View3D.TranslateY(yOffset);
                 if (Data.Any(x => x.LogarithmicIntensity))
-                    View3D.TranslateZ(-(float)Math.Log10(Data.Min(x => x.Min)) * ZScaling);
+                    View3D.TranslateZ(-MathF.Log10(Data.Min(x => x.PositiveMin)) * ZScaling);
                 using (SKAutoCanvasRestore ar = new SKAutoCanvasRestore(canvas))
                 {
                     View3D.ApplyToCanvas(canvas);

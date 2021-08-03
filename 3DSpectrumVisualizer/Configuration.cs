@@ -69,7 +69,7 @@ namespace _3DSpectrumVisualizer
         public string TemperatureFileName { get; set; } = "Temp.txt";
         public string UVFileName { get; set; } = "UV.txt";
         public string GasFileName { get; set; } = "Gas.txt";
-        public int GradientPositionSliderLawPower { get; set; } = 2;
+        public double GradientPositionSliderLawPower { get; set; } = 2.5;
         public int AMURoundingDigits { get; set; } = 1;
         public string RepositoryFileFilter { get; set; } = "*.csv";
         public float[] Last3DCoords { get; set; } = new float[] { 10, 10, 15, 0, 45, 4, 0.01f, 0.1f };
@@ -83,6 +83,8 @@ namespace _3DSpectrumVisualizer
         public string ExportXFormat { get; set; } = "F1";
         public string ExportUVTrueString { get; set; } = "1";
         public string ExportUVFalseString { get; set; } = "0";
+        public bool AutoupdateXScale { get; set; } = false;
+        public float ColorPositionSliderPrecision { get; set; } = 0.005f;
 
         public void Save()
         {
