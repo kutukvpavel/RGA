@@ -2,7 +2,7 @@
   "profiles": {
     "3DSpectrumVisualizer": {
       "commandName": "Project",
-      "commandLineArgs": "\"E:\\Doc\\EXP_ZNO_30_JUL\""
+      "commandLineArgs": "\"C:\\RESULTS\\EXP_LONG_30\""
     }
   }
 }

@@ -111,6 +111,12 @@ namespace _3DSpectrumVisualizer
             Dispatcher.UIThread.Post(() =>
             {
                 LoadingLabel.Background = Brushes.Yellow;
+                Title = $"{Title}: ";
+                foreach (var item in Program.Repositories)
+                {
+                    Title += $"{item.Folder.Split(Path.DirectorySeparatorChar).LastOrDefault()}, ";
+                }
+                Title = Title.Remove(Title.Length - 2, 2);
             });
         }
 

@@ -86,23 +86,28 @@ namespace _3DSpectrumVisualizer
         public bool AutoupdateXScale { get; set; } = false;
         public float ColorPositionSliderPrecision { get; set; } = 0.005f;
 
-        public void Save()
+        public void Save(string priorityFolder = null)
         {
-            Serialize(this, SerializationFileName, SerializerSettings);
+            Serialize(this, SerializationFileName, SerializerSettings, priorityFolder);
         }
 
-        public static Configuration Load()
+        public static Configuration Load(string priorityFolder = null)
         {
-            return Deserialize(SerializationFileName, new Configuration(), SerializerSettings);
+            return Deserialize(SerializationFileName, new Configuration(), SerializerSettings, priorityFolder);
         }
 
         #region Serialization
-        public static void Serialize<T>(T obj, string name, JsonSerializerSettings settings)
+        public static void Serialize<T>(T obj, string name, JsonSerializerSettings settings, string priorityFolder = null)
         {
             try
             {
-                var p = Path.Combine(Environment.CurrentDirectory, name + JsonExtension);
-                File.WriteAllText(p, JsonConvert.SerializeObject(obj, Formatting.Indented, settings));
+                string fn = name + JsonExtension;
+                string res = JsonConvert.SerializeObject(obj, Formatting.Indented, settings);
+                if (priorityFolder != null)
+                {
+                    File.WriteAllText(Path.Combine(priorityFolder, fn), res);
+                }
+                File.WriteAllText(Path.Combine(Environment.CurrentDirectory, fn), res);
             }
             catch (Exception ex)
             {
@@ -110,11 +115,17 @@ namespace _3DSpectrumVisualizer
             }
         }
 
-        public static T Deserialize<T>(string name, T def, JsonSerializerSettings settings)
+        public static T Deserialize<T>(string name, T def, JsonSerializerSettings settings, string priorityFolder = null)
         {
             try
             {
-                var p = Path.Combine(Environment.CurrentDirectory, name + JsonExtension);
+                var fn = name + JsonExtension;
+                string p = null;
+                if (priorityFolder != null)
+                {
+                    p = Path.Combine(priorityFolder, fn);
+                }
+                if (!File.Exists(p)) p = Path.Combine(Environment.CurrentDirectory, fn);
                 if (File.Exists(p))
                 {
                     object o = JsonConvert.DeserializeObject(File.ReadAllText(p), typeof(T), settings);
