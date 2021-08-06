@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
+using System.Linq;
+using Timer = System.Timers.Timer;
 
 namespace Acquisition
 {
@@ -46,6 +48,7 @@ namespace Acquisition
             CommunicationPort.BytesReceived += CommunicationPort_BytesReceived;
             CommunicationPort.CommandTransmitted += (s, e) => { TerminalLog?.Invoke(s, e); };
             CommunicationPort.SerialPort.Open();
+            _ScanTimeoutTimer.Elapsed += ScanTimeoutTimer_Elapsed;
         }
 
         public void Dispose()
@@ -55,9 +58,9 @@ namespace Acquisition
             {
                 ExecuteSequence(CommandSet.Sequences[HeadState.PowerDown]);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-
+                ExceptionLog?.Invoke(this, new ExceptionEventArgs(ex));
             }
             try
             {
@@ -77,9 +80,40 @@ namespace Acquisition
         #region Private
 
         private bool _Disposed = false;
-        private BlockingQueue _TerminalQueue = new BlockingQueue();
+        //private BlockingQueue _TerminalQueue = new BlockingQueue();
         private Queue<byte> _ScanBuffer = new Queue<byte>(4 * 2);
         private List<int> _ScanResult = new List<int>(65 * 10);
+        private Timer _ScanTimeoutTimer = new Timer(20000) { AutoReset = false, Enabled = false };
+
+        private void ScanTimeoutTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
+        {
+            if (Monitor.TryEnter(SynchronizingObject, 10000))
+            {
+                try
+                {
+                    ExceptionLog?.BeginInvoke(this, new ExceptionEventArgs(new TimeoutException("Scan timeout."),
+                        $@"Current buffered bytes: {string.Join(' ', _ScanBuffer.Select(x => x.ToString("X2")))};
+Current resuslts: {string.Join(' ', _ScanResult.Select(x => x.ToString()))};
+Scan points: expected {TotalScanPoints}, current {_ScanResult.Count};
+Port queue length: {CommunicationPort.SerialPort.BytesToRead} in, {CommunicationPort.SerialPort.BytesToWrite} out."
+                        ), null, null);
+                    CommunicationPort.DiscardBuffers();
+                    
+                    _ScanBuffer.Clear();
+                    _ScanResult.Clear();
+                    State = HeadState.ReadyToScan;
+                }
+                finally
+                {
+                    Monitor.Exit(SynchronizingObject);
+                }
+            }
+            else
+            {
+                ExceptionLog?.Invoke(this, new ExceptionEventArgs(new TimeoutException("Scan deadlock.")));
+                State = HeadState.PowerDown;
+            }
+        }
 
         private void CommunicationPort_BytesReceived(object sender, byte[] e)
         {
@@ -114,7 +148,11 @@ namespace Acquisition
                         State = HeadState.ReadyToScan;
                     }
                 }
-                if (State != HeadState.Scanning) ScanCompleted?.Invoke(this, new EventArgs());
+                if (State != HeadState.Scanning)
+                {
+                    _ScanTimeoutTimer.Stop();
+                    ScanCompleted?.Invoke(this, new EventArgs());
+                }
             }
             catch (Exception ex)
             {
@@ -181,11 +219,13 @@ namespace Acquisition
             lock (SynchronizingObject)
             {
                 State = HeadState.StartScan;
+                _ScanTimeoutTimer.Start();
             }
         }
 
         public void AbortScan()
         {
+            _ScanTimeoutTimer.Stop();
             lock (SynchronizingObject)
             {
                 CommunicationPort.Send(CommandSet.ShutDownMassFilter);
@@ -288,7 +328,7 @@ namespace Acquisition
         {
             get
             {
-                return Data != null ? $"{Exception.Message}\nData: {Data}" : Exception.Message;
+                return Data != null ? $"{Exception}\nData: {Data}" : Exception.ToString();
             }
         }
     }

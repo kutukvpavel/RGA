@@ -374,7 +374,16 @@ namespace _3DSpectrumVisualizer
             if (ColorScheme.Count > 1 || float.IsNaN(min) || float.IsNaN(max))
             {
                 SKColor[] colors = ColorScheme.Select(x => x.Color).ToArray();
-                float[] positions = ColorScheme.Select(LogarithmicIntensity ? 
+                float[] positions = ColorScheme.Select(LogarithmicIntensity ?
+                    /* This is linear gradient color position mapping to log scale.
+                     * Obviously it won't change the gradient transition law, but
+                     * it helps to reduce the necessity to adjust color positions
+                     * when (inter)changing scales.
+                     * Mapping function has a steep asymptotic behavior at negativeValuesColorPositionEdge,
+                     * therefore all the values to the left from negativeValuesColorPositionEdge have to be
+                     * interpolated (linearly). Two parts are stitched together using the fact that the slider has
+                     * finite step resolution.
+                     */
                     (x => {
                         float negativeValuesColorPositionEdge = (PositiveMin - Min) / (Max - Min);
                         float ratio = Max / PositiveMin;

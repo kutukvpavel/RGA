@@ -44,6 +44,12 @@ namespace Acquisition
             SerialPort.Write(NewLine);
         }
 
+        public void DiscardBuffers()
+        {
+            SerialPort.DiscardOutBuffer();
+            SerialPort.DiscardInBuffer();
+        }
+
         private readonly StringBuilder Buffer = new StringBuilder();
         private readonly BlockingQueue _LineQueue = new BlockingQueue();
         private readonly BlockingQueue _ByteQueue = new BlockingQueue();

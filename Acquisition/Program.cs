@@ -19,6 +19,7 @@ namespace Acquisition
         private static L Logger = new L();
         private static Configuration Config = new Configuration();
         private static MovingAverageContainer Average;
+        private static MovingAverageContainer GapSwappedAverage;
         
         public static Dictionary<double, double> Background { get; private set; } = new Dictionary<double, double>();
         public static string GapStartAMU { get; private set; } = null;
@@ -69,11 +70,12 @@ namespace Acquisition
                 gap = true;
                 StartAMU = args[1];
                 EndAMU = args[2];
+                GapSwappedAverage = new MovingAverageContainer(Average.Width);
             }
             //Acquisition cycle
             try
             {
-                while (true)
+                while (Device.State != HeadState.PowerDown)
                 {
                     StateMachine();
                     Thread.Sleep(500);
@@ -81,13 +83,14 @@ namespace Acquisition
                     {
                         Console.WriteLine("Starting new scan...");
                         if (CancellationRequested) break;
-                        if (gap)
-                        {
-                            ToggleAroundGap();
-                        }
+                        if (gap) ToggleAroundGap();
                         Device.StartScan();
                     }
                 }
+            }
+            catch (Exception ex)
+            {
+                Log("Fatal error in the acquisition loop.", ex);
             }
             finally
             {
@@ -110,7 +113,7 @@ namespace Acquisition
         }
 
         private static void ToggleAroundGap()
-        {
+        { 
             if (CommandSet.SetEndAMU.Parameter == EndAMU)
             {
                 CommandSet.SetStartAMU.Parameter = StartAMU;
@@ -121,6 +124,9 @@ namespace Acquisition
                 CommandSet.SetStartAMU.Parameter = GapEndAMU;
                 CommandSet.SetEndAMU.Parameter = EndAMU;
             }
+            MovingAverageContainer temp = Average;
+            Average = GapSwappedAverage;
+            GapSwappedAverage = temp;
         }
 
         private static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
@@ -182,7 +188,7 @@ namespace Acquisition
             Device = new Head(new Port(new RJCP.IO.Ports.SerialPortStream(port)));
             Device.TerminalLog += (s, t) => { Console.WriteLine(t); };
             Device.ScanCompleted += Device_ScanCompleted;
-            Device.ExceptionLog += (s, e) => { Console.WriteLine(e.LogString); };
+            Device.ExceptionLog += (s, e) => { Log(e.LogString); };
         }
 
         private static void Device_ScanCompleted(object sender, EventArgs e)

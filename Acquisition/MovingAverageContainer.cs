@@ -7,16 +7,38 @@ namespace Acquisition
 {
     public class MovingAverageContainer : Queue<int[]>
     {
-        private List<double> buffer;
-        private int[] length;
-        private readonly int width;
-
-        public MovingAverageContainer(int capacity) : base(capacity)
+        private struct Accumulator
         {
-            width = capacity;
+            public static Accumulator operator -(Accumulator a, double v)
+            {
+                return new Accumulator(a.Buffer - v, a.Length - 1);
+            }
+            public static Accumulator operator +(Accumulator a, double v)
+            {
+                return new Accumulator(a.Buffer + v, a.Length + 1);
+            }
+
+            public Accumulator(double b, int l = 1)
+            {
+                Buffer = b;
+                Length = l;
+            }
+
+            public double Buffer { get; }
+            public int Length { get; }
         }
 
-        public IEnumerable<double> CurrentAverage { get => buffer.Select((x, i) => x / length[i]); }
+        private List<Accumulator> accumulators;
+        private readonly int width;
+
+        public MovingAverageContainer(int windowWidth, int capacity = 65) : base(windowWidth)
+        {
+            width = windowWidth;
+            accumulators = new List<Accumulator>(capacity);
+        }
+
+        public IEnumerable<double> CurrentAverage { get => accumulators.Select(x => x.Buffer / x.Length); }
+        public int Width { get => width; }
 
         public new void Enqueue(int[] data)
         {
@@ -25,29 +47,26 @@ namespace Acquisition
                 int[] last = Dequeue();
                 for (int i = 0; i < last.Length; i++)
                 {
-                    buffer[i] -= last[i];
-                    length[i]--;
+                    accumulators[i] -= last[i];
                 }
             }
             for (int i = 0; i < data.Length; i++)
             {
-                if (buffer.Count > i)
+                if (accumulators.Count > i)
                 {
-                    buffer[i] += data[i];
+                    accumulators[i] += data[i];
                 }
                 else
                 {
-                    buffer.Add(data[i]);
+                    accumulators.Add(new Accumulator(data[i]));
                 }
-                length[i]++;
             }
             base.Enqueue(data);
         }
 
         public void Trim(int startIndex, int count)
         {
-            buffer = buffer.Skip(startIndex).Take(count).ToList();
-            length = length.Skip(startIndex).Take(count).ToArray();
+            accumulators = accumulators.Skip(startIndex).Take(count).ToList();
             for (int i = 0; i < Count; i++)
             {
                 int[] item = Dequeue();
