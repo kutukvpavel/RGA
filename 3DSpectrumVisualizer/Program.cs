@@ -37,7 +37,8 @@ namespace _3DSpectrumVisualizer
         public static void AppMain(Application app, string[] args)
         {
             Configuration.LogException += LogException;
-            Config = Configuration.Load();
+            string singleRepo = args.Length == 1 ? args[0] : null;
+            Config = Configuration.Load(singleRepo);
             InitStaticSettings();
             var mainWindow = new MainWindow();
             if (app.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime lt)
@@ -83,7 +84,7 @@ namespace _3DSpectrumVisualizer
             mainWindow.Opened += (s, e) => initTask.Start();
             app.Run(mainWindow);
             CollectSettings();
-            Config.Save();
+            Config.Save(singleRepo);
         }
 
         private static void InitStaticSettings()
