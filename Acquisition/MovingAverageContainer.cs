@@ -65,8 +65,8 @@ namespace Acquisition
             {
                 if (Count == Width)
                 {
-                    int[] last = Dequeue();
-                    for (int i = 0; i < last.Length; i++)
+                    var last = Dequeue();
+                    for (int i = 0; i < last.Count; i++)
                     {
                         try
                         {
@@ -78,7 +78,7 @@ namespace Acquisition
                         }
                     }
                 }
-                for (int i = 0; i < data.Length; i++)
+                for (int i = 0; i < data.Count; i++)
                 {
                     if (accumulators.Count > i)
                     {
@@ -114,7 +114,7 @@ namespace Acquisition
                 accumulators = accumulators.Skip(startIndex).Take(count).ToList();
                 for (int i = 0; i < Count; i++)
                 {
-                    int[] item = Dequeue();
+                    var item = Dequeue();
                     item = item.Skip(startIndex).Take(count).ToArray();
                     base.Enqueue(item);
                 }
