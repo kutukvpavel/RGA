@@ -16,8 +16,8 @@ namespace Acquisition
         private static bool CancellationRequested = false;
         private static string StartAMU = "1";
         private static string EndAMU = "65";
-        private static NamedPipeService Pipe = NamedPipeService.Instance;
-        private static L Logger = new L();
+        private static readonly NamedPipeService Pipe = NamedPipeService.Instance;
+        private static readonly L Logger = new L();
         private static Configuration Config = new Configuration();
         private static MovingAverageContainer Average;
         private static MovingAverageContainer GapSwappedAverage;
@@ -232,7 +232,7 @@ namespace Acquisition
             Console.WriteLine("\nScan completed.");
             double increment = 1.0 / Device.PointsPerAMU;
             var now = string.Format(Config.FileNameFormat, DateTime.Now);
-            //Save backup
+            //Save original data as a backup
             var t = new Thread(() =>
             {
                 try
@@ -257,13 +257,31 @@ namespace Acquisition
                 }
             });
             t.Start();
-            //Compute all post-processing stuff
-            Average.Enqueue(Device.LastScanResult);
-            var a = Average.CurrentAverage.Select(x => x / Device.CdemGain).ToArray();
-            var y = a.SkipLast(1);
-            double totalPressure = a.Last();
-            y = totalPressure == 0 ? y.Select(x => x / Config.CdemEnabledAdditionalDivisionFactor) : y.Select(x => x / totalPressure);
-            //Save processed data
+            //Calculate derived data
+            IEnumerable<double> y;
+            try
+            {
+                Average.Enqueue(Device.LastScanResult);
+                var a = Average.CurrentAverage;
+                if (a.Length != Device.LastScanResult.Length)
+                {
+                    Log("Improper action of MovingAveragingContainer detected: output array length is not equal to the input array length.");
+                    return;
+                }
+                for (int i = 0; i < a.Length; i++)
+                {
+                    a[i] /= Device.CdemGain;
+                }
+                y = a.SkipLast(1);
+                double totalPressure = a.Last();
+                y = totalPressure == 0 ? y.Select(x => x / Config.CdemEnabledAdditionalDivisionFactor) : y.Select(x => x / totalPressure);
+            }
+            catch (Exception ex)
+            {
+                Log("Error during data calculation.", ex);
+                return;
+            }
+            //Save derived data
             t = new Thread(() =>
             {
                 try
@@ -307,9 +325,11 @@ namespace Acquisition
         private static void InitPipe(string name)
         {
             Pipe.GasNames = Config.GasNames;
+            Pipe.ExcludeUnknownGasNames = Config.ExcludeUnknownGasIndexes;
             Pipe.GasGpioOffset = Config.GasGpioOffset;
             Pipe.UVGpioIndex = Config.UVGpioIndex;
-            Pipe.LogEvent += (x, y) => { Log("Pipe message received: " + y); };
+            if (Config.LogPipeMessages) Pipe.LogEvent += (x, y) => { Log("Pipe message received: " + y); };
+            Pipe.LogException += (x, y) => { Log(y.LogString); };
             Pipe.TemperatureReceived += Pipe_TemperatureReceived;
             Pipe.UVStateReceived += Pipe_UVStateReceived;
             Pipe.GasStateReceived += Pipe_GasStateReceived;
