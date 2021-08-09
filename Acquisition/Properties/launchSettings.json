@@ -2,7 +2,7 @@
   "profiles": {
     "Acquisition": {
       "commandName": "Project",
-      "commandLineArgs": "COM31",
+      "commandLineArgs": "-restore",
       "workingDirectory": "E:\\Doc\\EXP_ZNO_30_JUL"
     }
   }

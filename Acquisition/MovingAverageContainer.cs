@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace Acquisition
 {
-    public class MovingAverageContainer : Queue<int[]>
+    public class MovingAverageContainer : Queue<IList<double>>
     {
         private struct Accumulator
         {
@@ -29,28 +29,27 @@ namespace Acquisition
         }
 
         private List<Accumulator> accumulators;
-        private readonly int width;
 
         public MovingAverageContainer(int windowWidth, int capacity = 65) : base(windowWidth)
         {
-            width = windowWidth;
+            Width = windowWidth;
             accumulators = new List<Accumulator>(capacity);
         }
 
         public IEnumerable<double> CurrentAverage { get => accumulators.Select(x => x.Buffer / x.Length); }
-        public int Width { get => width; }
+        public int Width { get; }
 
-        public new void Enqueue(int[] data)
+        public new void Enqueue(IList<double> data)
         {
-            if (Count == width)
+            if (Count == Width)
             {
-                int[] last = Dequeue();
-                for (int i = 0; i < last.Length; i++)
+                var last = Dequeue();
+                for (int i = 0; i < last.Count; i++)
                 {
                     accumulators[i] -= last[i];
                 }
             }
-            for (int i = 0; i < data.Length; i++)
+            for (int i = 0; i < data.Count; i++)
             {
                 if (accumulators.Count > i)
                 {
@@ -69,7 +68,7 @@ namespace Acquisition
             accumulators = accumulators.Skip(startIndex).Take(count).ToList();
             for (int i = 0; i < Count; i++)
             {
-                int[] item = Dequeue();
+                var item = Dequeue();
                 item = item.Skip(startIndex).Take(count).ToArray();
                 base.Enqueue(item);
             }

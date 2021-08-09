@@ -650,6 +650,7 @@ namespace _3DSpectrumVisualizer
                                 NumberStyles.AllowLeadingSign, 
                                 CurrentCulture))
                                 .ToArray();
+                            if (!float.IsFinite(temp[1])) continue; 
                             if (temp[1] > 0 && temp[1] < PositiveTopBound) PositiveTopBound = temp[1];
                             if (Path2D.Points.Length > 0)
                             {

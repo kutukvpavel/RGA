@@ -82,7 +82,7 @@ namespace Acquisition
         private bool _Disposed = false;
         //private BlockingQueue _TerminalQueue = new BlockingQueue();
         private Queue<byte> _ScanBuffer = new Queue<byte>(4 * 2);
-        private List<int> _ScanResult = new List<int>(65 * 10);
+        private List<double> _ScanResult = new List<double>(65 * 10);
         private Timer _ScanTimeoutTimer = new Timer(20000) { AutoReset = false, Enabled = false };
 
         private void ScanTimeoutTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
@@ -198,7 +198,7 @@ Port queue length: {CommunicationPort.SerialPort.BytesToRead} in, {Communication
 
         public HeadStatusBits LastStatus { get; private set; } = HeadStatusBits.None;
 
-        public int[] LastScanResult { get; private set; }
+        public double[] LastScanResult { get; private set; }
 
         public int StartAMU { get; private set; } = 1;
 

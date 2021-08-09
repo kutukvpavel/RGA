@@ -6,12 +6,13 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using LLibrary;
-using System.Collections.Generic;
 
 namespace Acquisition
 {
     public class Program
     {
+        private const string BackupRestoreKey = "-restore";
+
         private static bool CancellationRequested = false;
         private static string StartAMU = "1";
         private static string EndAMU = "65";
@@ -21,7 +22,7 @@ namespace Acquisition
         private static MovingAverageContainer Average;
         private static MovingAverageContainer GapSwappedAverage;
         
-        public static Dictionary<double, double> Background { get; private set; } = new Dictionary<double, double>();
+        public static SpectrumBackground Background { get; private set; }
         public static string GapStartAMU { get; private set; } = null;
         public static string GapEndAMU { get; private set; } = null;
         public static Head Device { get; private set; }
@@ -29,6 +30,11 @@ namespace Acquisition
         static void Main(string[] args)
         {
             Console.CancelKeyPress += Console_CancelKeyPress;
+            if (args.Length == 0)
+            {
+                Log("No arguments. Shutting down.");
+                return;
+            }
             //Load Settings
             try
             {
@@ -40,14 +46,44 @@ namespace Acquisition
                 Log("Can't deserilize settings file:", ex);
                 Config = new Configuration();
             }
+            try
+            {
+                if (args[0] == BackupRestoreKey)
+                {
+                    BackupRestoreMain(args);
+                }
+                else
+                {
+                    AcquisitionMain(args);
+                }
+            }
+            catch (Exception ex)
+            {
+                Log("Error inside the main method.", ex);
+            }
+            finally
+            {
+                try
+                {
+                    Serializer.Serialize(Config, Serializer.SettingsFileName);
+                }
+                catch (Exception ex)
+                {
+                    Log("Failed to save configuration.", ex);
+                }
+            }
+        }
+
+        static void AcquisitionMain(string[] args)
+        {
             Average = new MovingAverageContainer(Config.MovingAverageWindowWidth);
             //Init
+            InitBackgroundRemoval();
             InitDevice(args[0]);
             InitPipe(Config.PipeName);
             VerifyDirectoryExists(Configuration.WorkingDirectory);
             VerifyDirectoryExists(Configuration.WorkingDirectory, Config.BackupSubfolderName);
             VerifyDirectoryExists(Configuration.WorkingDirectory, Config.InfoSubfolderName);
-            InitBackgroundRemoval();
             Console.WriteLine("RGA Acquisition Helper v1.0 started!");
             Log($"Background data found for {Background.Count} AMUs.");
             //CLI
@@ -64,10 +100,10 @@ namespace Acquisition
             {
 
             }
-            bool gap = false;
+            Config.GapEnabled = false;
             if (GapStartAMU != null && GapEndAMU != null)
             {
-                gap = true;
+                Config.GapEnabled = true;
                 StartAMU = args[1];
                 EndAMU = args[2];
                 GapSwappedAverage = new MovingAverageContainer(Average.Width);
@@ -83,7 +119,7 @@ namespace Acquisition
                     {
                         Console.WriteLine("Starting new scan...");
                         if (CancellationRequested) break;
-                        if (gap) ToggleAroundGap();
+                        if (Config.GapEnabled) ToggleAroundGap();
                         Device.StartScan();
                     }
                 }
@@ -94,8 +130,37 @@ namespace Acquisition
             }
             finally
             {
+                Config.CdemGain = Device.CdemGain;
                 Device.Dispose();
             }
+        }
+
+        static void BackupRestoreMain(string[] args)
+        {
+            string target = null;
+            string searchPattern = null;
+            try
+            {
+                if (Directory.Exists(args[1])) target = args[1];
+                searchPattern = args[2];
+            }
+            catch (Exception ex)
+            {
+                Log("Using default restore folder.", ex);
+            }
+            if (target == null) target = BackupRestore.BackupData.DefaultRestoreLocation;
+            if (searchPattern == null) searchPattern = "*.csv";
+            Console.WriteLine("Loading backup data...");
+            BackupRestore.BackupData backupData = new BackupRestore.BackupData(
+                Path.Combine(Configuration.WorkingDirectory, Config.BackupSubfolderName))
+            {
+                CsvConfig = Configuration.CsvConfig
+            };
+            backupData.LogException += (s, e) => Log(e.LogString);
+            backupData.Load(searchPattern);
+            Console.WriteLine("Restoring...");
+            backupData.SaveWith(target, Config);
+            Console.WriteLine("Done.");
         }
 
         #region Misc
@@ -143,43 +208,14 @@ namespace Acquisition
         {
             try
             {
-                string p = Path.Combine(Configuration.WorkingDirectory, Config.BackgroundFolderName);
-                if (!Directory.Exists(p)) return;
-                var f = Directory.GetFiles(p, Config.BackgroundSearchPattern);
-                if (f.Length > 0)
-                {
-                    var buf = new Dictionary<double, List<double>>();
-                    foreach (var item in f)
-                    {
-                        using TextReader r = new StreamReader(item);
-                        using CsvReader cr = new CsvReader(r, Configuration.CsvConfig);
-                        cr.Read();
-                        cr.ReadHeader();
-                        while (cr.Read())
-                        {
-                            try
-                            {
-                                double amu = cr.GetField<double>(0);
-                                double val = cr.GetField<double>(1);
-                                if (!buf.ContainsKey(amu))
-                                {
-                                    buf.Add(amu, new List<double>(f.Length));
-                                }
-                                buf[amu].Add(val);
-                            }
-                            catch (Exception ex)
-                            {
-                                Log("Can't parse background line:", ex);
-                            }
-                        }
-                    }
-                    Background = buf.ToDictionary(x => x.Key, x => x.Value.Average() * Config.BackgroundScaling);
-                }
+                Background = SpectrumBackground.Load(
+                    Path.Combine(Configuration.WorkingDirectory, Config.BackgroundFolderName),
+                    Config.BackgroundSearchPattern, Config.BackgroundScaling);
             }
             catch (Exception ex)
             {
                 Log("Can't parse background:", ex);
-                Background = new Dictionary<double, double>();
+                Background = new SpectrumBackground();
             }
         }
 
@@ -194,45 +230,62 @@ namespace Acquisition
         private static void Device_ScanCompleted(object sender, EventArgs e)
         {
             Console.WriteLine("\nScan completed.");
+            double increment = 1.0 / Device.PointsPerAMU;
+            var now = string.Format(Config.FileNameFormat, DateTime.Now);
+            //Save backup
+            var t = new Thread(() =>
+            {
+                try
+                {
+                    string p = Path.Combine(Configuration.WorkingDirectory, Config.BackupSubfolderName, now);
+                    using TextWriter tw = new StreamWriter(p);
+                    using CsvWriter cw = new CsvWriter(tw, Configuration.CsvConfig);
+                    cw.NextRecord();
+                    cw.NextRecord();
+                    double x = Device.StartAMU;
+                    for (int i = 0; i < Device.LastScanResult.Length; i++)
+                    {
+                        cw.WriteField(x.ToString(Config.AMUFormat, CultureInfo.InvariantCulture));
+                        cw.WriteField(Device.LastScanResult[i].ToString(Config.IntensityFormat, CultureInfo.InvariantCulture));
+                        x += increment;
+                        cw.NextRecord();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log("Failed to save a backup file.", ex);
+                }
+            });
+            t.Start();
+            //Compute all post-processing stuff
             Average.Enqueue(Device.LastScanResult);
             var a = Average.CurrentAverage.Select(x => x / Device.CdemGain).ToArray();
             var y = a.SkipLast(1);
             double totalPressure = a.Last();
             y = totalPressure == 0 ? y.Select(x => x / Config.CdemEnabledAdditionalDivisionFactor) : y.Select(x => x / totalPressure);
-            double increment = 1.0 / Device.PointsPerAMU;
-            var now = string.Format(Config.FileNameFormat, DateTime.Now);
-            var t = new Thread(() =>
-            {
-                using TextWriter tw = new StreamWriter(Path.Combine(Configuration.WorkingDirectory, now));
-                using CsvWriter cw = new CsvWriter(tw, Configuration.CsvConfig);
-                cw.NextRecord();
-                cw.NextRecord();
-                double x = Device.StartAMU;
-                foreach (var item in y)
-                {
-                    double xBkg = Math.Round(x, Config.BackgroundAMURoundingDigits);
-                    double v = item - (Background.ContainsKey(xBkg) ? Background[xBkg] : 0);
-                    cw.WriteField(x.ToString(Config.AMUFormat, CultureInfo.InvariantCulture));
-                    cw.WriteField(v.ToString(Config.IntensityFormat, CultureInfo.InvariantCulture));
-                    x += increment;
-                    cw.NextRecord();
-                }
-            });
-            t.Start();
+            //Save processed data
             t = new Thread(() =>
             {
-                string p = Path.Combine(Configuration.WorkingDirectory, Config.BackupSubfolderName, now);
-                using TextWriter tw = new StreamWriter(p);
-                using CsvWriter cw = new CsvWriter(tw, Configuration.CsvConfig);
-                cw.NextRecord();
-                cw.NextRecord();
-                double x = Device.StartAMU;
-                for (int i = 0; i < Device.LastScanResult.Length; i++)
+                try
                 {
-                    cw.WriteField(x.ToString(Config.AMUFormat, CultureInfo.InvariantCulture));
-                    cw.WriteField(Device.LastScanResult[i].ToString(Config.IntensityFormat, CultureInfo.InvariantCulture));
-                    x += increment;
+                    using TextWriter tw = new StreamWriter(Path.Combine(Configuration.WorkingDirectory, now));
+                    using CsvWriter cw = new CsvWriter(tw, Configuration.CsvConfig);
                     cw.NextRecord();
+                    cw.NextRecord();
+                    double x = Device.StartAMU;
+                    foreach (var item in y)
+                    {
+                        double xBkg = Math.Round(x, Config.BackgroundAMURoundingDigits);
+                        double v = item - (Background.ContainsKey(xBkg) ? Background[xBkg] : 0);
+                        cw.WriteField(x.ToString(Config.AMUFormat, CultureInfo.InvariantCulture));
+                        cw.WriteField(v.ToString(Config.IntensityFormat, CultureInfo.InvariantCulture));
+                        x += increment;
+                        cw.NextRecord();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log("Failed to save a processed spectrum file.", ex);
                 }
             });
             t.Start();
