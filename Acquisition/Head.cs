@@ -120,6 +120,7 @@ Port queue length: {CommunicationPort.SerialPort.BytesToRead} in, {Communication
             if (State != HeadState.Scanning) return;
             try
             {
+                bool scanFinished = false;
                 lock (SynchronizingObject)
                 {
                     foreach (var item in e)
@@ -145,13 +146,22 @@ Port queue length: {CommunicationPort.SerialPort.BytesToRead} in, {Communication
                     {
                         LastScanResult = _ScanResult.ToArray();
                         _ScanResult.Clear();
-                        State = HeadState.ReadyToScan;
+                        scanFinished = true;
                     }
                 }
-                if (State != HeadState.Scanning)
+                if (scanFinished)
                 {
+                    //Not really a good solution to the concurrency problem:
+                    //This handler seems to run on a separate thread, and setting State to ReadyToScan
+                    //before ScanCompleted handler was executed sometimes caused a race conditon
+                    //between ScanCompleted handler and AcquisitonMain 
+                    //(that switched pointers to averaging buffers when the gap is used, causing container mixup and NaNs)
+                    //
+                    //TODO: probably get rid of container switching altogether by making the containers AMU-aware
+                    //or use locks??
                     _ScanTimeoutTimer.Stop();
                     ScanCompleted?.Invoke(this, new EventArgs());
+                    State = HeadState.ReadyToScan;
                 }
             }
             catch (Exception ex)
