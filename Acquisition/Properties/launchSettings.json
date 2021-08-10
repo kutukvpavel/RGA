@@ -3,7 +3,7 @@
     "Acquisition": {
       "commandName": "Project",
       "commandLineArgs": "-restore",
-      "workingDirectory": "E:\\Doc\\EXP_ZNO_30_JUL"
+      "workingDirectory": "C:\\RESULTS\\ZNO_NO2_30_50_100_150"
     }
   }
 }

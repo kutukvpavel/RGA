@@ -87,7 +87,7 @@ namespace Acquisition
 
         public static bool ParseCdemGain(Command cmd, Head h, string resp)
         {
-            if (int.Parse(TurnHVON.Parameter) > 0) 
+            if (int.Parse(TurnHVON.Parameter) > 0) //MG commands returns CDEM gain in units of thousands
                 h.SetCdemGain((int)(float.Parse(resp, System.Globalization.CultureInfo.InvariantCulture) * 1000));
             return true;
         }
