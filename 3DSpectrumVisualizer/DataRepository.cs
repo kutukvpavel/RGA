@@ -300,6 +300,7 @@ namespace _3DSpectrumVisualizer
                     try
                     {
                         bool val = bool.Parse(l);
+                        var lastRegion = UVProfile.LastOrDefault();
                         if (_LastUVState ^ val)
                         {
                             if (val)
@@ -308,12 +309,12 @@ namespace _3DSpectrumVisualizer
                             }
                             else
                             {
-                                UVProfile.Last().EndTimeOffset = t.Value;
+                                if (lastRegion != null) lastRegion.EndTimeOffset = t.Value;
                             }
                         }
                         else
                         {
-                            if (val) UVProfile.Last().EndTimeOffset = t.Value;
+                            if (val && (lastRegion != null)) lastRegion.EndTimeOffset = t.Value;
                         }
                         _LastUVState = val;
                         raiseDataAdded = true;
@@ -328,8 +329,8 @@ namespace _3DSpectrumVisualizer
                 {
                     try
                     {
-                        GasProfile.Last().EndTimeOffset = t.Value;
-                        GasRegion reg = null;
+                        var reg = GasProfile.LastOrDefault();
+                        if (reg != null) reg.EndTimeOffset = t.Value;
                         if (GasRegionColor.ContainsKey(l))
                         {
                             if (!_GasPaintCache.ContainsKey(l)) _GasPaintCache.Add(l, new SKPaint()

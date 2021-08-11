@@ -33,7 +33,7 @@ namespace Acquisition
             { 0, "Example 0" },
             { 1, "Example 1" }
         };
-        public double CdemEnabledAdditionalDivisionFactor { get; set; } = 1;
+        public double CdemEnabledAdditionalDivisionFactor { get; set; } = 1000;
         public int BackgroundAMURoundingDigits { get; set; } = 2;
         public double BackgroundScaling { get; set; } = 1;
         public int MovingAverageWindowWidth { get; set; } = 1;
