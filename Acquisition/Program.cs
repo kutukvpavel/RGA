@@ -223,9 +223,10 @@ namespace Acquisition
         private static void InitDevice(string port)
         {
             Device = new Head(new Port(new RJCP.IO.Ports.SerialPortStream(port)));
-            Device.TerminalLog += (s, t) => { Console.WriteLine(t); };
+            if (Config.LogTerminalCommunication) Device.TerminalLog += (s, t) => Log(t);
+            else Device.TerminalLog += (s, t) => Console.WriteLine(t);
             Device.ScanCompleted += Device_ScanCompleted;
-            Device.ExceptionLog += (s, e) => { Log(e.LogString); };
+            Device.ExceptionLog += (s, e) => Log(e.LogString);
         }
 
         private static void Device_ScanCompleted(object sender, EventArgs e)

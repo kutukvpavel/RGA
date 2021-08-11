@@ -330,7 +330,11 @@ namespace _3DSpectrumVisualizer
                     try
                     {
                         var reg = GasProfile.LastOrDefault();
-                        if (reg != null) reg.EndTimeOffset = t.Value;
+                        if (reg != null)
+                        {
+                            reg.EndTimeOffset = t.Value;
+                            if (reg.Name == l) continue;
+                        }
                         if (GasRegionColor.ContainsKey(l))
                         {
                             if (!_GasPaintCache.ContainsKey(l)) _GasPaintCache.Add(l, new SKPaint()
@@ -767,6 +771,7 @@ namespace _3DSpectrumVisualizer
             : base(parent, timeOffset)
         {
             Name = name;
+            Paint = paint;
         }
 
         public string Name { get; }
