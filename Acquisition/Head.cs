@@ -246,7 +246,7 @@ Port queue length: {CommunicationPort.SerialPort.BytesToRead} in, {Communication
 
         public void SetCdemGain(int g)
         {
-            CdemGain = g * 1000; //MG commands returns CDEM gain in units of thousands
+            CdemGain = g;
         }
 
         public void SetTotalScanPoints(int p)

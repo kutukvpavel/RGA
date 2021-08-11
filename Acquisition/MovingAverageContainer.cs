@@ -58,6 +58,7 @@ namespace Acquisition
         }
         public int Width { get; }
         public object SynchronizingObject { get; set; } = new object();
+        public int Length { get => accumulators.Count; }
 
         public new void Enqueue(IList<double> data)
         {

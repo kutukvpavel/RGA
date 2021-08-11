@@ -6,6 +6,7 @@ using System.Linq;
 using System.Globalization;
 using CsvHelper;
 using CsvHelper.Configuration;
+using MoreLinq;
 
 namespace Acquisition.BackupRestore
 {
@@ -55,12 +56,36 @@ namespace Acquisition.BackupRestore
             {
                 containers[i] = new MovingAverageContainer(cfg.MovingAverageWindowWidth, capacity);
             }
+            int containerAlignmentRecal = 0;
             for (int i = 0; i < Spectra.Count; i++)
             {
                 try
                 {
-                    var c = containers[i % containers.Length];
                     var s = Spectra.Values[i];
+                    var x = s.DataPoints.Keys;
+                    var c = containers[(i + containerAlignmentRecal) % containers.Length];
+                    if ((c.Length != x.Count) && (c.Count > 0))
+                    {
+                        LogException?.Invoke(this, new ExceptionEventArgs(new Exception(
+                            "Warning: gap agorithm malfunction detected, missing half of a spectrum.")));
+                        int k = 0;
+                        for (; k < containers.Length; k++)
+                        {
+                            if (containers[k].Length == x.Count)
+                            {
+                                containerAlignmentRecal = k - ((i + containerAlignmentRecal) % containers.Length);
+                                c = containers[(i + containerAlignmentRecal) % containers.Length];
+                                break;
+                            }
+                        }
+                        if (k == containers.Length)
+                        {
+                            LogException?.Invoke(this, new ExceptionEventArgs(new Exception(
+                                "Warning: can't find suitable averaging container for this spectrum length."),
+                                x.Count.ToString()));
+                            continue;
+                        }
+                    }
                     c.Enqueue(s.DataPoints.Values);
                     double div = cfg.CdemGain * (s.TotalPressure == 0 ? cfg.CdemEnabledAdditionalDivisionFactor : s.TotalPressure);
                     var res = c.CurrentAverage.Select(x => x / div);
@@ -70,7 +95,6 @@ namespace Acquisition.BackupRestore
                     using CsvWriter cw = new CsvWriter(tw, CsvConfig);
                     cw.NextRecord();
                     cw.NextRecord();
-                    var x = s.DataPoints.Keys;
                     int j = 0;
                     foreach (var item in res)
                     {
