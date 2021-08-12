@@ -1,5 +1,4 @@
-﻿using Avalonia.Data.Converters;
-using CsvHelper;
+﻿using CsvHelper;
 using CsvHelper.Configuration;
 using MoreLinq;
 using SkiaSharp;
@@ -41,8 +40,8 @@ namespace _3DSpectrumVisualizer
         {
             Color = SKColor.Parse("#fff"),
             IsAntialias = true,
-            Style = SKPaintStyle.StrokeAndFill,
-            StrokeWidth = 2.0f
+            Style = SKPaintStyle.Fill,
+            StrokeWidth = 0
         };
         private static SKPointXEqualityComparer XEqualityComparer = new SKPointXEqualityComparer();
         private static Func<GradientColor, float> ColorPosSelector =
@@ -50,6 +49,25 @@ namespace _3DSpectrumVisualizer
 
         public static void ExportSections(IList<DataRepository> repos, float amu, string path)
         {
+            bool lockTaken = false;
+            foreach (var item in repos)
+            {
+                lockTaken = Monitor.TryEnter(item.UpdateSynchronizingObject, 20000);
+                if (!lockTaken) break;
+            }
+            if (!lockTaken)
+            {
+                foreach (var item in repos)
+                {
+                    try
+                    {
+                        Monitor.Exit(item.UpdateSynchronizingObject);
+                    }
+                    catch (SynchronizationLockException)
+                    { }
+                }
+                throw new TimeoutException("Can't acquire update lock to export the section.");
+            }
             using TextWriter tw = new StreamWriter(path, false);
             using CsvWriter cw = new CsvWriter(tw, ExportCsvConfig);
             int len = repos.Max(x => x.Sections[amu].LinearPath.PointCount);
@@ -436,8 +454,8 @@ namespace _3DSpectrumVisualizer
         public bool HitTestUVRegion(DateTime point)
         {
             if (UVProfile.Count == 0) return false;
-            return UVProfile.Any(x => (StartTime.AddSeconds(x.StartTimeOffset) <= point)
-                && (StartTime.AddSeconds(x.EndTimeOffset) >= point));
+            double offset = (point - StartTime).TotalSeconds;
+            return UVProfile.Any(x => (x.StartTimeOffset <= offset) && (x.EndTimeOffset >= offset));
         }
 
         public string HitTestGasRegion(DateTime point)
@@ -445,8 +463,8 @@ namespace _3DSpectrumVisualizer
             if (GasProfile.Count == 0) return null;
             try
             {
-                return GasProfile.First(x => (StartTime.AddSeconds(x.StartTimeOffset) <= point)
-                    && (StartTime.AddSeconds(x.EndTimeOffset) >= point)).Name;
+                double offset = (point - StartTime).TotalSeconds;
+                return GasProfile.First(x => (x.StartTimeOffset <= offset) && (x.EndTimeOffset >= offset)).Name;
             }
             catch (InvalidOperationException)
             {

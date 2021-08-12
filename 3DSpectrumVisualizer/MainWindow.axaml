@@ -81,6 +81,7 @@ Gradient</CheckBox>
 				   BorderBrush="Black" BorderThickness="1" x:Name="lblLoading">
 				Loading...
 			</Label>
+			<TextBlock VerticalAlignment="Center" Margin="10,3,3,3">Hide results:</TextBlock>
 			<Slider x:Name="sldHideStart" Minimum="0" Maximum="1" SmallChange="0.01" Width="100"
 					Value="{Binding #Spectrum3D.HideFirstPercentOfResults, Mode=TwoWay}"></Slider>
 			<Slider x:Name="sldHideEnd" Minimum="0" Maximum="1" SmallChange="0.01" Width="100"
@@ -116,6 +117,10 @@ Gradient</CheckBox>
 							x:Name="SectionAMUSlider" TickFrequency="1" IsSnapToTickEnabled="{Binding !#chkSnap.IsChecked}"></Slider>
 				</DockPanel>
 				<StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal">
+					<CheckBox IsChecked="{Binding #SpectrumSection.RenderTemperatureProfile, Mode=TwoWay}"
+							  Click="OnShowTempProfileClick">Temperature</CheckBox>
+					<CheckBox IsChecked="{Binding #SpectrumSection.RenderGasRegions, Mode=TwoWay}"
+							  Click="OnShowGasRegionsClick">Gases</CheckBox>
 					<Button Background="#FABDA5" Button.Click="OnExportSectionClick" 
 							IsEnabled="{Binding #SpectrumSection.AMUPresent}" x:Name="btnExportSection">
 						Export

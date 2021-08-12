@@ -121,7 +121,11 @@ Port queue length: {CommunicationPort.SerialPort.BytesToRead} in, {Communication
             try
             {
                 bool scanFinished = false;
-                lock (SynchronizingObject)
+                if (!Monitor.TryEnter(SynchronizingObject, 10000))
+                {
+                    throw new TimeoutException("Can't acquire a lock to process the bytes received.");
+                }
+                try
                 {
                     foreach (var item in e)
                     {
@@ -149,6 +153,10 @@ Port queue length: {CommunicationPort.SerialPort.BytesToRead} in, {Communication
                         scanFinished = true;
                     }
                 }
+                finally
+                {
+                    Monitor.Exit(SynchronizingObject);
+                }
                 if (scanFinished)
                 {
                     //Not really a good solution to the concurrency problem:
@@ -167,6 +175,7 @@ Port queue length: {CommunicationPort.SerialPort.BytesToRead} in, {Communication
             catch (Exception ex)
             {
                 ExceptionLog?.Invoke(this, new ExceptionEventArgs(ex));
+                State = HeadState.ReadyToScan; //Reset scan without ScanCompleted invocation
             }
         }
 
@@ -226,10 +235,20 @@ Port queue length: {CommunicationPort.SerialPort.BytesToRead} in, {Communication
 
         public void StartScan()
         {
-            lock (SynchronizingObject)
+            if (!Monitor.TryEnter(SynchronizingObject, 20000))
+            {
+                ExceptionLog?.Invoke(this, new ExceptionEventArgs(new TimeoutException(
+                    "Can't acquire a lock to start a scan.")));
+                return;
+            }
+            try
             {
                 State = HeadState.StartScan;
                 _ScanTimeoutTimer.Start();
+            }
+            finally
+            {
+                Monitor.Exit(SynchronizingObject);
             }
         }
 
@@ -281,7 +300,13 @@ Port queue length: {CommunicationPort.SerialPort.BytesToRead} in, {Communication
 
         public void ExecuteSequence(CommandSequence s)
         {
-            lock (SynchronizingObject)
+            if (!Monitor.TryEnter(SynchronizingObject, 20000))
+            {
+                ExceptionLog?.Invoke(this, new ExceptionEventArgs(new TimeoutException(
+                    "Can't acquire a lock to execute the sequence.")));
+                return;
+            }
+            try
             {
                 foreach (var item in s)
                 {
@@ -318,6 +343,10 @@ Port queue length: {CommunicationPort.SerialPort.BytesToRead} in, {Communication
                     }
                 }
                 State = s.SuccessNextState;
+            }
+            finally
+            {
+                Monitor.Exit(SynchronizingObject);
             }
         }
 

@@ -7,11 +7,9 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.Threading;
 using CsvHelper;
-using CsvHelper.Configuration;
 using SkiaSharp;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -34,6 +32,8 @@ namespace _3DSpectrumVisualizer
 #endif
             this.Opened += (s, e) =>
             {
+                SectionPlot.RenderTemperatureProfile = Program.Config.ShowTemperatureProfile;
+                SectionPlot.RenderGasRegions = Program.Config.ShowGasRegions;
                 ColorPositionSlider.SmallChange = Program.Config.ColorPositionSliderPrecision;
                 AutoupdateXScaleCheckbox.IsChecked = Program.Config.AutoupdateXScale;
                 GLLabel.Background = SkiaCustomControl.OpenGLEnabled ? Brushes.Lime : Brushes.OrangeRed;
@@ -44,6 +44,8 @@ namespace _3DSpectrumVisualizer
             };
             this.Closing += (s, e) =>
             {
+                Program.Config.ShowGasRegions = SectionPlot.RenderGasRegions;
+                Program.Config.ShowTemperatureProfile = SectionPlot.RenderTemperatureProfile;
                 Program.Config.AutoupdateXScale = AutoupdateXScaleCheckbox.IsChecked.Value;
                 Program.Config.LastAMUSection = SectionPlot.AMU;
                 Program.Config.LastTimeAxisInterval = Spectrum3D.TimeAxisInterval;
@@ -144,6 +146,15 @@ namespace _3DSpectrumVisualizer
         #endregion
 
         #region UI events
+        private void OnShowTempProfileClick(object sender, RoutedEventArgs e)
+        {
+            SectionPlot.InvalidateVisual();
+        }
+
+        private void OnShowGasRegionsClick(object sender, RoutedEventArgs e)
+        {
+            SectionPlot.InvalidateVisual();
+        }
 
         private async void OnExportSectionClick(object sender, RoutedEventArgs e)
         {

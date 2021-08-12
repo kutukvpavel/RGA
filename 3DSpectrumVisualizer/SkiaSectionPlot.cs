@@ -37,6 +37,10 @@ namespace _3DSpectrumVisualizer
             IsAntialias = true
         };
 
+        public bool RenderGasRegions { get; set; } = true;
+
+        public bool RenderTemperatureProfile { get; set; } = true;
+
         public new SKColor Background
         {
             get => base.Background;
@@ -223,16 +227,18 @@ namespace _3DSpectrumVisualizer
 
         private class DrawSectionPlot : CustomDrawOp
         {
-            private float XTr;
-            private float YTr;
-            private float XSc;
-            private float YSc;
-            private float AMU;
-            private SKPaint FontPaint;
-            private float TimeAxisInterval;
-            private float ResultsBegin;
-            private float ResultsEnd;
-            private IEnumerable<DataRepository> Data;
+            private readonly float XTr;
+            private readonly float YTr;
+            private readonly float XSc;
+            private readonly float YSc;
+            private readonly float AMU;
+            private readonly SKPaint FontPaint;
+            private readonly float TimeAxisInterval;
+            private readonly float ResultsBegin;
+            private readonly float ResultsEnd;
+            private readonly bool ShowGasRegions;
+            private readonly bool ShowTemperatureProfile;
+            private readonly IEnumerable<DataRepository> Data;
 
             public DrawSectionPlot(SkiaSectionPlot parent) : base(parent)
             {
@@ -246,6 +252,8 @@ namespace _3DSpectrumVisualizer
                 TimeAxisInterval = parent.TimeAxisInterval;
                 ResultsBegin = parent.HideFirstPercentOfResults;
                 ResultsEnd = parent.HideLastPercentOfResults;
+                ShowGasRegions = parent.RenderGasRegions;
+                ShowTemperatureProfile = parent.RenderTemperatureProfile;
             }
 
             protected override void RenderCanvas(SKCanvas canvas)
@@ -256,11 +264,14 @@ namespace _3DSpectrumVisualizer
                     canvas.Translate(XTr, 0);
                     canvas.Scale(XSc, 1);
                     RenderRegions(canvas);
-                    var h = canvas.LocalClipBounds.Height * 0.95f;
-                    var s = h / Data.Max(x => x.TemperatureProfile.Bounds.Height) * 0.95f;
-                    canvas.Translate(0, h + Data.Min(x => x.TemperatureProfile.Bounds.Top) * s);
-                    canvas.Scale(1, -s);
-                    RenderTemperatureProfile(canvas);
+                    if (ShowTemperatureProfile)
+                    {
+                        var h = canvas.LocalClipBounds.Height * 0.95f;
+                        var s = h / Data.Max(x => x.TemperatureProfile.Bounds.Height) * 0.95f;
+                        canvas.Translate(0, h + Data.Min(x => x.TemperatureProfile.Bounds.Top) * s);
+                        canvas.Scale(1, -s);
+                        RenderTemperatureProfile(canvas);
+                    }
                 }
                 RenderTimeAxis(canvas);
                 canvas.Translate(XTr, YTr);
@@ -277,13 +288,14 @@ namespace _3DSpectrumVisualizer
             private void RenderTimeAxis(SKCanvas canvas)
             {
                 int step = (int)MathF.Ceiling(FontPaint.TextSize * FontPaint.TextScaleX * TimeAxisInterval * 5);
-                int ticks = (int)Math.Ceiling(canvas.LocalClipBounds.Width / step);
+                int ticks = (int)MathF.Ceiling(canvas.LocalClipBounds.Width / step);
                 var min = Data.Min(x => x.StartTime);
+                float tripleStroke = FontPaint.StrokeWidth * 3;
                 for (int i = 0; i < ticks; i++)
                 {
-                    var x = i * step + FontPaint.StrokeWidth;
-                    var s = min.AddSeconds(-XTr / XSc + x / XSc).ToLongTimeString();
-                    canvas.DrawText(s, x + FontPaint.StrokeWidth * 3, FontPaint.TextSize, FontPaint);
+                    var x = MathF.FusedMultiplyAdd(i, step, FontPaint.StrokeWidth);
+                    var s = min.AddSeconds((x - XTr) / XSc).ToLongTimeString();
+                    canvas.DrawText(s, x + tripleStroke, FontPaint.TextSize, FontPaint);
                     canvas.DrawLine(x, 0, x, canvas.LocalClipBounds.Height, FontPaint);
                 }
             }
@@ -292,13 +304,18 @@ namespace _3DSpectrumVisualizer
             {
                 foreach (var item in Data)
                 {
+                    if (ShowGasRegions)
+                    {
+                        foreach (var reg in item.GasProfile)
+                        {
+                            canvas.DrawRect(IRegion.GetRect(reg, 0, canvas.LocalClipBounds.Height), reg.Paint);
+                            /*canvas.DrawRect(reg.StartTimeOffset, 0, reg.EndTimeOffset - reg.StartTimeOffset, canvas.LocalClipBounds.Height,
+                                reg.Paint);*/
+                        }
+                    }
                     foreach (var reg in item.UVProfile)
                     {
                         canvas.DrawRect(IRegion.GetRect(reg, 0, canvas.LocalClipBounds.Height), item.UVRegionPaint);
-                    }
-                    foreach (var reg in item.GasProfile)
-                    {
-                        canvas.DrawRect(IRegion.GetRect(reg, 0, canvas.LocalClipBounds.Height), reg.Paint);
                     }
                 }
             }

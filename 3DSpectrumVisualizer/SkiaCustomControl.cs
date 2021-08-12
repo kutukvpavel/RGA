@@ -38,6 +38,8 @@ namespace _3DSpectrumVisualizer
             AttachedToVisualTree += SkiaCustomControl_AttachedToVisualTree;
         }
 
+        #region Properties
+
         public new SKColor Background
         {
             get => CustomDrawOp.BackgroundColor;
@@ -63,6 +65,8 @@ namespace _3DSpectrumVisualizer
             get => _RedrawTimer.Enabled;
             set => _RedrawTimer.Enabled = value;
         }
+
+        #endregion
 
         protected abstract class CustomDrawOp : ICustomDrawOperation
         {

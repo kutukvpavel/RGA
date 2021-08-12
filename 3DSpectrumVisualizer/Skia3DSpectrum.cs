@@ -278,14 +278,14 @@ namespace _3DSpectrumVisualizer
 
             private void RenderMassAxis(SKCanvas canvas, DataRepository dataMaxLen, float dataMaxDuration)
             {
-                var shift = FontPaint.TextSize * FontPaint.TextScaleX / 3;
+                var shift = -FontPaint.TextSize * FontPaint.TextScaleX / 3;
                 var marginStart = -FontPaint.TextSize * 1.1f;
                 var marginEnd = -marginStart + dataMaxDuration * (1 - ResultsEnd) * ScanSpacing;
                 marginStart += dataMaxDuration * ResultsBegin * ScanSpacing;
                 for (int i = 0; i <= dataMaxLen.Right; i++)
                 {
                     var s = i.ToString();
-                    var x = i - shift * s.Length;
+                    var x = MathF.FusedMultiplyAdd(shift, s.Length, i);
                     canvas.DrawText(s, x, marginStart, FontPaint);
                     canvas.DrawText(s, x, marginEnd, FontPaint);
                 }

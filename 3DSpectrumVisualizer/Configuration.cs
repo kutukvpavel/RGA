@@ -1,8 +1,7 @@
-﻿using SkiaSharp;
+﻿using Newtonsoft.Json;
+using SkiaSharp;
 using System;
 using System.Collections.Generic;
-using System.Text;
-using Newtonsoft.Json;
 using System.IO;
 using System.Linq;
 
@@ -85,6 +84,8 @@ namespace _3DSpectrumVisualizer
         public string ExportUVFalseString { get; set; } = "0";
         public bool AutoupdateXScale { get; set; } = false;
         public float ColorPositionSliderPrecision { get; set; } = 0.005f;
+        public bool ShowTemperatureProfile { get; set; } = true;
+        public bool ShowGasRegions { get; set; } = true;
 
         public void Save(string priorityFolder = null)
         {
