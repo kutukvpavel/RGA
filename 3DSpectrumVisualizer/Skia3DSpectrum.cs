@@ -1,13 +1,10 @@
 ﻿using Avalonia;
-using Avalonia.Data.Converters;
 using Avalonia.Input;
 using Avalonia.Media;
-using Avalonia.Rendering.SceneGraph;
 using MoreLinq;
 using SkiaSharp;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
 
 namespace _3DSpectrumVisualizer
@@ -29,7 +26,7 @@ namespace _3DSpectrumVisualizer
         public SKPaint FontPaint { get; set; } = new SKPaint() 
         { 
             Color = SKColor.Parse("#ECE2E2"), StrokeWidth = 2, TextSize = 0.7f, TextScaleX = 1,
-            IsAntialias = true
+            IsAntialias = false
         };
         public IEnumerable<DataRepository> DataRepositories { get; set; } = new List<DataRepository>();
         public new SKColor Background
@@ -245,6 +242,7 @@ namespace _3DSpectrumVisualizer
                 }
                 View3D.Restore();
                 //Data
+                float negScanSpacing = -ScanSpacing;
                 foreach (var item in Data)
                 {
                     View3D.Save();
@@ -252,14 +250,14 @@ namespace _3DSpectrumVisualizer
                     View3D.TranslateY(yOffset);
                     for (int i = 0; i < item.Results.Count; i++)
                     {
-                        if (i > 0) View3D.TranslateY(-ScanSpacing * 
-                            (float)(item.Results[i].CreationTime - item.Results[i - 1].CreationTime).TotalSeconds);
-                        if ((float)(item.Results[i].CreationTime - item.StartTime).TotalSeconds 
-                            / item.Duration < ResultsBegin) continue;
-                        if ((float)(item.EndTime - item.Results[i].CreationTime).TotalSeconds
-                            / item.Duration < ResultsEnd) break;
-                        if (DropCoef > 1) if (i % DropCoef == 0) continue;
                         var scan = item.Results[i];
+                        if (i > 0) View3D.TranslateY(negScanSpacing * 
+                            (float)(scan.CreationTime - item.Results[i - 1].CreationTime).TotalSeconds);
+                        if (DropCoef > 1) if (i % DropCoef == 0) continue;
+                        if ((float)(scan.CreationTime - item.StartTime).TotalSeconds 
+                            / item.Duration < ResultsBegin) continue;
+                        if ((float)(item.EndTime - scan.CreationTime).TotalSeconds
+                            / item.Duration < ResultsEnd) break;
                         var path = item.LogarithmicIntensity ? scan.LogPath2D : scan.Path2D;
                         if (path == null) continue;
                         using (SKAutoCanvasRestore ar = new SKAutoCanvasRestore(canvas))
@@ -280,7 +278,7 @@ namespace _3DSpectrumVisualizer
             {
                 var shift = -FontPaint.TextSize * FontPaint.TextScaleX / 3;
                 var marginStart = -FontPaint.TextSize * 1.1f;
-                var marginEnd = -marginStart + dataMaxDuration * (1 - ResultsEnd) * ScanSpacing;
+                var marginEnd = dataMaxDuration * (1 - ResultsEnd) * ScanSpacing - marginStart;
                 marginStart += dataMaxDuration * ResultsBegin * ScanSpacing;
                 for (int i = 0; i <= dataMaxLen.Right; i++)
                 {
@@ -299,7 +297,7 @@ namespace _3DSpectrumVisualizer
                 var max = Data.Max(x => x.EndTime);
                 int ticks = (int)MathF.Floor((float)(max - min).TotalSeconds * (1 - ResultsEnd) / step);
                 var marginStart = -FontPaint.TextSize * FontPaint.TextScaleX * 5;
-                var marginEnd = 1 * FontPaint.TextSize * FontPaint.TextScaleX + dataMaxLen.Right;
+                var marginEnd = MathF.FusedMultiplyAdd(FontPaint.TextSize, FontPaint.TextScaleX, dataMaxLen.Right);
                 for (int i = 0; i < ticks; i++)
                 {
                     var s = min.AddSeconds(i * step).ToLongTimeString();

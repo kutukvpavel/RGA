@@ -71,6 +71,7 @@ namespace _3DSpectrumVisualizer
         protected abstract class CustomDrawOp : ICustomDrawOperation
         {
             protected Control _Parent;
+            protected SKImage _Cache;
 
             public static SKColor BackgroundColor { get; set; } = new SKColor(211, 215, 222);
 
@@ -96,9 +97,17 @@ namespace _3DSpectrumVisualizer
                 var c = ((ISkiaDrawingContextImpl)context).SkCanvas;
                 try
                 {
-                    using (SKAutoCanvasRestore ar1 = new SKAutoCanvasRestore(c))
+                    if (_Cache != null)
                     {
-                        RenderCanvas(c);
+                        c.DrawImage(_Cache, 0, 0);
+                    }
+                    else
+                    {
+                        using (SKAutoCanvasRestore ar1 = new SKAutoCanvasRestore(c))
+                        {
+                            RenderCanvas(c);
+                        }
+                        _Cache = ((ISkiaDrawingContextImpl)context).SkSurface.Snapshot(c.DeviceClipBounds);
                     }
                 }
                 catch (Exception ex)

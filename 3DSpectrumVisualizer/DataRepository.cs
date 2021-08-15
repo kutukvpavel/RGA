@@ -68,68 +68,76 @@ namespace _3DSpectrumVisualizer
                 }
                 throw new TimeoutException("Can't acquire update lock to export the section.");
             }
-            using TextWriter tw = new StreamWriter(path, false);
-            using CsvWriter cw = new CsvWriter(tw, ExportCsvConfig);
-            int len = repos.Max(x => x.Sections[amu].LinearPath.PointCount);
-            foreach (var item in repos)
+            try
             {
-                cw.WriteField(item.Folder.Split(Path.DirectorySeparatorChar).LastOrDefault());
-                cw.WriteField($"AMU = {amu:F1}");
-                cw.WriteField("Temperature");
-                cw.WriteField("UV");
-                cw.WriteField("Gas");
-            }
-            cw.NextRecord();
-            int[] tempIndex = new int[repos.Count];
-            for (int i = 0; i < len; i++)
-            {
-                try
+                using TextWriter tw = new StreamWriter(path, false);
+                using CsvWriter cw = new CsvWriter(tw, ExportCsvConfig);
+                int len = repos.Max(x => x.Sections[amu].LinearPath.PointCount);
+                foreach (var item in repos)
                 {
-                    for (int j = 0; j < repos.Count; j++)
+                    cw.WriteField(item.Folder.Split(Path.DirectorySeparatorChar).LastOrDefault());
+                    cw.WriteField($"AMU = {amu:F1}");
+                    cw.WriteField("Temperature");
+                    cw.WriteField("UV");
+                    cw.WriteField("Gas");
+                }
+                cw.NextRecord();
+                int[] tempIndex = new int[repos.Count];
+                for (int i = 0; i < len; i++)
+                {
+                    try
                     {
-                        var item = repos[j];
-                        if (item.Sections[amu].LinearPath.PointCount > i)
+                        for (int j = 0; j < repos.Count; j++)
                         {
-                            var p = item.Sections[amu].LinearPath[i];
-                            //Time and value
-                            cw.WriteField(p.X.ToString(Program.Config.ExportXFormat));
-                            cw.WriteField(p.Y.ToString(Program.Config.ExportYFormat));
-                            //Temperature
-                            var offset = (item.Results[i].CreationTime - item.StartTime).TotalSeconds;
-                            string t = "";
-                            try
+                            var item = repos[j];
+                            if (item.Sections[amu].LinearPath.PointCount > i)
                             {
-                                if (item.TemperatureProfile.Points[tempIndex[j]].X <= offset)
+                                var p = item.Sections[amu].LinearPath[i];
+                                //Time and value
+                                cw.WriteField(p.X.ToString(Program.Config.ExportXFormat));
+                                cw.WriteField(p.Y.ToString(Program.Config.ExportYFormat));
+                                //Temperature
+                                string t = "";
+                                try
                                 {
-                                    while (item.TemperatureProfile.Points[tempIndex[j]].X < offset) tempIndex[j]++;
-                                    t = item.TemperatureProfile.Points[tempIndex[j]].Y.ToString("F1");
+                                    if (item.TemperatureProfile[tempIndex[j]].X <= p.X)
+                                    {
+                                        while (item.TemperatureProfile[tempIndex[j]].X < p.X) tempIndex[j]++;
+                                        t = item.TemperatureProfile[tempIndex[j]].Y.ToString("F1");
+                                    }
                                 }
+                                catch (IndexOutOfRangeException)
+                                { }
+                                cw.WriteField(t);
+                                //UV
+                                cw.WriteField(item.HitTestUVRegion(p.X) ?
+                                    Program.Config.ExportUVTrueString : Program.Config.ExportUVFalseString);
+                                //Gas
+                                t = item.HitTestGasRegion(p.X);
+                                cw.WriteField(t ?? "");
                             }
-                            catch (IndexOutOfRangeException)
-                            { }
-                            cw.WriteField(t);
-                            //UV
-                            DateTime rt = item.Results[i].CreationTime;
-                            cw.WriteField(item.HitTestUVRegion(rt) ? 
-                                Program.Config.ExportUVTrueString : Program.Config.ExportUVFalseString);
-                            //Gas
-                            t = item.HitTestGasRegion(rt);
-                            cw.WriteField(t ?? "");
-                        }
-                        else
-                        {
-                            for (int k = 0; k < 5; k++)
+                            else
                             {
-                                cw.WriteField("");
+                                for (int k = 0; k < 5; k++)
+                                {
+                                    cw.WriteField("");
+                                }
                             }
                         }
                     }
+                    catch (Exception ex)
+                    {
+                        Program.LogException(repos, ex);
+                    }
+                    cw.NextRecord();
                 }
-                catch (Exception ex)
+            }
+            finally
+            {
+                foreach (var item in repos)
                 {
-                    Program.LogException(repos, ex);
+                    Monitor.Exit(item.UpdateSynchronizingObject);
                 }
-                cw.NextRecord();
             }
         }
 
@@ -450,26 +458,35 @@ namespace _3DSpectrumVisualizer
             PaintFill.Shader = Shader;
             PaintStroke.Shader = Shader;
         }
-
-        public bool HitTestUVRegion(DateTime point)
+        
+        public bool HitTestUVRegion(double offset)
         {
             if (UVProfile.Count == 0) return false;
-            double offset = (point - StartTime).TotalSeconds;
             return UVProfile.Any(x => (x.StartTimeOffset <= offset) && (x.EndTimeOffset >= offset));
         }
+        public bool HitTestUVRegion(DateTime point)
+        {
+            double offset = (point - StartTime).TotalSeconds;
+            return HitTestUVRegion(offset);
+        }
 
-        public string HitTestGasRegion(DateTime point)
+        public string HitTestGasRegion(double offset)
         {
             if (GasProfile.Count == 0) return null;
             try
             {
-                double offset = (point - StartTime).TotalSeconds;
                 return GasProfile.First(x => (x.StartTimeOffset <= offset) && (x.EndTimeOffset >= offset)).Name;
             }
             catch (InvalidOperationException)
             {
                 return null;
             }
+
+        }
+        public string HitTestGasRegion(DateTime point)
+        {
+            double offset = (point - StartTime).TotalSeconds;
+            return HitTestGasRegion(offset);
         }
 
         #endregion
