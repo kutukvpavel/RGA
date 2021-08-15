@@ -11,7 +11,8 @@ namespace _3DSpectrumVisualizer
 {
     public class Skia3DSpectrum : SkiaCustomControl
     {
-        public static float ScalingLowerLimit { get; set; } = 0.001f;
+        public static float ScalingLowerLimit { get; set; }
+        public static float FastModeDepth { get; set; }
 
         public Skia3DSpectrum() : base()
         {
@@ -27,6 +28,7 @@ namespace _3DSpectrumVisualizer
         }
 
         #region Properties
+
         public AvaloniaProperty<float> TimeAxisIntervalProperty =
             AvaloniaProperty.Register<Skia3DSpectrum, float>("TimeAxisInterval");
         public AvaloniaProperty<bool> FastModeProperty = AvaloniaProperty.Register<Skia3DSpectrum, bool>("FastMode");
@@ -98,7 +100,7 @@ namespace _3DSpectrumVisualizer
             set
             {
                 _FastMode = value;
-                FontPaint.IsAntialias = _FastMode;
+                FontPaint.IsAntialias = !_FastMode;
                 SetValue(FastModeProperty, _FastMode);
             }
         }
@@ -107,7 +109,7 @@ namespace _3DSpectrumVisualizer
             {
                 if (!DataRepositories.Any()) return -1;
                 int c = (int)(DataRepositories.Average(x => x.AverageScanTime) * 10 * (ScalingFactor * ScanSpacing) + 
-                    (FastMode ? -2.5f : 0.5f));
+                    (FastMode ? FastModeDepth : 0.5f));
                 if (c > 10) c = -1;
                 else if (c < 3) c -= 4;
                 if (c % 2 == 0) c -= 1;
@@ -242,16 +244,16 @@ namespace _3DSpectrumVisualizer
                 canvas.Clear(BackgroundColor);
                 canvas.Translate(XTranslate, YTranslate);
                 canvas.Scale(Scaling);
-                //Regions
-
-                //Axes
                 if (!Data.Any()) return;
                 var dataMaxLen = Data.MaxBy(x => x.Right).FirstOrDefault();
                 if (dataMaxLen == null) return;
+                View3D.TranslateX(-dataMaxLen.MidX);
+                View3D.Save();
+                //Regions
+
+                //Axes
                 var dataMaxDuration = Data.Max(x => x.Duration);
                 var yOffset = dataMaxDuration * ScanSpacing / 2;
-                View3D.Save();
-                View3D.TranslateX(-dataMaxLen.MidX);
                 View3D.TranslateY(yOffset);
                 if (Data.Any(x => x.LogarithmicIntensity))
                     View3D.TranslateZ(-MathF.Log10(Data.Min(x => x.PositiveMin)) * ZScaling);
@@ -263,43 +265,66 @@ namespace _3DSpectrumVisualizer
                 }
                 View3D.Restore();
                 //Data
-                float negScanSpacing = -ScanSpacing;
+                bool reverseDrawingOrder;
+                {
+                    float angle = MathF.Abs(ZRotate % 360);
+                    reverseDrawingOrder = angle > 90 && angle < 270;
+                }
+                if (reverseDrawingOrder) yOffset = -yOffset;
+                View3D.TranslateY(yOffset);
                 foreach (var item in Data)
                 {
                     View3D.Save();
-                    View3D.TranslateX(-dataMaxLen.MidX);
-                    View3D.TranslateY(yOffset);
-                    for (int i = 0; i < item.Results.Count; i++)
+                    ScanResult lastScan = null;
+                    if (reverseDrawingOrder)
                     {
-                        var scan = item.Results[i];
-                        if (i > 0) View3D.TranslateY(negScanSpacing * 
-                            (float)(scan.CreationTime - item.Results[i - 1].CreationTime).TotalSeconds);
-                        if (DropCoef > 1)
+                        for (int i = item.Results.Count - 1; i >= 0; i--)
                         {
-                            if (i % DropCoef == 0) continue;
+                            if (RenderScan(item, i, ref lastScan, canvas, reverseDrawingOrder)) break;
                         }
-                        else if (DropCoef < -1)
+                    }
+                    else
+                    {
+                        for (int i = 0; i < item.Results.Count; i++)
                         {
-                            if (i % DropCoef != 0) continue;
-                        }
-                        if ((float)(scan.CreationTime - item.StartTime).TotalSeconds 
-                            / item.Duration < ResultsBegin) continue;
-                        if ((float)(item.EndTime - scan.CreationTime).TotalSeconds
-                            / item.Duration < ResultsEnd) break;
-                        var path = item.LogarithmicIntensity ? scan.LogPath2D : scan.Path2D;
-                        if (path == null) continue;
-                        using (SKAutoCanvasRestore ar = new SKAutoCanvasRestore(canvas))
-                        {
-                            View3D.Save();
-                            View3D.RotateXDegrees(90);
-                            View3D.ApplyToCanvas(canvas);
-                            View3D.Restore();
-                            canvas.Scale(1, ZScaling);
-                            canvas.DrawPath(path, item.PaintStroke);
+                            if (RenderScan(item, i, ref lastScan, canvas, reverseDrawingOrder)) break;
                         }
                     }
                     View3D.Restore();
                 }
+            }
+
+            private bool RenderScan(DataRepository item, int i, ref ScanResult lastScan, 
+                SKCanvas canvas, bool reverseOrder)
+            {
+                var scan = item.Results[i];
+                if (lastScan != null) View3D.TranslateY(ScanSpacing *
+                    (float)(lastScan.CreationTime - scan.CreationTime).TotalSeconds);
+                lastScan = scan;
+                if (DropCoef > 1)
+                {
+                    if (i % DropCoef == 0) return false;
+                }
+                else if (DropCoef < -1)
+                {
+                    if (i % DropCoef != 0) return false;
+                }
+                if ((float)(scan.CreationTime - item.StartTime).TotalSeconds
+                    / item.Duration < ResultsBegin) return reverseOrder;
+                if ((float)(item.EndTime - scan.CreationTime).TotalSeconds
+                    / item.Duration < ResultsEnd) return !reverseOrder;
+                var path = item.LogarithmicIntensity ? scan.LogPath2D : scan.Path2D;
+                if (path == null) return false;
+                using (SKAutoCanvasRestore ar = new SKAutoCanvasRestore(canvas))
+                {
+                    View3D.Save();
+                    View3D.RotateXDegrees(90);
+                    View3D.ApplyToCanvas(canvas);
+                    View3D.Restore();
+                    canvas.Scale(1, ZScaling);
+                    canvas.DrawPath(path, item.PaintStroke);
+                }
+                return false;
             }
 
             private void RenderMassAxis(SKCanvas canvas, DataRepository dataMaxLen, float dataMaxDuration)

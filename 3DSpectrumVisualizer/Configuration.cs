@@ -87,6 +87,8 @@ namespace _3DSpectrumVisualizer
         public bool ShowTemperatureProfile { get; set; } = true;
         public bool ShowGasRegions { get; set; } = true;
         public bool FastMode { get; set; } = false;
+        public float FastModeDepth { get; set; } = -2.5f;
+        public float ZScalingLowerLimit { get; set; } = 0.001f;
 
         public void Save(string priorityFolder = null)
         {

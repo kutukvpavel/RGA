@@ -101,6 +101,8 @@ namespace _3DSpectrumVisualizer
             DataRepository.UseHorizontalGradient = Config.UseHorizontalGradient;
             DataRepository.ColorPositionSliderPrecision = Config.ColorPositionSliderPrecision;
             MainWindow.PositionValueConverter = new RootValueConverter(Config.GradientPositionSliderLawPower);
+            Skia3DSpectrum.FastModeDepth = Config.FastModeDepth;
+            Skia3DSpectrum.ScalingLowerLimit = Config.ZScalingLowerLimit;
         }
 
         private static void CollectSettings()
@@ -108,6 +110,8 @@ namespace _3DSpectrumVisualizer
             Config.UseHorizontalGradient = DataRepository.UseHorizontalGradient;
             Config.LastLightSliderPosition = DataRepository.LightGradient[1].Alpha;
             Config.UseLogIntensity = Repositories.Select(x => x.LogarithmicIntensity).ToArray();
+            Config.FastModeDepth = Skia3DSpectrum.FastModeDepth;
+            Config.ZScalingLowerLimit = Skia3DSpectrum.ScalingLowerLimit;
         }
 
         public static void LogException(object s, Exception e)
