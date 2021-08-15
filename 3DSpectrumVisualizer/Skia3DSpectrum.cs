@@ -17,11 +17,19 @@ namespace _3DSpectrumVisualizer
         {
             PointerMoved += Skia3DSpectrum_PointerMoved;
             PointerWheelChanged += Skia3DSpectrum_PointerWheelChanged;
+            FastModeProperty.Changed.Subscribe((e) => 
+            {
+                if (!IsInitialized || !e.IsEffectiveValueChange || !e.NewValue.HasValue) return;
+                FastMode = e.NewValue.Value; 
+                InvalidateVisual();
+                RaiseCoordsChanged();
+            });
         }
 
         #region Properties
         public AvaloniaProperty<float> TimeAxisIntervalProperty =
             AvaloniaProperty.Register<Skia3DSpectrum, float>("TimeAxisInterval");
+        public AvaloniaProperty<bool> FastModeProperty = AvaloniaProperty.Register<Skia3DSpectrum, bool>("FastMode");
 
         public SKPaint FontPaint { get; set; } = new SKPaint() 
         { 
@@ -83,13 +91,26 @@ namespace _3DSpectrumVisualizer
             get => _ScanSpacing;
             set { if (value > 0) _ScanSpacing = value; }
         }
+        private bool _FastMode = false;
+        public bool FastMode
+        {
+            get => _FastMode;
+            set
+            {
+                _FastMode = value;
+                FontPaint.IsAntialias = _FastMode;
+                SetValue(FastModeProperty, _FastMode);
+            }
+        }
         public int PointDropCoef { 
             get
             {
                 if (!DataRepositories.Any()) return -1;
-                int c = (int)(DataRepositories.Average(x => x.AverageScanTime) * 10 * (ScalingFactor * ScanSpacing) + 0.5f);
+                int c = (int)(DataRepositories.Average(x => x.AverageScanTime) * 10 * (ScalingFactor * ScanSpacing) + 
+                    (FastMode ? -2.5f : 0.5f));
                 if (c > 10) c = -1;
-                else if (c < 3) c = 3;
+                else if (c < 3) c -= 4;
+                if (c % 2 == 0) c -= 1;
                 return c;
             }
         }
@@ -253,7 +274,14 @@ namespace _3DSpectrumVisualizer
                         var scan = item.Results[i];
                         if (i > 0) View3D.TranslateY(negScanSpacing * 
                             (float)(scan.CreationTime - item.Results[i - 1].CreationTime).TotalSeconds);
-                        if (DropCoef > 1) if (i % DropCoef == 0) continue;
+                        if (DropCoef > 1)
+                        {
+                            if (i % DropCoef == 0) continue;
+                        }
+                        else if (DropCoef < -1)
+                        {
+                            if (i % DropCoef != 0) continue;
+                        }
                         if ((float)(scan.CreationTime - item.StartTime).TotalSeconds 
                             / item.Duration < ResultsBegin) continue;
                         if ((float)(item.EndTime - scan.CreationTime).TotalSeconds

@@ -86,6 +86,7 @@ namespace _3DSpectrumVisualizer
         public float ColorPositionSliderPrecision { get; set; } = 0.005f;
         public bool ShowTemperatureProfile { get; set; } = true;
         public bool ShowGasRegions { get; set; } = true;
+        public bool FastMode { get; set; } = false;
 
         public void Save(string priorityFolder = null)
         {

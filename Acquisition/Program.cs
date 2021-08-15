@@ -331,6 +331,7 @@ namespace Acquisition
             Pipe.GasGpioOffset = Config.GasGpioOffset;
             Pipe.UVGpioIndex = Config.UVGpioIndex;
             if (Config.LogPipeMessages) Pipe.LogEvent += (x, y) => { Log("Pipe message received: " + y); };
+            else Pipe.LogEvent += (x, y) => Console.WriteLine(y);
             Pipe.LogException += (x, y) => { Log(y.LogString); };
             Pipe.TemperatureReceived += Pipe_TemperatureReceived;
             Pipe.UVStateReceived += Pipe_UVStateReceived;

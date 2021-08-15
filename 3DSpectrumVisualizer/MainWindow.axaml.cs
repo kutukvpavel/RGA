@@ -39,6 +39,7 @@ namespace _3DSpectrumVisualizer
                 GLLabel.Background = SkiaCustomControl.OpenGLEnabled ? Brushes.Lime : Brushes.OrangeRed;
                 Spectrum3D.Background = Program.Config.SpectraBackground;
                 Spectrum3D.TimeAxisInterval = Program.Config.LastTimeAxisInterval;
+                Spectrum3D.FastMode = Program.Config.FastMode;
                 Last3DCoords = Program.Config.Last3DCoords;
                 OnRestore3DViewClick(this, null);
             };
@@ -50,6 +51,7 @@ namespace _3DSpectrumVisualizer
                 Program.Config.LastAMUSection = SectionPlot.AMU;
                 Program.Config.LastTimeAxisInterval = Spectrum3D.TimeAxisInterval;
                 Program.Config.SpectraBackground = Spectrum3D.Background;
+                Program.Config.FastMode = Spectrum3D.FastMode;
                 OnTopViewClick(this, null);
                 Program.Config.Last3DCoords = Last3DCoords;
             };
@@ -252,7 +254,7 @@ namespace _3DSpectrumVisualizer
                 try
                 {
                     Program.Config.ColorSchemes.SelectedItem[LstColors.SelectedIndex].Color 
-                        = SKColor.Parse(((Color)e.NewValue).ToString());
+                        = new SKColor(((Color)e.NewValue).ToUint32());
                     foreach (var item in Program.Repositories)
                     {
                         item.RecalculateShader();
@@ -275,8 +277,7 @@ namespace _3DSpectrumVisualizer
                 if (e.NewValue == null || !e.IsEffectiveValueChange) return;
                 try
                 {
-                    var s = ((Color)e.NewValue).ToString();
-                    Spectrum3D.Background = SKColor.Parse(s);
+                    Spectrum3D.Background = new SKColor(((Color)e.NewValue).ToUint32());
                     SectionPlot.Background = Spectrum3D.Background;
                     Spectrum3D.InvalidateVisual();
                     SectionPlot.InvalidateVisual();

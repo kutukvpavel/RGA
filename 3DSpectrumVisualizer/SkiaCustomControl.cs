@@ -83,7 +83,11 @@ namespace _3DSpectrumVisualizer
 
             public void Dispose()
             {
-                // No-op
+                if (_Cache != null)
+                {
+                    _Cache.Dispose();
+                    _Cache = null;
+                }
             }
 
             public Rect Bounds { get; }
@@ -94,27 +98,27 @@ namespace _3DSpectrumVisualizer
             public virtual bool Equals(ICustomDrawOperation other) => false;
             public void Render(IDrawingContextImpl context)
             {
-                var c = ((ISkiaDrawingContextImpl)context).SkCanvas;
+                var c = (ISkiaDrawingContextImpl)context;
                 try
                 {
-                    if (_Cache != null)
+                    if (_Cache?.IsValid(c.GrContext) ?? false)
                     {
-                        c.DrawImage(_Cache, 0, 0);
+                        c.SkCanvas.DrawImage(_Cache, 0, 0);
                     }
                     else
                     {
-                        using (SKAutoCanvasRestore ar1 = new SKAutoCanvasRestore(c))
+                        using (SKAutoCanvasRestore ar1 = new SKAutoCanvasRestore(c.SkCanvas))
                         {
-                            RenderCanvas(c);
+                            RenderCanvas(c.SkCanvas);
                         }
-                        _Cache = ((ISkiaDrawingContextImpl)context).SkSurface.Snapshot(c.DeviceClipBounds);
+                        _Cache = c.SkSurface.Snapshot(c.SkCanvas.DeviceClipBounds);
                     }
                 }
                 catch (Exception ex)
                 {
                     var p = new SKPaint(new SKFont(SKTypeface.Default)) { Color = SKColor.Parse("#F40A0A") };
-                    c.Translate(0, p.TextSize);
-                    c.DrawText(ex.ToString(), 0, 0, p);
+                    c.SkCanvas.Translate(0, p.TextSize);
+                    c.SkCanvas.DrawText(ex.ToString(), 0, 0, p);
                 }
             }
             protected abstract void RenderCanvas(SKCanvas canvas);

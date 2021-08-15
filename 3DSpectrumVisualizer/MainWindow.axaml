@@ -95,6 +95,7 @@ Gradient</CheckBox>
 				x:Name="GLLabel" BorderThickness="1" BorderBrush="Black">
 				GL
 			</Label>
+			<CheckBox IsChecked="{Binding #Spectrum3D.FastMode, Mode=TwoWay}">Fast Mode</CheckBox>
 			<Label VerticalContentAlignment="Center" Margin="10,3,0,3" FontSize="14"
 				   x:Name="CoordsLabel">
 				Coords...
