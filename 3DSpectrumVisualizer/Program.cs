@@ -103,6 +103,7 @@ namespace _3DSpectrumVisualizer
             MainWindow.PositionValueConverter = new RootValueConverter(Config.GradientPositionSliderLawPower);
             Skia3DSpectrum.FastModeDepth = Config.FastModeDepth;
             Skia3DSpectrum.ScalingLowerLimit = Config.ZScalingLowerLimit;
+            SkiaCustomControl.EnableCaching = Config.EnableRenderCaching;
         }
 
         private static void CollectSettings()

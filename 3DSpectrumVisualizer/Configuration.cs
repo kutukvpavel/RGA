@@ -89,6 +89,7 @@ namespace _3DSpectrumVisualizer
         public bool FastMode { get; set; } = false;
         public float FastModeDepth { get; set; } = -2.5f;
         public float ZScalingLowerLimit { get; set; } = 0.001f;
+        public bool EnableRenderCaching { get; set; } = true;
 
         public void Save(string priorityFolder = null)
         {

@@ -126,8 +126,14 @@ Gradient</CheckBox>
 							IsEnabled="{Binding #SpectrumSection.AMUPresent}" x:Name="btnExportSection">
 						Export
 					</Button>
-					<Button Background="#ADE6B7" Button.Click="OnSectionAutoscaleYClick">Auto Y</Button>
-					<Button Background="#ADE2E6" Button.Click="OnSectionAutoscaleXClick">Auto X</Button>
+					<Button Background="#ADE6B7" Button.Click="OnSectionAutoscaleYClick"
+							IsEnabled="{Binding #SpectrumSection.AMUPresent}">
+						Auto Y
+					</Button>
+					<Button Background="#ADE2E6" Button.Click="OnSectionAutoscaleXClick"
+							IsEnabled="{Binding #SpectrumSection.AMUPresent}">
+						Auto X
+					</Button>
 					<CheckBox x:Name="chkAutoX">Autoupdate X Scale</CheckBox>
 					<Label x:Name="lblSectionCoords" FontSize="16" DockPanel.Dock="Bottom" MinHeight="30"
 						   Margin="3">Coords...</Label>

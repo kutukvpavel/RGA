@@ -6,6 +6,7 @@ using Avalonia.Platform;
 using Avalonia.Rendering.SceneGraph;
 using Avalonia.Skia;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using SkiaSharp;
 using System;
 using System.Threading;
@@ -16,8 +17,11 @@ namespace _3DSpectrumVisualizer
 {
     public abstract class SkiaCustomControl : UserControl
     {
-        public static IValueConverter ColorConverter = new FuncValueConverter<SKColor, Color>(
+        public static IValueConverter ColorConverter { get; set; } = new FuncValueConverter<SKColor, Color>(
             (x) => Color.FromArgb(x.Alpha, x.Red, x.Green, x.Blue));
+        public static SKPaint ExceptionPaint { get; set; }
+            = new SKPaint(new SKFont(SKTypeface.Default)) { Color = SKColor.Parse("#F40A0A") };
+        public static bool EnableCaching { get; set; }
 
         private System.Timers.Timer _RedrawTimer = new System.Timers.Timer() { Enabled = false, Interval = 30, AutoReset = true };
         private Task _RedrawTask;
@@ -78,6 +82,7 @@ namespace _3DSpectrumVisualizer
             public CustomDrawOp(Control parent)
             {
                 Bounds = new Rect(0, 0, parent.Bounds.Width, parent.Bounds.Height);
+                TransformedBounds = parent.TransformedBounds;
                 _Parent = parent;
             }
 
@@ -91,9 +96,14 @@ namespace _3DSpectrumVisualizer
             }
 
             public Rect Bounds { get; }
+            public TransformedBounds? TransformedBounds { get; }
             public bool HitTest(Point p)
             {
-                return true;
+                if (TransformedBounds == null) return false;
+                var pp = _Parent.GetVisualRoot().PointToScreen(p);
+                var br =_Parent.PointToScreen(TransformedBounds.Value.Clip.BottomRight);
+                var tl = _Parent.PointToScreen(TransformedBounds.Value.Clip.TopLeft);
+                return (tl.X < pp.X) && (pp.X < br.X) && (tl.Y < pp.Y) && (pp.Y < br.Y);
             }
             public virtual bool Equals(ICustomDrawOperation other) => false;
             public void Render(IDrawingContextImpl context)
@@ -111,14 +121,12 @@ namespace _3DSpectrumVisualizer
                         {
                             RenderCanvas(c.SkCanvas);
                         }
-                        _Cache = c.SkSurface.Snapshot(c.SkCanvas.DeviceClipBounds);
+                        if (EnableCaching) _Cache = c.SkSurface.Snapshot(c.SkCanvas.DeviceClipBounds); //Additional 16mS/S
                     }
                 }
                 catch (Exception ex)
                 {
-                    var p = new SKPaint(new SKFont(SKTypeface.Default)) { Color = SKColor.Parse("#F40A0A") };
-                    c.SkCanvas.Translate(0, p.TextSize);
-                    c.SkCanvas.DrawText(ex.ToString(), 0, 0, p);
+                    c.SkCanvas.DrawText(ex.ToString(), 0, c.SkCanvas.LocalClipBounds.MidY, ExceptionPaint);
                 }
             }
             protected abstract void RenderCanvas(SKCanvas canvas);
