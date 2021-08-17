@@ -1,11 +1,9 @@
 ﻿using Avalonia;
 using Avalonia.Input;
-using MoreLinq;
 using SkiaSharp;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace _3DSpectrumVisualizer
 {
