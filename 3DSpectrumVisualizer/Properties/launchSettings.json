@@ -1,8 +1,7 @@
 {
   "profiles": {
     "3DSpectrumVisualizer": {
-      "commandName": "Project",
-      "commandLineArgs": "E:\\Doc\\ZNO_NO2_30_50_100_150"
+      "commandName": "Project"
     }
   }
 }

@@ -202,20 +202,20 @@ namespace _3DSpectrumVisualizer
         class Draw3DSpectrum : CustomDrawOp
         {
             private readonly SK3dView View3D;
-            private float Scaling;
-            private float ScanSpacing;
-            private float ZScaling;
-            private float XTranslate;
-            private float YTranslate;
-            private float XRotate;
-            private float YRotate;
-            private float ZRotate;
-            private int DropCoef;
-            IEnumerable<DataRepository> Data;
-            private SKPaint FontPaint;
-            private float TimeAxisInterval;
-            private float ResultsBegin;
-            private float ResultsEnd;
+            private readonly float Scaling;
+            private readonly float ScanSpacing;
+            private readonly float ZScaling;
+            private readonly float XTranslate;
+            private readonly float YTranslate;
+            private readonly float XRotate;
+            private readonly float YRotate;
+            private readonly float ZRotate;
+            private readonly int DropCoef;
+            readonly IEnumerable<DataRepository> Data;
+            private readonly SKPaint FontPaint;
+            private readonly float TimeAxisInterval;
+            private readonly float ResultsBegin;
+            private readonly float ResultsEnd;
 
             public Draw3DSpectrum(Skia3DSpectrum parent) : base(parent)
             {
@@ -239,8 +239,15 @@ namespace _3DSpectrumVisualizer
                 ResultsEnd = parent.HideLastPercentOfResults;
             }
 
+            public override void Dispose()
+            {
+                View3D.Dispose();
+                base.Dispose();
+            }
+
             protected override void RenderCanvas(SKCanvas canvas)
             {
+                View3D.Save();
                 canvas.Clear(BackgroundColor);
                 canvas.Translate(XTranslate, YTranslate);
                 canvas.Scale(Scaling);
@@ -252,7 +259,7 @@ namespace _3DSpectrumVisualizer
                 //Regions
 
                 //Axes
-                var dataMaxDuration = Data.Max(x => x.Duration);
+                var dataMaxDuration = Data.Max(x => x.Duration);            
                 var yOffset = dataMaxDuration * ScanSpacing / 2;
                 View3D.TranslateY(yOffset);
                 if (Data.Any(x => x.LogarithmicIntensity))
@@ -292,6 +299,7 @@ namespace _3DSpectrumVisualizer
                     }
                     View3D.Restore();
                 }
+                View3D.Restore();
             }
 
             private bool RenderScan(DataRepository item, int i, ref ScanResult lastScan, 

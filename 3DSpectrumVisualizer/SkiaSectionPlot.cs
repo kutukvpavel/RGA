@@ -113,6 +113,7 @@ namespace _3DSpectrumVisualizer
 
         public void AutoscaleX(bool invalidate = true)
         {
+            if (!DataRepositories.Any()) return;
             XScaling = (float)Bounds.Width / DataRepositories.Max(x => x.Duration);
             XTranslate = 0;
             if (invalidate) InvalidateVisual();
@@ -120,6 +121,7 @@ namespace _3DSpectrumVisualizer
 
         public void AutoscaleY(bool invalidate = true)
         {
+            if (!DataRepositories.Any()) return;
             float max = DataRepositories.Max(x =>
             {
                 if (x.Sections.ContainsKey(AMU))
@@ -149,6 +151,7 @@ namespace _3DSpectrumVisualizer
 
         public void AutoscaleYForAllSections(bool invalidate = true)
         {
+            if (!DataRepositories.Any()) return;
             float max = DataRepositories.Max(x => x.Max);
             float min = DataRepositories.Min(x => x.Min);
             AutoscalingYEngine(min, max, invalidate);

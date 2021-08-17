@@ -52,7 +52,7 @@ namespace _3DSpectrumVisualizer
                 Program.Config.LastTimeAxisInterval = Spectrum3D.TimeAxisInterval;
                 Program.Config.SpectraBackground = Spectrum3D.Background;
                 Program.Config.FastMode = Spectrum3D.FastMode;
-                OnTopViewClick(this, null);
+                Save3DCoords();
                 Program.Config.Last3DCoords = Last3DCoords;
             };
         }
@@ -401,19 +401,8 @@ namespace _3DSpectrumVisualizer
 
         private void OnTopViewClick(object sender, RoutedEventArgs e)
         {
-            if (!ViewStateTop)
-            {
-                Last3DCoords = new float[] {
-                    Spectrum3D.XTranslate,
-                    Spectrum3D.YTranslate,
-                    Spectrum3D.XRotate,
-                    Spectrum3D.YRotate,
-                    Spectrum3D.ZRotate,
-                    Spectrum3D.ScalingFactor,
-                    Spectrum3D.ZScalingFactor,
-                    Spectrum3D.ScanSpacing
-                };
-            }
+            if (!ViewStateTop) Save3DCoords();
+            if (!Program.Repositories.Any()) return;
             float shiftX = Spectrum3D.FontPaint.TextSize * Spectrum3D.FontPaint.TextScaleX * 10;
             float extraY = Spectrum3D.FontPaint.TextSize * 6;
             Spectrum3D.XRotate = 90;
@@ -424,12 +413,26 @@ namespace _3DSpectrumVisualizer
             Spectrum3D.ScalingFactor = (float)Spectrum3D.Bounds.Width / 
                 (Program.Repositories.Max(x => x.Right - x.Left) + shiftX);
             Spectrum3D.ScanSpacing = (float)(Spectrum3D.Bounds.Height - extraY * Spectrum3D.ScalingFactor) / 
-                ((Program.Repositories.Max(x => x.Duration)) * Spectrum3D.ScalingFactor);
+                (Program.Repositories.Max(x => x.Duration) * Spectrum3D.ScalingFactor);
             Spectrum3D.ZScalingFactor = Skia3DSpectrum.ScalingLowerLimit;
             Spectrum3D.InvalidateVisual();
             ViewStateTop = true;
         }
 
         #endregion
+
+        private void Save3DCoords()
+        {
+            Last3DCoords = new float[] {
+                    Spectrum3D.XTranslate,
+                    Spectrum3D.YTranslate,
+                    Spectrum3D.XRotate,
+                    Spectrum3D.YRotate,
+                    Spectrum3D.ZRotate,
+                    Spectrum3D.ScalingFactor,
+                    Spectrum3D.ZScalingFactor,
+                    Spectrum3D.ScanSpacing
+                };
+        }
     }
 }

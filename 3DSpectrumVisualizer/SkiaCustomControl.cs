@@ -81,12 +81,14 @@ namespace _3DSpectrumVisualizer
 
             public CustomDrawOp(Control parent)
             {
-                Bounds = new Rect(0, 0, parent.Bounds.Width, parent.Bounds.Height);
-                TransformedBounds = parent.TransformedBounds;
                 _Parent = parent;
             }
 
-            public void Dispose()
+            protected abstract void RenderCanvas(SKCanvas canvas);
+            public virtual bool Equals(ICustomDrawOperation other) => false;
+            public Rect Bounds { get => new Rect(0, 0, _Parent.Bounds.Width, _Parent.Bounds.Height); }
+
+            public virtual void Dispose()
             {
                 if (_Cache != null)
                 {
@@ -95,17 +97,15 @@ namespace _3DSpectrumVisualizer
                 }
             }
 
-            public Rect Bounds { get; }
-            public TransformedBounds? TransformedBounds { get; }
             public bool HitTest(Point p)
             {
-                if (TransformedBounds == null) return false;
+                if (_Parent.TransformedBounds == null) return false;
                 var pp = _Parent.GetVisualRoot().PointToScreen(p);
-                var br =_Parent.PointToScreen(TransformedBounds.Value.Clip.BottomRight);
-                var tl = _Parent.PointToScreen(TransformedBounds.Value.Clip.TopLeft);
+                var br =_Parent.PointToScreen(_Parent.TransformedBounds.Value.Clip.BottomRight);
+                var tl = _Parent.PointToScreen(_Parent.TransformedBounds.Value.Clip.TopLeft);
                 return (tl.X < pp.X) && (pp.X < br.X) && (tl.Y < pp.Y) && (pp.Y < br.Y);
             }
-            public virtual bool Equals(ICustomDrawOperation other) => false;
+
             public void Render(IDrawingContextImpl context)
             {
                 var c = (ISkiaDrawingContextImpl)context;
@@ -113,7 +113,7 @@ namespace _3DSpectrumVisualizer
                 {
                     if (_Cache?.IsValid(c.GrContext) ?? false)
                     {
-                        c.SkCanvas.DrawImage(_Cache, 0, 0);
+                        c.SkCanvas.DrawImage(_Cache, Bounds.ToSKRect());
                     }
                     else
                     {
@@ -129,7 +129,6 @@ namespace _3DSpectrumVisualizer
                     c.SkCanvas.DrawText(ex.ToString(), 0, c.SkCanvas.LocalClipBounds.MidY, ExceptionPaint);
                 }
             }
-            protected abstract void RenderCanvas(SKCanvas canvas);
         }
 
         public override void Render(DrawingContext context)
