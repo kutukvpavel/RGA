@@ -79,6 +79,7 @@ namespace Acquisition
         {
             Average = new MovingAverageContainer(Config.MovingAverageWindowWidth);
             //Init
+            CommandSet.SetNoiseFloor.Parameter = Config.NoiseFloorSetting.ToString();
             InitBackgroundRemoval();
             InitDevice(args[0]);
             InitPipe(Config.PipeName);

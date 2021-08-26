@@ -42,5 +42,6 @@ namespace Acquisition
         public bool LogPipeMessages { get; set; } = false;
         public bool ExcludeUnknownGasIndexes { get; set; } = false;
         public bool LogTerminalCommunication { get; set; } = false;
+        public int NoiseFloorSetting { get; set; } = 3;
     }
 }
