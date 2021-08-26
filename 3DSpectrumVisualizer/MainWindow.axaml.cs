@@ -76,6 +76,8 @@ namespace _3DSpectrumVisualizer
         private float[] Last3DCoords;
         private CheckBox AutoupdateXScaleCheckbox;
         private Slider ColorPositionSlider;
+        private Slider HideFirstSlider;
+        private Slider HideLastSlider;
 
         private void InitializeComponent()
         {
@@ -104,6 +106,44 @@ namespace _3DSpectrumVisualizer
             ExportSectionButton = this.FindControl<Button>("btnExportSection");
             AutoupdateXScaleCheckbox = this.FindControl<CheckBox>("chkAutoX");
             ColorPositionSlider = this.FindControl<Slider>("sldPosition");
+            HideFirstSlider = this.Find<Slider>("sldHideStart");
+            HideLastSlider = this.Find<Slider>("sldHideEnd");
+            HideFirstSlider.PropertyChanged += HideFirstSlider_PropertyChanged;
+            HideLastSlider.PropertyChanged += HideLastSlider_PropertyChanged;
+        }
+
+        private void HideLastSlider_PropertyChanged(object sender, AvaloniaPropertyChangedEventArgs e)
+        {
+            if (!IsInitialized) return;
+            if (e.Property == Slider.ValueProperty)
+            {
+                if (e.NewValue == null || !e.IsEffectiveValueChange) return;
+                SectionPlot.HideLastPercentOfResults = (float)(double)e.NewValue;
+            }
+        }
+
+        private void HideFirstSlider_PropertyChanged(object sender, AvaloniaPropertyChangedEventArgs e)
+        {
+            if (!IsInitialized) return;
+            if (e.Property == Slider.ValueProperty)
+            {
+                if (e.NewValue == null || !e.IsEffectiveValueChange) return;
+                SectionPlot.HideFirstPercentOfResults = (float)(double)e.NewValue;
+            }
+        }
+
+        private void Save3DCoords()
+        {
+            Last3DCoords = new float[] {
+                    Spectrum3D.XTranslate,
+                    Spectrum3D.YTranslate,
+                    Spectrum3D.XRotate,
+                    Spectrum3D.YRotate,
+                    Spectrum3D.ZRotate,
+                    Spectrum3D.ScalingFactor,
+                    Spectrum3D.ZScalingFactor,
+                    Spectrum3D.ScanSpacing
+                };
         }
 
         #endregion
@@ -420,19 +460,5 @@ namespace _3DSpectrumVisualizer
         }
 
         #endregion
-
-        private void Save3DCoords()
-        {
-            Last3DCoords = new float[] {
-                    Spectrum3D.XTranslate,
-                    Spectrum3D.YTranslate,
-                    Spectrum3D.XRotate,
-                    Spectrum3D.YRotate,
-                    Spectrum3D.ZRotate,
-                    Spectrum3D.ScalingFactor,
-                    Spectrum3D.ZScalingFactor,
-                    Spectrum3D.ScanSpacing
-                };
-        }
     }
 }

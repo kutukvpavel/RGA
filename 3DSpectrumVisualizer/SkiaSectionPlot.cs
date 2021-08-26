@@ -1,5 +1,6 @@
 ﻿using Avalonia;
 using Avalonia.Input;
+using Avalonia.Data;
 using SkiaSharp;
 using System;
 using System.Collections.Generic;
@@ -29,9 +30,9 @@ namespace _3DSpectrumVisualizer
 
         #region Properties
         public AvaloniaProperty<float> AMUProperty = AvaloniaProperty.Register<SkiaSectionPlot, float>("AMU",
-            defaultBindingMode: Avalonia.Data.BindingMode.TwoWay);
+            defaultBindingMode: BindingMode.TwoWay);
         public AvaloniaProperty<bool> AMUPresent = AvaloniaProperty.Register<SkiaSectionPlot, bool>("AMUPresent",
-            defaultBindingMode: Avalonia.Data.BindingMode.OneWay, defaultValue: false);
+            defaultBindingMode: BindingMode.OneWay, defaultValue: false);
 
         public SKPaint FontPaint { get; set; } = new SKPaint()
         { 
@@ -265,8 +266,8 @@ namespace _3DSpectrumVisualizer
                 Data = parent.DataRepositories;
                 FontPaint = parent.FontPaint;
                 TimeAxisInterval = parent.TimeAxisInterval;
-                ResultsBegin = parent.HideFirstPercentOfResults;
-                ResultsEnd = parent.HideLastPercentOfResults;
+                ResultsBegin = 1 - parent.HideFirstPercentOfResults;
+                ResultsEnd = 1 - parent.HideLastPercentOfResults;
                 ShowGasRegions = parent.RenderGasRegions;
                 ShowTemperatureProfile = parent.RenderTemperatureProfile;
                 LastMouseY = lastMouseY;
@@ -295,10 +296,17 @@ namespace _3DSpectrumVisualizer
                 canvas.Scale(XSc, -YSc);
                 foreach (var item in Data)
                 {
-                    canvas.DrawPath(
-                        item.LogarithmicIntensity ? item.Sections[AMU].LogPath : item.Sections[AMU].LinearPath,
-                        item.SectionPaint
-                        );
+                    var path = item.LogarithmicIntensity ? item.Sections[AMU].LogPath : item.Sections[AMU].LinearPath;
+                    if (ResultsEnd != 1 || ResultsBegin != 1)
+                    {
+                        var virtualBoundsRect = new SKRect(
+                            path.Bounds.Right - path.Bounds.Width * ResultsBegin,
+                            path.Bounds.Top,
+                            path.Bounds.Left + path.Bounds.Width * ResultsEnd,
+                            path.Bounds.Bottom);
+                        canvas.ClipRect(virtualBoundsRect);
+                    }
+                    canvas.DrawPath(path, item.SectionPaint);
                 }
             }
 
@@ -335,8 +343,6 @@ namespace _3DSpectrumVisualizer
                         foreach (var reg in item.GasProfile)
                         {
                             canvas.DrawRect(IRegion.GetRect(reg, 0, canvas.LocalClipBounds.Height), reg.Paint);
-                            /*canvas.DrawRect(reg.StartTimeOffset, 0, reg.EndTimeOffset - reg.StartTimeOffset, canvas.LocalClipBounds.Height,
-                                reg.Paint);*/
                         }
                     }
                     foreach (var reg in item.UVProfile)
