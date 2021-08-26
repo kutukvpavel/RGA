@@ -9,10 +9,14 @@ namespace _3DSpectrumVisualizer
 {
     class SkiaSectionPlot : SkiaCustomControl
     {
+        public static string IntensityLabelFormat { get; set; }
+        public static float TicksScale { get; set; } = 1;
+
         public SkiaSectionPlot() : base()
         {
             PointerMoved += SkiaSectionPlot_PointerMoved;
             PointerWheelChanged += SkiaSectionPlot_PointerWheelChanged;
+            PointerPressed += SkiaSectionPlot_PointerPressed;
             AMUProperty.Changed.Subscribe((e) =>
             {
                 if (!IsInitialized) return;
@@ -160,11 +164,12 @@ namespace _3DSpectrumVisualizer
         #region Private
 
         private Point _LastPoint;
+        private Point _LastPressedPoint;
 
         private void AutoscalingYEngine(float min, float max, bool invalidate)
         {
             YScaling = (float)Bounds.Height * 0.9f / (max - min);
-            YTranslate = min * YScaling;
+            YTranslate = min * YScaling - (float)Bounds.Height * 0.05f;
             if (invalidate) InvalidateVisual();
         }
 
@@ -177,7 +182,13 @@ namespace _3DSpectrumVisualizer
         protected override CustomDrawOp PrepareCustomDrawingOperation()
         {
             if (DisableRendering) return null;
-            return new DrawSectionPlot(this);
+            return new DrawSectionPlot(this, (float)_LastPressedPoint.Y);
+        }
+
+        private void SkiaSectionPlot_PointerPressed(object sender, PointerPressedEventArgs e)
+        {
+            _LastPressedPoint = e.GetCurrentPoint(this).Position;
+            InvalidateVisual();
         }
 
         private void SkiaSectionPlot_PointerWheelChanged(object sender, PointerWheelEventArgs e)
@@ -211,11 +222,13 @@ namespace _3DSpectrumVisualizer
         {
             var point = e.GetCurrentPoint(this);
             var pos = point.Position;
-            if (point.Properties.IsLeftButtonPressed) //Pan
+            //Pan
+            if (point.Properties.IsLeftButtonPressed)
             {
                 XTranslate += (float)(pos.X - _LastPoint.X);
                 YTranslate += (float)(pos.Y - _LastPoint.Y);
                 RaiseCoordsChanged();
+                _LastPressedPoint = pos;
                 InvalidateVisual();
             }
             _LastPoint = pos;
@@ -239,14 +252,15 @@ namespace _3DSpectrumVisualizer
             private readonly float ResultsEnd;
             private readonly bool ShowGasRegions;
             private readonly bool ShowTemperatureProfile;
+            private readonly float LastMouseY;
             private readonly IEnumerable<DataRepository> Data;
 
-            public DrawSectionPlot(SkiaSectionPlot parent) : base(parent)
+            public DrawSectionPlot(SkiaSectionPlot parent, float lastMouseY) : base(parent)
             {
                 XTr = parent.XTranslate;
-                YTr = parent.YTranslate + (float)parent.Bounds.Height * 0.95f;
+                YTr = parent.YTranslate + (float)parent.Bounds.Height /** 0.95f*/;
                 XSc = parent.XScaling;
-                YSc = -parent.YScaling;
+                YSc = parent.YScaling;
                 AMU = MathF.Round(parent.AMU, parent.AMURoundingDigits);
                 Data = parent.DataRepositories;
                 FontPaint = parent.FontPaint;
@@ -255,6 +269,7 @@ namespace _3DSpectrumVisualizer
                 ResultsEnd = parent.HideLastPercentOfResults;
                 ShowGasRegions = parent.RenderGasRegions;
                 ShowTemperatureProfile = parent.RenderTemperatureProfile;
+                LastMouseY = lastMouseY;
             }
 
             protected override void RenderCanvas(SKCanvas canvas)
@@ -275,8 +290,9 @@ namespace _3DSpectrumVisualizer
                     }
                 }
                 RenderTimeAxis(canvas);
+                RenderIntensityAxis(canvas);
                 canvas.Translate(XTr, YTr);
-                canvas.Scale(XSc, YSc);
+                canvas.Scale(XSc, -YSc);
                 foreach (var item in Data)
                 {
                     canvas.DrawPath(
@@ -292,13 +308,22 @@ namespace _3DSpectrumVisualizer
                 int ticks = (int)MathF.Ceiling(canvas.LocalClipBounds.Width / step);
                 var min = Data.Min(x => x.StartTime);
                 float tripleStroke = FontPaint.StrokeWidth * 3;
+                float tickHeight = FontPaint.TextSize * 2 * TicksScale;
                 for (int i = 0; i < ticks; i++)
                 {
                     var x = MathF.FusedMultiplyAdd(i, step, FontPaint.StrokeWidth);
                     var s = min.AddSeconds((x - XTr) / XSc).ToLongTimeString();
                     canvas.DrawText(s, x + tripleStroke, FontPaint.TextSize, FontPaint);
-                    canvas.DrawLine(x, 0, x, canvas.LocalClipBounds.Height, FontPaint);
+                    canvas.DrawLine(x, 0, x, tickHeight, FontPaint);
                 }
+            }
+
+            private void RenderIntensityAxis(SKCanvas canvas)
+            {
+                float value = (YTr - LastMouseY) / YSc;
+                string text = value.ToString(IntensityLabelFormat);
+                canvas.DrawText(text, 0, LastMouseY + FontPaint.TextSize * 1.1f, FontPaint);
+                canvas.DrawLine(0, LastMouseY, FontPaint.MeasureText(text) * 1.5f * TicksScale, LastMouseY, FontPaint);
             }
 
             private void RenderRegions(SKCanvas canvas)

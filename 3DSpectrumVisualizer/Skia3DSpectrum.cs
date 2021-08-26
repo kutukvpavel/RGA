@@ -13,6 +13,7 @@ namespace _3DSpectrumVisualizer
     {
         public static float ScalingLowerLimit { get; set; }
         public static float FastModeDepth { get; set; }
+        public static float AxisLabelRotateThreshold { get; set; } = 15;
 
         public Skia3DSpectrum() : base()
         {
@@ -256,29 +257,17 @@ namespace _3DSpectrumVisualizer
                 if (dataMaxLen == null) return;
                 View3D.TranslateX(-dataMaxLen.MidX);
                 View3D.Save();
-                //Regions
-
-                //Axes
-                var dataMaxDuration = Data.Max(x => x.Duration);            
-                var yOffset = dataMaxDuration * ScanSpacing / 2;
-                View3D.TranslateY(yOffset);
-                if (Data.Any(x => x.LogarithmicIntensity))
-                    View3D.TranslateZ(-MathF.Log10(Data.Min(x => x.PositiveMin)) * ZScaling);
-                using (SKAutoCanvasRestore ar = new SKAutoCanvasRestore(canvas))
-                {
-                    View3D.ApplyToCanvas(canvas);
-                    RenderMassAxis(canvas, dataMaxLen, dataMaxDuration);
-                    RenderTimeAxis(canvas, dataMaxLen);
-                }
-                View3D.Restore();
-                //Data
                 bool reverseDrawingOrder;
                 {
                     float angle = MathF.Abs(ZRotate % 360);
                     reverseDrawingOrder = angle > 90 && angle < 270;
                 }
-                if (reverseDrawingOrder) yOffset = -yOffset;
-                View3D.TranslateY(yOffset);
+                var dataMaxDuration = Data.Max(x => x.Duration);
+                var yOffset = dataMaxDuration * ScanSpacing / 2;
+                //Regions
+
+                //Data
+                View3D.TranslateY(reverseDrawingOrder ? -yOffset : yOffset);
                 foreach (var item in Data)
                 {
                     View3D.Save();
@@ -298,6 +287,28 @@ namespace _3DSpectrumVisualizer
                         }
                     }
                     View3D.Restore();
+                }
+                View3D.Restore();
+                //Axes
+                bool rotateMassAxis = MathF.Abs((XRotate - 90) % 180) < AxisLabelRotateThreshold;     
+                View3D.TranslateY(yOffset);
+                if (Data.Any(x => x.LogarithmicIntensity))
+                    View3D.TranslateZ(-MathF.Log10(Data.Min(x => x.PositiveMin)) * ZScaling);
+                using (SKAutoCanvasRestore ar = new SKAutoCanvasRestore(canvas))
+                {
+                    View3D.ApplyToCanvas(canvas);
+                    RenderTimeAxis(canvas, dataMaxLen);
+                    if (!rotateMassAxis) RenderMassAxis(canvas, dataMaxLen, dataMaxDuration, true);
+                }
+                if (rotateMassAxis)
+                {
+                    if (!reverseDrawingOrder) View3D.TranslateY(dataMaxDuration * (ResultsEnd - 1) * ScanSpacing);
+                    View3D.RotateXDegrees(-90);
+                    using (SKAutoCanvasRestore ar = new SKAutoCanvasRestore(canvas))
+                    {
+                        View3D.ApplyToCanvas(canvas);
+                        RenderMassAxis(canvas, dataMaxLen, dataMaxDuration, false);
+                    }
                 }
                 View3D.Restore();
             }
@@ -335,18 +346,19 @@ namespace _3DSpectrumVisualizer
                 return false;
             }
 
-            private void RenderMassAxis(SKCanvas canvas, DataRepository dataMaxLen, float dataMaxDuration)
+            private void RenderMassAxis(SKCanvas canvas, DataRepository dataMaxLen, float dataMaxDuration, bool dual)
             {
                 var shift = -FontPaint.TextSize * FontPaint.TextScaleX / 3;
                 var marginStart = -FontPaint.TextSize * 1.1f;
                 var marginEnd = dataMaxDuration * (1 - ResultsEnd) * ScanSpacing - marginStart;
                 marginStart += dataMaxDuration * ResultsBegin * ScanSpacing;
+                if (!dual) marginStart = (XRotate % 180) > 90 ? marginStart : -marginStart;
                 for (int i = 0; i <= dataMaxLen.Right; i++)
                 {
                     var s = i.ToString();
                     var x = MathF.FusedMultiplyAdd(shift, s.Length, i);
                     canvas.DrawText(s, x, marginStart, FontPaint);
-                    canvas.DrawText(s, x, marginEnd, FontPaint);
+                    if (dual) canvas.DrawText(s, x, marginEnd, FontPaint);
                 }
             }
 

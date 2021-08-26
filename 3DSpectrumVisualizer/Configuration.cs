@@ -90,6 +90,7 @@ namespace _3DSpectrumVisualizer
         public float FastModeDepth { get; set; } = -3.5f;
         public float ZScalingLowerLimit { get; set; } = 0.001f;
         public bool EnableRenderCaching { get; set; } = true;
+        public string IntensityLabelFormat { get; set; } = "0.#E+0";
 
         public void Save(string priorityFolder = null)
         {

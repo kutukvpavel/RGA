@@ -104,6 +104,7 @@ namespace _3DSpectrumVisualizer
             Skia3DSpectrum.FastModeDepth = Config.FastModeDepth;
             Skia3DSpectrum.ScalingLowerLimit = Config.ZScalingLowerLimit;
             SkiaCustomControl.EnableCaching = Config.EnableRenderCaching;
+            SkiaSectionPlot.IntensityLabelFormat = Config.IntensityLabelFormat;
         }
 
         private static void CollectSettings()
