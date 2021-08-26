@@ -276,14 +276,20 @@ namespace _3DSpectrumVisualizer
                     {
                         for (int i = item.Results.Count - 1; i >= 0; i--)
                         {
-                            if (RenderScan(item, i, ref lastScan, canvas, reverseDrawingOrder)) break;
+                            using (SKAutoCanvasRestore ar = new SKAutoCanvasRestore(canvas))
+                            {
+                                if (RenderScan(item, i, ref lastScan, canvas, reverseDrawingOrder)) break;
+                            }
                         }
                     }
                     else
                     {
                         for (int i = 0; i < item.Results.Count; i++)
                         {
-                            if (RenderScan(item, i, ref lastScan, canvas, reverseDrawingOrder)) break;
+                            using (SKAutoCanvasRestore ar = new SKAutoCanvasRestore(canvas))
+                            {
+                                if (RenderScan(item, i, ref lastScan, canvas, reverseDrawingOrder)) break;
+                            }
                         }
                     }
                     View3D.Restore();
@@ -334,15 +340,12 @@ namespace _3DSpectrumVisualizer
                     / item.Duration < ResultsEnd) return !reverseOrder;
                 var path = item.LogarithmicIntensity ? scan.LogPath2D : scan.Path2D;
                 if (path == null) return false;
-                using (SKAutoCanvasRestore ar = new SKAutoCanvasRestore(canvas))
-                {
-                    View3D.Save();
-                    View3D.RotateXDegrees(90);
-                    View3D.ApplyToCanvas(canvas);
-                    View3D.Restore();
-                    canvas.Scale(1, ZScaling);
-                    canvas.DrawPath(path, item.PaintStroke);
-                }
+                View3D.Save();
+                View3D.RotateXDegrees(90);
+                View3D.ApplyToCanvas(canvas);
+                View3D.Restore();
+                canvas.Scale(1, ZScaling);
+                canvas.DrawPath(path, item.PaintStroke);
                 return false;
             }
 

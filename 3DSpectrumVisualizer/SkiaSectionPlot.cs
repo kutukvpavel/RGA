@@ -164,7 +164,7 @@ namespace _3DSpectrumVisualizer
         #region Private
 
         private Point _LastPoint;
-        private Point _LastPressedPoint;
+        private Point? _LastPressedPoint;
 
         private void AutoscalingYEngine(float min, float max, bool invalidate)
         {
@@ -182,7 +182,7 @@ namespace _3DSpectrumVisualizer
         protected override CustomDrawOp PrepareCustomDrawingOperation()
         {
             if (DisableRendering) return null;
-            return new DrawSectionPlot(this, (float)_LastPressedPoint.Y);
+            return new DrawSectionPlot(this, (float)(_LastPressedPoint?.Y ?? Bounds.Height / 2));
         }
 
         private void SkiaSectionPlot_PointerPressed(object sender, PointerPressedEventArgs e)
