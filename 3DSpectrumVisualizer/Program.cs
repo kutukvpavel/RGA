@@ -65,8 +65,8 @@ namespace _3DSpectrumVisualizer
                         Config.TemperatureProfileColors[i] : Config.TemperatureProfileColors[0];
                     if (Config.ColorSchemes.Count > i)
                     {
-                        dr.PaintFill.Color = Config.ColorSchemes[i][0].Color;
                         dr.PaintStroke.Color = Config.ColorSchemes[i][0].Color;
+                        dr.PaintWideStroke.Color = Config.ColorSchemes[i][0].Color;
                         dr.ColorScheme = Config.ColorSchemes[i];
                     }
                     dr.InitializeInfoPathes();
@@ -103,6 +103,7 @@ namespace _3DSpectrumVisualizer
             MainWindow.PositionValueConverter = new RootValueConverter(Config.GradientPositionSliderLawPower);
             Skia3DSpectrum.FastModeDepth = Config.FastModeDepth;
             Skia3DSpectrum.ScalingLowerLimit = Config.ZScalingLowerLimit;
+            Skia3DSpectrum.IntensityLabelFormat = Config.IntensityLabelFormat;
             SkiaCustomControl.EnableCaching = Config.EnableRenderCaching;
             SkiaSectionPlot.IntensityLabelFormat = Config.IntensityLabelFormat;
         }

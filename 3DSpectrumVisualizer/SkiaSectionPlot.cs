@@ -290,24 +290,26 @@ namespace _3DSpectrumVisualizer
                         RenderTemperatureProfile(canvas);
                     }
                 }
+                using (SKAutoCanvasRestore ar = new SKAutoCanvasRestore(canvas))
+                {
+                    canvas.Translate(XTr, YTr);
+                    canvas.Scale(XSc, -YSc);
+                    foreach (var item in Data)
+                    {
+                        var path = item.LogarithmicIntensity ? item.Sections[AMU].LogPath : item.Sections[AMU].LinearPath;
+                        if (ResultsEnd != 1 || ResultsBegin != 1)
+                        {
+                            canvas.ClipRect(new SKRect(
+                                path.Bounds.Right - path.Bounds.Width * ResultsBegin,
+                                path.Bounds.Top,
+                                path.Bounds.Left + path.Bounds.Width * ResultsEnd,
+                                path.Bounds.Bottom));
+                        }
+                        canvas.DrawPath(path, item.SectionPaint);
+                    }
+                }
                 RenderTimeAxis(canvas);
                 RenderIntensityAxis(canvas);
-                canvas.Translate(XTr, YTr);
-                canvas.Scale(XSc, -YSc);
-                foreach (var item in Data)
-                {
-                    var path = item.LogarithmicIntensity ? item.Sections[AMU].LogPath : item.Sections[AMU].LinearPath;
-                    if (ResultsEnd != 1 || ResultsBegin != 1)
-                    {
-                        var virtualBoundsRect = new SKRect(
-                            path.Bounds.Right - path.Bounds.Width * ResultsBegin,
-                            path.Bounds.Top,
-                            path.Bounds.Left + path.Bounds.Width * ResultsEnd,
-                            path.Bounds.Bottom);
-                        canvas.ClipRect(virtualBoundsRect);
-                    }
-                    canvas.DrawPath(path, item.SectionPaint);
-                }
             }
 
             private void RenderTimeAxis(SKCanvas canvas)

@@ -14,6 +14,7 @@ namespace _3DSpectrumVisualizer
         public static float ScalingLowerLimit { get; set; }
         public static float FastModeDepth { get; set; }
         public static float AxisLabelRotateThreshold { get; set; } = 15;
+        public static string IntensityLabelFormat { get; set; }
 
         public Skia3DSpectrum() : base()
         {
@@ -36,8 +37,8 @@ namespace _3DSpectrumVisualizer
 
         public SKPaint FontPaint { get; set; } = new SKPaint() 
         { 
-            Color = SKColor.Parse("#ECE2E2"), StrokeWidth = 2, TextSize = 0.7f, TextScaleX = 1,
-            IsAntialias = false
+            Color = SKColor.Parse("#ECE2E2"), StrokeWidth = 0.1f, TextSize = 0.7f, TextScaleX = 1,
+            IsAntialias = true
         };
         public IEnumerable<DataRepository> DataRepositories { get; set; } = new List<DataRepository>();
         public new SKColor Background
@@ -133,6 +134,7 @@ namespace _3DSpectrumVisualizer
         #region Private
 
         private Point _LastPoint;
+        private SKPaint _IntensityRulerPaint;
 
         protected override string UpdateCoordinatesString()
         {
@@ -225,9 +227,9 @@ namespace _3DSpectrumVisualizer
                 ZScaling = parent.ZScalingFactor;
                 XTranslate = parent.XTranslate + (float)Bounds.Width / 2;
                 YTranslate = parent.YTranslate + (float)Bounds.Height / 2;
-                XRotate = -parent.XRotate + 90;
-                YRotate = parent.YRotate;
-                ZRotate = parent.ZRotate;
+                XRotate = (90 - parent.XRotate) % 360;
+                YRotate = parent.YRotate % 360;
+                ZRotate = parent.ZRotate % 360;
                 DropCoef = parent.PointDropCoef;
                 View3D = new SK3dView();
                 View3D.RotateXDegrees(XRotate);
@@ -259,7 +261,7 @@ namespace _3DSpectrumVisualizer
                 View3D.Save();
                 bool reverseDrawingOrder;
                 {
-                    float angle = MathF.Abs(ZRotate % 360);
+                    float angle = MathF.Abs(ZRotate);
                     reverseDrawingOrder = angle > 90 && angle < 270;
                 }
                 var dataMaxDuration = Data.Max(x => x.Duration);
@@ -298,8 +300,16 @@ namespace _3DSpectrumVisualizer
                 //Axes
                 bool rotateMassAxis = MathF.Abs((XRotate - 90) % 180) < AxisLabelRotateThreshold;     
                 View3D.TranslateY(yOffset);
+                if (!DataRepository.UseHorizontalGradient)
+                {
+                    canvas.Save();
+                    View3D.Save();
+                    RenderIntensityAxis(canvas, dataMaxLen, dataMaxDuration);
+                    View3D.Restore();
+                    canvas.Restore();
+                }
                 if (Data.Any(x => x.LogarithmicIntensity))
-                    View3D.TranslateZ(-MathF.Log10(Data.Min(x => x.PositiveMin)) * ZScaling);
+                    View3D.TranslateZ(-MathF.Log10(Data.Min(x => x.PositiveMin)) * ZScaling / 2);
                 using (SKAutoCanvasRestore ar = new SKAutoCanvasRestore(canvas))
                 {
                     View3D.ApplyToCanvas(canvas);
@@ -349,6 +359,36 @@ namespace _3DSpectrumVisualizer
                 return false;
             }
 
+            private void RenderIntensityAxis(SKCanvas canvas, DataRepository dataMaxLen, float dataMaxDuration)
+            {
+                float xOffset = (ZRotate > -90 && ZRotate < 90) || (ZRotate > 270) || (ZRotate < -270) ? 
+                    dataMaxLen.Right : dataMaxLen.Left;
+                float yOffset = (ZRotate > 0 && ZRotate < 180) || (ZRotate < -180) ? dataMaxDuration : 0;
+                View3D.TranslateY(-yOffset * ScanSpacing);
+                View3D.TranslateX(xOffset);
+                View3D.Save();
+                View3D.RotateXDegrees(-90);
+                View3D.RotateYDegrees(-ZRotate);
+                bool log = Data.Any(x => x.LogarithmicIntensity);
+                float min = log ? MathF.Log10(Data.Min(x => x.PositiveMin)) : Data.Min(x => x.Min);
+                float max = log ? MathF.Log10(Data.Max(x => x.Max)) : Data.Max(x => x.Max);
+                float step = FontPaint.TextSize * 2 / ZScaling;
+                using (SKAutoCanvasRestore ar = new SKAutoCanvasRestore(canvas))
+                {
+                    View3D.ApplyToCanvas(canvas);
+                    for (float z = min; z <= max; z += step)
+                    {
+                        canvas.DrawText(z.ToString(IntensityLabelFormat), FontPaint.FontSpacing, -z * ZScaling, FontPaint);
+                    }
+                }
+                View3D.Restore();
+                View3D.RotateXDegrees(90);
+                View3D.RotateYDegrees(ZRotate);
+                View3D.ApplyToCanvas(canvas);
+                canvas.Scale(1, ZScaling);
+                canvas.DrawLine(0, min, 0, max, Data.FirstOrDefault()?.PaintWideStroke ?? FontPaint);
+            }
+
             private void RenderMassAxis(SKCanvas canvas, DataRepository dataMaxLen, float dataMaxDuration, bool dual)
             {
                 var shift = -FontPaint.TextSize * FontPaint.TextScaleX / 3;
@@ -356,7 +396,7 @@ namespace _3DSpectrumVisualizer
                 var marginEnd = dataMaxDuration * (1 - ResultsEnd) * ScanSpacing - marginStart;
                 marginStart += dataMaxDuration * ResultsBegin * ScanSpacing;
                 if (!dual) marginStart = (XRotate % 180) > 90 ? marginStart : -marginStart;
-                for (int i = 0; i <= dataMaxLen.Right; i++)
+                for (int i = (int)MathF.Floor(dataMaxLen.Left); i <= dataMaxLen.Right; i++)
                 {
                     var s = i.ToString();
                     var x = MathF.FusedMultiplyAdd(shift, s.Length, i);
@@ -369,15 +409,16 @@ namespace _3DSpectrumVisualizer
             {
                 int step = (int)MathF.Ceiling(FontPaint.TextSize * TimeAxisInterval / ScanSpacing); //in seconds, since default Y unit is 1S
                 float stepScaled = step * ScanSpacing;
-                var min = Data.Min(x => x.StartTime);
+                float halfStep = stepScaled / 2;
+                var min = Data.Min(x => x.StartTime).AddSeconds(step / 2);
                 var max = Data.Max(x => x.EndTime);
-                int ticks = (int)MathF.Floor((float)(max - min).TotalSeconds * (1 - ResultsEnd) / step);
-                var marginStart = -FontPaint.TextSize * FontPaint.TextScaleX * 5;
+                int ticks = (int)MathF.Ceiling((float)(max - min).TotalSeconds * (1 - ResultsEnd) / step);
+                var marginStart = dataMaxLen.Left - FontPaint.TextSize * FontPaint.TextScaleX * 5;
                 var marginEnd = MathF.FusedMultiplyAdd(FontPaint.TextSize, FontPaint.TextScaleX, dataMaxLen.Right);
                 for (int i = 0; i < ticks; i++)
                 {
                     var s = min.AddSeconds(i * step).ToLongTimeString();
-                    var y = i * stepScaled;
+                    var y = MathF.FusedMultiplyAdd(i, stepScaled, halfStep);
                     canvas.DrawText(s, marginStart, y, FontPaint);
                     canvas.DrawText(s, marginEnd, y, FontPaint);
                 }

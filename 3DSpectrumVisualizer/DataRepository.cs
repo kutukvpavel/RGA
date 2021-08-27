@@ -150,8 +150,8 @@ namespace _3DSpectrumVisualizer
             Folder = folder;
             _PollTimer = new System.Timers.Timer(pollPeriod) { AutoReset = true, Enabled = false };
             _PollTimer.Elapsed += _PollTimer_Elapsed;
-            PaintFill.Shader = Shader;
             PaintStroke.Shader = Shader;
+            PaintWideStroke.Shader = Shader;
         }
 
         public event EventHandler DataAdded;
@@ -165,18 +165,19 @@ namespace _3DSpectrumVisualizer
         public SKPath TemperatureProfile { get; } = new SKPath();
         public List<UVRegion> UVProfile { get; } = new List<UVRegion>();
         public List<GasRegion> GasProfile { get; } = new List<GasRegion>();
-        public SKPaint PaintFill { get; set; } = new SKPaint() 
-        { 
-            Color = FallbackColor, 
-            Style = SKPaintStyle.Fill, 
-            IsAntialias = false
-        };
         public SKPaint PaintStroke { get; set; } = new SKPaint() 
         { 
             Color = FallbackColor, 
             Style = SKPaintStyle.Stroke, 
             StrokeWidth = 0,
             IsAntialias = false
+        };
+        public SKPaint PaintWideStroke { get; set; } = new SKPaint()
+        {
+            Color = FallbackColor,
+            Style = SKPaintStyle.Stroke,
+            StrokeWidth = 0.1f,
+            IsAntialias = true
         };
         private SKPaint _SectionPaintBuffer = new SKPaint() 
         { 
@@ -214,13 +215,13 @@ namespace _3DSpectrumVisualizer
         public DateTime EndTime { get; private set; }
         public float Duration { get => (float)(EndTime - StartTime).TotalSeconds; }
         public float AverageScanTime { get; private set; } = 0;
-        public float Min { get; private set; } = 1;
-        public float PositiveMin { get; private set; } = 1;
-        public float Max { get; private set; } = 0;
-        public float Left { get; private set; } = 1;
+        public float Min { get; private set; } = float.MaxValue;
+        public float PositiveMin { get; private set; } = float.MaxValue;
+        public float Max { get; private set; } = float.MinValue;
+        public float Left { get; private set; } = float.MaxValue;
         public float Right { get; private set; } = 0;
-        public float MidX { get => (Right - Left) / 2; }
-        public float MidY { get => (Max - Min) / 2; }
+        public float MidX { get => Left + (Right - Left) / 2; }
+        public float MidY { get => Min + (Max - Min) / 2; }
         public bool LogarithmicIntensity { get; set; } = false;
         public SKPath MassAxis { get; private set; } = new SKPath();
         public SKPath TimeAxis { get; private set; } = new SKPath();
@@ -455,8 +456,8 @@ namespace _3DSpectrumVisualizer
                     );
                 Shader = SKShader.CreateCompose(Shader, lightShader, SKBlendMode.Darken);
             }
-            PaintFill.Shader = Shader;
             PaintStroke.Shader = Shader;
+            PaintWideStroke.Shader = Shader;
         }
         
         public bool HitTestUVRegion(double offset)
