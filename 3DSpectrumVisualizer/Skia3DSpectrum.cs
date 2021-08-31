@@ -134,7 +134,6 @@ namespace _3DSpectrumVisualizer
         #region Private
 
         private Point _LastPoint;
-        private SKPaint _IntensityRulerPaint;
 
         protected override string UpdateCoordinatesString()
         {
