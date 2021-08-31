@@ -263,7 +263,7 @@ namespace _3DSpectrumVisualizer
                 XSc = parent.XScaling;
                 YSc = parent.YScaling;
                 AMU = MathF.Round(parent.AMU, parent.AMURoundingDigits);
-                Data = parent.DataRepositories;
+                Data = parent.DataRepositories.Where(x => x.Enabled);
                 FontPaint = parent.FontPaint;
                 TimeAxisInterval = parent.TimeAxisInterval;
                 ResultsBegin = 1 - parent.HideFirstPercentOfResults;
@@ -275,6 +275,7 @@ namespace _3DSpectrumVisualizer
 
             protected override void RenderCanvas(SKCanvas canvas)
             {
+                if (!Data.Any()) return;
                 canvas.Clear(BackgroundColor);
                 using (SKAutoCanvasRestore ar = new SKAutoCanvasRestore(canvas))
                 {

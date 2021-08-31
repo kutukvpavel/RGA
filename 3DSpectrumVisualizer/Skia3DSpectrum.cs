@@ -234,7 +234,7 @@ namespace _3DSpectrumVisualizer
                 View3D.RotateXDegrees(XRotate);
                 View3D.RotateYDegrees(YRotate);
                 View3D.RotateZDegrees(ZRotate);
-                Data = parent.DataRepositories;
+                Data = parent.DataRepositories.Where(x => x.Enabled);
                 FontPaint = parent.FontPaint;
                 TimeAxisInterval = parent.TimeAxisInterval;
                 ResultsBegin = parent.HideFirstPercentOfResults;

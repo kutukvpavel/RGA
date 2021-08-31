@@ -2,7 +2,7 @@
   "profiles": {
     "3DSpectrumVisualizer": {
       "commandName": "Project",
-      "commandLineArgs": "C:\\RESULTS\\EXP_HELIUM_BACKGROUND"
+      "commandLineArgs": "C:\\RESULTS\\ZNO_NO2_HIGH_GAIN_FROM_AR"
     }
   }
 }
