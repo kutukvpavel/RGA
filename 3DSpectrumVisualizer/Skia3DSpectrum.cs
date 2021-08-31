@@ -373,12 +373,14 @@ namespace _3DSpectrumVisualizer
                 float min = log ? MathF.Log10(Data.Min(x => x.PositiveMin)) : Data.Min(x => x.Min);
                 float max = log ? MathF.Log10(Data.Max(x => x.Max)) : Data.Max(x => x.Max);
                 float step = FontPaint.TextSize * 2 / ZScaling;
+                float lim = max + step / 2;
                 using (SKAutoCanvasRestore ar = new SKAutoCanvasRestore(canvas))
                 {
                     View3D.ApplyToCanvas(canvas);
-                    for (float z = min; z <= max; z += step)
+                    for (float z = min; z < lim; z += step)
                     {
-                        canvas.DrawText(z.ToString(IntensityLabelFormat), FontPaint.FontSpacing, -z * ZScaling, FontPaint);
+                        float zv = log ? MathF.Pow(10, z) : z;
+                        canvas.DrawText(zv.ToString(IntensityLabelFormat), FontPaint.FontSpacing, -z * ZScaling, FontPaint);
                     }
                 }
                 View3D.Restore();

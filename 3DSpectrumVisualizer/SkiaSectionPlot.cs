@@ -331,6 +331,7 @@ namespace _3DSpectrumVisualizer
             private void RenderIntensityAxis(SKCanvas canvas)
             {
                 float value = (YTr - LastMouseY) / YSc;
+                if (Data.Any(x => x.LogarithmicIntensity)) value = MathF.Pow(10, value);
                 string text = value.ToString(IntensityLabelFormat);
                 canvas.DrawText(text, 0, LastMouseY + FontPaint.TextSize * 1.1f, FontPaint);
                 canvas.DrawLine(0, LastMouseY, FontPaint.MeasureText(text) * 1.5f * TicksScale, LastMouseY, FontPaint);
