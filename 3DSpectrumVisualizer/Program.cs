@@ -51,26 +51,35 @@ namespace _3DSpectrumVisualizer
             {
                 for (int i = 0; i < args.Length; i++)
                 {
-                    var dr = new DataRepository(args[i])
+                    try
                     {
-                        Filter = Config.RepositoryFileFilter,
-                        UpdateSynchronizingObject = Program.UpdateSynchronizingObject,
-                        GasRegionColor = Config.GasRegionColor,
-                        LogarithmicIntensity = (Config.UseLogIntensity.Length > i) ? 
-                            Config.UseLogIntensity[i] : Config.UseLogIntensity[0]
-                    };
-                    dr.UVRegionPaint.Color = (Config.UVRegionColors.Length > i) ? 
-                        Config.UVRegionColors[i] : Config.UVRegionColors[0];
-                    dr.TemperaturePaint.Color = (Config.TemperatureProfileColors.Length > i) ? 
-                        Config.TemperatureProfileColors[i] : Config.TemperatureProfileColors[0];
-                    if (Config.ColorSchemes.Count > i)
-                    {
-                        dr.PaintStroke.Color = Config.ColorSchemes[i][0].Color;
-                        dr.PaintWideStroke.Color = Config.ColorSchemes[i][0].Color;
-                        dr.ColorScheme = Config.ColorSchemes[i];
+                        var dr = new DataRepository(args[i])
+                        {
+                            Filter = Config.RepositoryFileFilter,
+                            UpdateSynchronizingObject = Program.UpdateSynchronizingObject,
+                            GasRegionColor = Config.GasRegionColor,
+                            LogarithmicIntensity = Config.UseLogIntensity.Any() &&
+    ((Config.UseLogIntensity.Length > i) ? Config.UseLogIntensity[i] : Config.UseLogIntensity[0])
+                        };
+                        dr.UVRegionPaint.Color = Config.UVRegionColors.Any() ? 
+                        ((Config.UVRegionColors.Length > i) ? Config.UVRegionColors[i] : Config.UVRegionColors[0])
+                        : Config.FallbackColor;
+                        dr.TemperaturePaint.Color = Config.TemperatureProfileColors.Any() ?
+                        ((Config.TemperatureProfileColors.Length > i) ? Config.TemperatureProfileColors[i] : Config.TemperatureProfileColors[0])
+                        : Config.FallbackColor;
+                        if (Config.ColorSchemes.Count > i)
+                        {
+                            dr.PaintStroke.Color = Config.ColorSchemes[i][0].Color;
+                            dr.PaintWideStroke.Color = Config.ColorSchemes[i][0].Color;
+                            dr.ColorScheme = Config.ColorSchemes[i];
+                        }
+                        dr.InitializeInfoPathes();
+                        Repositories.Add(dr);
                     }
-                    dr.InitializeInfoPathes();
-                    Repositories.Add(dr);
+                    catch (Exception ex)
+                    {
+                        LogException(null, ex);
+                    }
                 }
                 RepositoriesInitialized?.Invoke(null, null);
                 foreach (var item in Repositories)
