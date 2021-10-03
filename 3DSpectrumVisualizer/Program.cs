@@ -15,7 +15,7 @@ namespace _3DSpectrumVisualizer
         public static event EventHandler RepositoriesParsed;
         public static event EventHandler RepositoriesInitialized;
 
-        public static List<DataRepository> Repositories { get; } = new List<DataRepository>();
+        public static List<DataRepositoryBase> Repositories { get; } = new List<DataRepositoryBase>();
         public static object UpdateSynchronizingObject { get; } = new object();
         public static Configuration Config { get; private set; }
 
@@ -51,14 +51,12 @@ namespace _3DSpectrumVisualizer
             {
                 for (int i = 0; i < args.Length; i++)
                 {
-                    var dr = new DataRepository(args[i])
-                    {
-                        Filter = Config.RepositoryFileFilter,
-                        UpdateSynchronizingObject = Program.UpdateSynchronizingObject,
-                        GasRegionColor = Config.GasRegionColor,
-                        LogarithmicIntensity = (Config.UseLogIntensity.Length > i) ? 
-                            Config.UseLogIntensity[i] : Config.UseLogIntensity[0]
-                    };
+                    DataRepositoryBase dr = DataRepositoryFactory.CreateRepository(args[i]);
+                    dr.Filter = Config.RepositoryFileFilter;
+                    dr.UpdateSynchronizingObject = Program.UpdateSynchronizingObject;
+                    dr.GasRegionColor = Config.GasRegionColor;
+                    dr.LogarithmicIntensity = (Config.UseLogIntensity.Length > i) ?
+                            Config.UseLogIntensity[i] : Config.UseLogIntensity[0];
                     dr.UVRegionPaint.Color = (Config.UVRegionColors.Length > i) ? 
                         Config.UVRegionColors[i] : Config.UVRegionColors[0];
                     dr.TemperaturePaint.Color = (Config.TemperatureProfileColors.Length > i) ? 
@@ -69,14 +67,14 @@ namespace _3DSpectrumVisualizer
                         dr.PaintWideStroke.Color = Config.ColorSchemes[i][0].Color;
                         dr.ColorScheme = Config.ColorSchemes[i];
                     }
-                    dr.InitializeInfoPathes();
+                    dr.Initialize();
                     Repositories.Add(dr);
                 }
                 RepositoriesInitialized?.Invoke(null, null);
                 foreach (var item in Repositories)
                 {
                     item.DataAdded += mainWindow.InvalidateSpectrum;
-                    item.UpdateData();
+                    item.LoadData();
                     item.Enabled = true;
                 }
                 RepositoriesParsed?.Invoke(null, null);
@@ -89,17 +87,17 @@ namespace _3DSpectrumVisualizer
 
         private static void InitStaticSettings()
         {
-            DataRepository.AMURoundingDigits = Config.AMURoundingDigits;
-            DataRepository.FallbackColor = Config.FallbackColor;
-            DataRepository.GasFileName = Config.GasFileName;
-            DataRepository.InfoSplitter = Config.InfoSplitter;
-            DataRepository.InfoSubfolder = Config.InfoSubfolder;
-            DataRepository.LightGradient = Config.LightGradient;
-            DataRepository.TemperatureFileName = Config.TemperatureFileName;
-            DataRepository.UVFileName = Config.UVFileName;
-            DataRepository.LightGradient[1] = DataRepository.LightGradient[1].WithAlpha(Config.LastLightSliderPosition);
-            DataRepository.UseHorizontalGradient = Config.UseHorizontalGradient;
-            DataRepository.ColorPositionSliderPrecision = Config.ColorPositionSliderPrecision;
+            DataRepositoryBase.AMURoundingDigits = Config.AMURoundingDigits;
+            DataRepositoryBase.FallbackColor = Config.FallbackColor;
+            DataRepositoryBase.GasFileName = Config.GasFileName;
+            DataRepositoryBase.InfoSplitter = Config.InfoSplitter;
+            DataRepositoryBase.InfoSubfolder = Config.InfoSubfolder;
+            DataRepositoryBase.LightGradient = Config.LightGradient;
+            DataRepositoryBase.TemperatureFileName = Config.TemperatureFileName;
+            DataRepositoryBase.UVFileName = Config.UVFileName;
+            DataRepositoryBase.LightGradient[1] = DataRepositoryBase.LightGradient[1].WithAlpha(Config.LastLightSliderPosition);
+            DataRepositoryBase.UseHorizontalGradient = Config.UseHorizontalGradient;
+            DataRepositoryBase.ColorPositionSliderPrecision = Config.ColorPositionSliderPrecision;
             MainWindow.PositionValueConverter = new RootValueConverter(Config.GradientPositionSliderLawPower);
             Skia3DSpectrum.FastModeDepth = Config.FastModeDepth;
             Skia3DSpectrum.ScalingLowerLimit = Config.ZScalingLowerLimit;
@@ -110,8 +108,8 @@ namespace _3DSpectrumVisualizer
 
         private static void CollectSettings()
         {
-            Config.UseHorizontalGradient = DataRepository.UseHorizontalGradient;
-            Config.LastLightSliderPosition = DataRepository.LightGradient[1].Alpha;
+            Config.UseHorizontalGradient = DataRepositoryBase.UseHorizontalGradient;
+            Config.LastLightSliderPosition = DataRepositoryBase.LightGradient[1].Alpha;
             Config.UseLogIntensity = Repositories.Select(x => x.LogarithmicIntensity).ToArray();
             Config.FastModeDepth = Skia3DSpectrum.FastModeDepth;
             Config.ZScalingLowerLimit = Skia3DSpectrum.ScalingLowerLimit;

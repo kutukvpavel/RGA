@@ -111,7 +111,14 @@ namespace _3DSpectrumVisualizer
                 string res = JsonConvert.SerializeObject(obj, Formatting.Indented, settings);
                 if (priorityFolder != null)
                 {
-                    File.WriteAllText(Path.Combine(priorityFolder, fn), res);
+                    if (Path.GetExtension(priorityFolder) == ZipHelpers.ZipFileExtension)
+                    {
+                        ZipHelpers.WriteConfigurationFile(priorityFolder, res, fn);
+                    }
+                    else
+                    {
+                        File.WriteAllText(Path.Combine(priorityFolder, fn), res);
+                    }
                 }
                 File.WriteAllText(Path.Combine(Environment.CurrentDirectory, fn), res);
             }
@@ -127,17 +134,21 @@ namespace _3DSpectrumVisualizer
             {
                 var fn = name + JsonExtension;
                 string p = null;
-                if (priorityFolder != null)
+                string json = null;
+                if (Path.GetExtension(priorityFolder) == ZipHelpers.ZipFileExtension)
                 {
-                    p = Path.Combine(priorityFolder, fn);
+                    json = ZipHelpers.ReadConfigurationFile(priorityFolder, fn);
                 }
-                if (!File.Exists(p)) p = Path.Combine(Environment.CurrentDirectory, fn);
-                if (File.Exists(p))
+                else
                 {
-                    object o = JsonConvert.DeserializeObject(File.ReadAllText(p), typeof(T), settings);
-                    if (o == null) throw new JsonSerializationException("Deserialization result is null.");
-                    return (T)o;
+                    if (priorityFolder != null) p = Path.Combine(priorityFolder, fn);
+                    if (!File.Exists(p)) p = Path.Combine(Environment.CurrentDirectory, fn);
+                    if (File.Exists(p)) json = File.ReadAllText(p);
                 }
+                if (json == null) return def;
+                object o = JsonConvert.DeserializeObject(json, typeof(T), settings);
+                if (o == null) throw new JsonSerializationException("Deserialization result is null.");
+                return (T)o;
             }
             catch (Exception ex)
             {

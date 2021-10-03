@@ -1,0 +1,513 @@
+﻿using CsvHelper;
+using CsvHelper.Configuration;
+using SkiaSharp;
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace _3DSpectrumVisualizer
+{
+    public class SKPointXEqualityComparer : IEqualityComparer<SKPoint>
+    {
+        public bool Equals(SKPoint x, SKPoint y)
+        {
+            return x.X == y.X;
+        }
+
+        public int GetHashCode(SKPoint obj)
+        {
+            return obj.X.GetHashCode();
+        }
+    }
+
+    public abstract class DataRepositoryBase
+    {
+        protected DataRepositoryBase(string location)
+        {
+            Location = location;
+            StartTime = DateTime.Now;
+            EndTime = StartTime;
+            PaintStroke.Shader = Shader;
+            PaintWideStroke.Shader = Shader;
+        }
+
+        public event EventHandler DataAdded;
+
+        #region Abstract
+
+        public abstract void LoadData();
+
+        public abstract void Initialize();
+
+        #endregion
+
+        #region Static
+
+        public static float ColorPositionSliderPrecision { get; set; }
+        public static CsvConfiguration ExportCsvConfig { get; set; } = new CsvConfiguration(CultureInfo.CurrentCulture)
+        {
+            Delimiter = CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator == "," ? ";" : ","
+        };
+        public static string InfoSplitter { get; set; }
+        public static string InfoSubfolder { get; set; }
+        public static string TemperatureFileName { get; set; }
+        public static string UVFileName { get; set; }
+        public static string GasFileName { get; set; }
+        public static bool UseHorizontalGradient { get; set; } = false;
+        public static int AMURoundingDigits { get; set; }
+        public static ParallelOptions ParallelOptions { get; set; } = new ParallelOptions()
+        {
+            MaxDegreeOfParallelism = Environment.ProcessorCount
+        };
+        public static SKColor FallbackColor { get; set; }
+        public static SKColor[] LightGradient { get; set; }
+        public static SKPaint RegionPaintTemplate { get; set; } = new SKPaint()
+        {
+            Color = SKColor.Parse("#fff"),
+            IsAntialias = true,
+            Style = SKPaintStyle.Fill,
+            StrokeWidth = 0
+        };
+        protected static SKPointXEqualityComparer XEqualityComparer = new SKPointXEqualityComparer();
+        protected static Func<GradientColor, float> ColorPosSelector =
+            new Func<GradientColor, float>(x => x.Position);
+
+        public static void ExportSections(IList<DataRepositoryBase> repos, float amu, string path)
+        {
+            bool lockTaken = false;
+            foreach (var item in repos)
+            {
+                lockTaken = Monitor.TryEnter(item.UpdateSynchronizingObject, 20000);
+                if (!lockTaken) break;
+            }
+            if (!lockTaken)
+            {
+                foreach (var item in repos)
+                {
+                    try
+                    {
+                        Monitor.Exit(item.UpdateSynchronizingObject);
+                    }
+                    catch (SynchronizationLockException)
+                    { }
+                }
+                throw new TimeoutException("Can't acquire update lock to export the section.");
+            }
+            try
+            {
+                using TextWriter tw = new StreamWriter(path, false);
+                using CsvWriter cw = new CsvWriter(tw, ExportCsvConfig);
+                int len = repos.Max(x => x.Sections[amu].LinearPath.PointCount);
+                foreach (var item in repos)
+                {
+                    cw.WriteField(item.Location.Split(Path.DirectorySeparatorChar).LastOrDefault());
+                    cw.WriteField($"AMU = {amu:F1}");
+                    cw.WriteField("Temperature");
+                    cw.WriteField("UV");
+                    cw.WriteField("Gas");
+                }
+                cw.NextRecord();
+                int[] tempIndex = new int[repos.Count];
+                for (int i = 0; i < len; i++)
+                {
+                    try
+                    {
+                        for (int j = 0; j < repos.Count; j++)
+                        {
+                            var item = repos[j];
+                            if (item.Sections[amu].LinearPath.PointCount > i)
+                            {
+                                var p = item.Sections[amu].LinearPath[i];
+                                //Time and value
+                                cw.WriteField(p.X.ToString(Program.Config.ExportXFormat));
+                                cw.WriteField(p.Y.ToString(Program.Config.ExportYFormat));
+                                //Temperature
+                                string t = "";
+                                try
+                                {
+                                    if (item.TemperatureProfile[tempIndex[j]].X <= p.X)
+                                    {
+                                        while (item.TemperatureProfile[tempIndex[j]].X < p.X) tempIndex[j]++;
+                                        t = item.TemperatureProfile[tempIndex[j]].Y.ToString("F1");
+                                    }
+                                }
+                                catch (IndexOutOfRangeException)
+                                { }
+                                cw.WriteField(t);
+                                //UV
+                                cw.WriteField(item.HitTestUVRegion(p.X) ?
+                                    Program.Config.ExportUVTrueString : Program.Config.ExportUVFalseString);
+                                //Gas
+                                t = item.HitTestGasRegion(p.X);
+                                cw.WriteField(t ?? "");
+                            }
+                            else
+                            {
+                                for (int k = 0; k < 5; k++)
+                                {
+                                    cw.WriteField("");
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Program.LogException(repos, ex);
+                    }
+                    cw.NextRecord();
+                }
+            }
+            finally
+            {
+                foreach (var item in repos)
+                {
+                    Monitor.Exit(item.UpdateSynchronizingObject);
+                }
+            }
+        }
+
+        #endregion
+
+        #region Properties
+
+        public virtual bool Enabled { get; set; }
+        public object UpdateSynchronizingObject { get; set; } = new object();
+        public string Location { get; }
+        public string Filter { get; set; }
+        public List<ScanResult> Results { get; } = new List<ScanResult>();
+        public SKPath TemperatureProfile { get; } = new SKPath();
+        public List<UVRegion> UVProfile { get; } = new List<UVRegion>();
+        public List<GasRegion> GasProfile { get; } = new List<GasRegion>();
+        public SKPaint PaintStroke { get; set; } = new SKPaint()
+        {
+            Color = FallbackColor,
+            Style = SKPaintStyle.Stroke,
+            StrokeWidth = 0,
+            IsAntialias = false
+        };
+        public SKPaint PaintWideStroke { get; set; } = new SKPaint()
+        {
+            Color = FallbackColor,
+            Style = SKPaintStyle.Stroke,
+            StrokeWidth = 0.1f,
+            IsAntialias = true
+        };
+        protected SKPaint _SectionPaintBuffer = new SKPaint()
+        {
+            BlendMode = SKBlendMode.SrcOver,
+            Style = SKPaintStyle.Stroke,
+            IsAntialias = true,
+            StrokeWidth = 0
+        };
+        public SKPaint SectionPaint
+        {
+            get
+            {
+                _SectionPaintBuffer.Color = PaintStroke.Color;
+                return _SectionPaintBuffer;
+            }
+        }
+        public SKShader Shader { get; protected set; }
+        public SKPaint UVRegionPaint { get; set; } = new SKPaint()
+        {
+            BlendMode = RegionPaintTemplate.BlendMode,
+            IsAntialias = RegionPaintTemplate.IsAntialias,
+            Style = RegionPaintTemplate.Style,
+            StrokeWidth = RegionPaintTemplate.StrokeWidth
+        };
+        public Dictionary<string, SKColor> GasRegionColor { get; set; } = new Dictionary<string, SKColor>();
+        public ICollection<GradientColor> ColorScheme { get; set; } = new GradientColor[0];
+        public SKPaint TemperaturePaint { get; set; } = new SKPaint()
+        {
+            Color = FallbackColor,
+            Style = SKPaintStyle.Stroke,
+            StrokeWidth = 0,
+            IsAntialias = true
+        };
+        public DateTime StartTime { get; protected set; }
+        public DateTime EndTime { get; protected set; }
+        public float Duration { get => (float)(EndTime - StartTime).TotalSeconds; }
+        public float AverageScanTime { get; protected set; } = 0;
+        public float Min { get; protected set; } = float.MaxValue;
+        public float PositiveMin { get; protected set; } = float.MaxValue;
+        public float Max { get; protected set; } = float.MinValue;
+        public float Left { get; protected set; } = float.MaxValue;
+        public float Right { get; protected set; } = 0;
+        public float MidX { get => Left + (Right - Left) / 2; }
+        public float MidY { get => Min + (Max - Min) / 2; }
+        public bool LogarithmicIntensity { get; set; } = false;
+        public SKPath MassAxis { get; protected set; } = new SKPath();
+        public SKPath TimeAxis { get; protected set; } = new SKPath();
+        public Dictionary<float, SpectrumSection> Sections { get; protected set; } = new Dictionary<float, SpectrumSection>();
+
+        #endregion
+
+        #region Public Methods
+
+        public void RecalculateShader()
+        {
+            float min = LogarithmicIntensity ? MathF.Log10(PositiveMin) : Min;
+            float max = LogarithmicIntensity ? MathF.Log10(Max) : Max;
+            if (ColorScheme.Count > 1 || float.IsNaN(min) || float.IsNaN(max))
+            {
+                SKColor[] colors = ColorScheme.Select(x => x.Color).ToArray();
+                float[] positions = ColorScheme.Select(LogarithmicIntensity ?
+                    /* This is linear gradient color position mapping to log scale.
+                     * Obviously it won't change the gradient transition law, but
+                     * it helps to reduce the necessity to adjust color positions
+                     * when (inter)changing scales.
+                     * Mapping function has a steep asymptotic behavior at negativeValuesColorPositionEdge,
+                     * therefore all the values to the left from negativeValuesColorPositionEdge have to be
+                     * interpolated (linearly). Two parts are stitched together using the fact that the slider has
+                     * finite step resolution.
+                     */
+                    (x => {
+                        float negativeValuesColorPositionEdge = (PositiveMin - Min) / (Max - Min);
+                        float ratio = Max / PositiveMin;
+                        float diff = x.Position - negativeValuesColorPositionEdge;
+                        if (diff <= 0)
+                            return MathF.Log10(ColorPositionSliderPrecision * (ratio - 1) + 1)
+                            / MathF.Log10(ratio) * (1 + diff / negativeValuesColorPositionEdge);
+                        return MathF.Log10((x.Position - negativeValuesColorPositionEdge) * (ratio - 1) + 1)
+                            / MathF.Log10(ratio);
+                    })
+                    : ColorPosSelector).ToArray();
+                Shader = SKShader.CreateLinearGradient(
+                    UseHorizontalGradient ? new SKPoint(Left, 0) : new SKPoint(0, min),
+                    UseHorizontalGradient ? new SKPoint(Right, 0) : new SKPoint(0, max),
+                    colors,
+                    positions,
+                    SKShaderTileMode.Clamp
+                    );
+                _SectionPaintBuffer.Shader = UseHorizontalGradient ?
+                    SKShader.CreateColor(FallbackColor) :
+                    SKShader.CreateLinearGradient(new SKPoint(0, min), new SKPoint(0, max),
+                        colors.Select(x => x.WithAlpha(0xFF)).ToArray(),
+                        positions,
+                        SKShaderTileMode.Clamp);
+            }
+            else
+            {
+                Shader = SKShader.CreateColor(FallbackColor);
+                _SectionPaintBuffer.Shader = Shader;
+            }
+            if (LightGradient.Length > 1)
+            {
+                var lightShader = SKShader.CreateLinearGradient(
+                    UseHorizontalGradient ? new SKPoint(0, min) : new SKPoint(Left, 0),
+                    UseHorizontalGradient ? new SKPoint(0, max) : new SKPoint(Right, 0),
+                    LightGradient,
+                    SKShaderTileMode.Clamp
+                    );
+                Shader = SKShader.CreateCompose(Shader, lightShader, SKBlendMode.Darken);
+            }
+            PaintStroke.Shader = Shader;
+            PaintWideStroke.Shader = Shader;
+        }
+
+        public bool HitTestUVRegion(double offset)
+        {
+            if (UVProfile.Count == 0) return false;
+            return UVProfile.Any(x => (x.StartTimeOffset <= offset) && (x.EndTimeOffset >= offset));
+        }
+        public bool HitTestUVRegion(DateTime point)
+        {
+            double offset = (point - StartTime).TotalSeconds;
+            return HitTestUVRegion(offset);
+        }
+
+        public string HitTestGasRegion(double offset)
+        {
+            if (GasProfile.Count == 0) return null;
+            try
+            {
+                return GasProfile.First(x => (x.StartTimeOffset <= offset) && (x.EndTimeOffset >= offset)).Name;
+            }
+            catch (InvalidOperationException)
+            {
+                return null;
+            }
+
+        }
+        public string HitTestGasRegion(DateTime point)
+        {
+            double offset = (point - StartTime).TotalSeconds;
+            return HitTestGasRegion(offset);
+        }
+
+        #endregion
+
+        #region Protected Methods
+
+        protected IEnumerable<string> ReadLines(StreamReader r)
+        {
+            string line;
+            while ((line = r.ReadLine()) != null)
+            {
+                yield return line;
+            }
+        }
+
+        protected void RecalculateMassAxis()
+        {
+            MassAxis.Reset();
+            MassAxis.LineTo(Right, 0);
+        }
+
+        protected void RecalculateTimeAxis()
+        {
+            TimeAxis.Reset();
+            TimeAxis.LineTo(0, Duration);
+        }
+
+        protected void RaiseDataAdded(object sender)
+        {
+            DataAdded?.Invoke(sender, new EventArgs());
+        }
+
+        protected void AddFile(IEnumerable<string> lines, string name)
+        {
+            string ts = Path.GetFileNameWithoutExtension(name).Replace('_', ' ')
+                .Replace("Scan", "", StringComparison.InvariantCultureIgnoreCase).Trim();
+            char[] arr = ts.ToCharArray();
+            for (int i = ts.IndexOf(' '); i < arr.Length; i++) //Replace dashes with colons for time string
+            {
+                if (arr[i] == '-') arr[i] = ':';
+            }
+            var ct = DateTime.Parse(arr, CultureInfo.InvariantCulture);
+            if (Results.Count == 0) StartTime = ct;
+            else
+            {
+                EndTime = ct;
+                AverageScanTime = Duration / (Results.Count + 1);
+            }
+            var sr = new ScanResult(lines, name, ct);
+            var b = sr.Path2D.Bounds;
+            bool updateShader = false;
+            bool updateMassAxis = false;
+            if (b.Bottom > Max)
+            {
+                Max = b.Bottom;
+                updateShader = true;
+            }
+            if (sr.PositiveTopBound < PositiveMin)
+            {
+                PositiveMin = sr.PositiveTopBound;
+                updateShader = true;
+            }
+            if (b.Top < Min)
+            {
+                Min = b.Top;
+                updateShader = true;
+            }
+            if (b.Left < Left)
+            {
+                Left = b.Left;
+                updateShader = true;
+                updateMassAxis = true;
+            }
+            if (b.Right > Right)
+            {
+                Right = b.Right;
+                updateShader = true;
+                updateMassAxis = true;
+            }
+            if (updateShader) RecalculateShader();
+            if (updateMassAxis) RecalculateMassAxis();
+            Results.Add(sr);
+            RecalculateTimeAxis();
+            foreach (var point in sr.Path2D.Points
+                .Select(x => new SKPoint(MathF.Round(x.X, AMURoundingDigits), x.Y))
+                .Distinct(XEqualityComparer))
+            {
+                try
+                {
+                    var ss = Sections[point.X];
+                    ss.AddPoint((float)(sr.CreationTime - StartTime).TotalSeconds, point.Y);
+                }
+                catch (KeyNotFoundException)
+                {
+                    Sections.Add(point.X, new SpectrumSection(point.Y));
+                }
+            }
+        }
+
+        private Dictionary<string, SKPaint> _GasPaintCache = new Dictionary<string, SKPaint>();
+        protected void AddGasInfoLine(string l)
+        {
+            l = ParseInfoLine(l, out float t);
+            var reg = GasProfile.LastOrDefault();
+            if (reg != null)
+            {
+                reg.EndTimeOffset = t;
+                if (reg.Name == l) return;
+            }
+            if (GasRegionColor.ContainsKey(l))
+            {
+                if (!_GasPaintCache.ContainsKey(l)) _GasPaintCache.Add(l, new SKPaint()
+                {
+                    BlendMode = RegionPaintTemplate.BlendMode,
+                    Color = GasRegionColor[l],
+                    IsAntialias = RegionPaintTemplate.IsAntialias,
+                    Style = RegionPaintTemplate.Style,
+                    StrokeWidth = RegionPaintTemplate.StrokeWidth
+                });
+                reg = new GasRegion(this, t, l, _GasPaintCache[l]);
+            }
+            else
+            {
+                reg = new GasRegion(this, t, l);
+            }
+            GasProfile.Add(reg);
+        }
+        protected bool _LastUVState = false;
+        protected void AddUVInfoLine(string l)
+        {
+            l = ParseInfoLine(l, out float t);
+            bool val = bool.Parse(l);
+            var lastRegion = UVProfile.LastOrDefault();
+            if (_LastUVState ^ val)
+            {
+                if (val)
+                {
+                    UVProfile.Add(new UVRegion(this, t));
+                }
+                else
+                {
+                    if (lastRegion != null) lastRegion.EndTimeOffset = t;
+                }
+            }
+            else
+            {
+                if (val && (lastRegion != null)) lastRegion.EndTimeOffset = t;
+            }
+            _LastUVState = val;
+        }
+        protected void AddTempInfoLine(string l)
+        {
+            l = ParseInfoLine(l, out float t);
+            float val = float.Parse(l, CultureInfo.InvariantCulture);
+            if (TemperatureProfile.PointCount > 0)
+            {
+                TemperatureProfile.LineTo(t, val);
+            }
+            else
+            {
+                TemperatureProfile.MoveTo(t, val);
+            }
+        }
+        protected string ParseInfoLine(string l, out float time)
+        {
+            var split = l.Split(InfoSplitter);
+            time = (float)(DateTime.Parse(split[0], CultureInfo.InvariantCulture) - StartTime).TotalSeconds;
+            return split[1];
+        }
+
+        #endregion
+    }
+}

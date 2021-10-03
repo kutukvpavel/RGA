@@ -30,7 +30,7 @@ namespace _3DSpectrumVisualizer
         protected readonly AvaloniaProperty<string> CoordinatesString =
             AvaloniaProperty.Register<SkiaCustomControl, string>("CoordinatesString");
 
-        private void _RedrawTimer_Elapsed(object sender, ElapsedEventArgs e)
+        private void RedrawTimer_Elapsed(object sender, ElapsedEventArgs e)
         {
             InvalidateVisual();
         }
@@ -38,7 +38,7 @@ namespace _3DSpectrumVisualizer
         public SkiaCustomControl()
         {
             ClipToBounds = true;
-            _RedrawTimer.Elapsed += _RedrawTimer_Elapsed;
+            _RedrawTimer.Elapsed += RedrawTimer_Elapsed;
             AttachedToVisualTree += SkiaCustomControl_AttachedToVisualTree;
         }
 

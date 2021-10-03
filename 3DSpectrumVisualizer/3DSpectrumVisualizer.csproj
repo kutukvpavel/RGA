@@ -23,16 +23,17 @@
 	<DebugSymbols>false</DebugSymbols>
   </PropertyGroup>
   <ItemGroup>
-	<PackageReference Include="Avalonia" Version="0.10.6" />
+	<PackageReference Include="Avalonia" Version="0.10.7" />
 	<PackageReference Include="Avalonia.Angle.Windows.Natives" Version="2.1.0.2020091801" />
-	<PackageReference Include="Avalonia.Desktop" Version="0.10.6" />
-	<PackageReference Include="Avalonia.Diagnostics" Version="0.10.6" />
-	<PackageReference Include="Avalonia.Native" Version="0.10.6" />
-	<PackageReference Include="AvaloniaColorPicker" Version="1.0.6.1" />
+	<PackageReference Include="Avalonia.Desktop" Version="0.10.7" />
+	<PackageReference Include="Avalonia.Diagnostics" Version="0.10.7" />
+	<PackageReference Include="Avalonia.Native" Version="0.10.7" />
+	<PackageReference Include="AvaloniaColorPicker" Version="1.0.7" />
 	<PackageReference Include="CsvHelper" Version="27.1.1" />
 	<PackageReference Include="L" Version="5.0.0" />
 	<PackageReference Include="morelinq" Version="3.3.2" />
 	<PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+	<PackageReference Include="System.IO.Compression.ZipFile" Version="4.3.0" />
    </ItemGroup>
 	<ItemGroup>
 		<AvaloniaResource Include="Assets\*" />

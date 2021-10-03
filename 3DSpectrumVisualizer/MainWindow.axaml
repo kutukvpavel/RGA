@@ -42,7 +42,7 @@
 			<ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Visible" Padding="0,0,10,0">
 				<StackPanel Orientation="Vertical">
 					<CheckBox x:Name="chkHorizontalGradient" Margin="0,0,20,10" 
-							  IsChecked="{x:Static local:DataRepository.UseHorizontalGradient}"
+							  IsChecked="{x:Static local:DataRepositoryBase.UseHorizontalGradient}"
 							  Click="OnHorizontalGradientChecked">Horizontal
 Gradient</CheckBox>
 					<TextBlock>Time Axis Interval</TextBlock>
@@ -107,7 +107,7 @@ Gradient</CheckBox>
 			<Expander.Header>
 				<TextBlock>Single AMU Section</TextBlock>
 			</Expander.Header>
-			<DockPanel>
+			<DockPanel LastChildFill="True">
 				<DockPanel DockPanel.Dock="Top" LastChildFill="True">
 					<CheckBox x:Name="chkSnap" DockPanel.Dock="Right" Margin="10,0,10,0">0.1 AMU Ticks</CheckBox>
 					<TextBlock DockPanel.Dock="Left" Margin="10,10,0,10" FontSize="16">AMU: </TextBlock>

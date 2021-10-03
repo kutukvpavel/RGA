@@ -40,7 +40,7 @@ namespace _3DSpectrumVisualizer
             Color = SKColor.Parse("#ECE2E2"), StrokeWidth = 0.1f, TextSize = 0.7f, TextScaleX = 1,
             IsAntialias = true
         };
-        public IEnumerable<DataRepository> DataRepositories { get; set; } = new List<DataRepository>();
+        public IEnumerable<DataRepositoryBase> DataRepositories { get; set; } = new List<DataRepositoryBase>();
         public new SKColor Background
         {
             get => base.Background;
@@ -134,7 +134,6 @@ namespace _3DSpectrumVisualizer
         #region Private
 
         private Point _LastPoint;
-        private SKPaint _IntensityRulerPaint;
 
         protected override string UpdateCoordinatesString()
         {
@@ -214,7 +213,7 @@ namespace _3DSpectrumVisualizer
             private readonly float YRotate;
             private readonly float ZRotate;
             private readonly int DropCoef;
-            readonly IEnumerable<DataRepository> Data;
+            readonly IEnumerable<DataRepositoryBase> Data;
             private readonly SKPaint FontPaint;
             private readonly float TimeAxisInterval;
             private readonly float ResultsBegin;
@@ -300,7 +299,7 @@ namespace _3DSpectrumVisualizer
                 //Axes
                 bool rotateMassAxis = MathF.Abs((XRotate - 90) % 180) < AxisLabelRotateThreshold;     
                 View3D.TranslateY(yOffset);
-                if (!DataRepository.UseHorizontalGradient)
+                if (!DataRepositoryBase.UseHorizontalGradient)
                 {
                     canvas.Save();
                     View3D.Save();
@@ -329,7 +328,7 @@ namespace _3DSpectrumVisualizer
                 View3D.Restore();
             }
 
-            private bool RenderScan(DataRepository item, int i, ref ScanResult lastScan, 
+            private bool RenderScan(DataRepositoryBase item, int i, ref ScanResult lastScan, 
                 SKCanvas canvas, bool reverseOrder)
             {
                 var scan = item.Results[i];
@@ -359,7 +358,7 @@ namespace _3DSpectrumVisualizer
                 return false;
             }
 
-            private void RenderIntensityAxis(SKCanvas canvas, DataRepository dataMaxLen, float dataMaxDuration)
+            private void RenderIntensityAxis(SKCanvas canvas, DataRepositoryBase dataMaxLen, float dataMaxDuration)
             {
                 float xOffset = (ZRotate > -90 && ZRotate < 90) || (ZRotate > 270) || (ZRotate < -270) ? 
                     dataMaxLen.Right : dataMaxLen.Left;
@@ -389,7 +388,7 @@ namespace _3DSpectrumVisualizer
                 canvas.DrawLine(0, min, 0, max, Data.FirstOrDefault()?.PaintWideStroke ?? FontPaint);
             }
 
-            private void RenderMassAxis(SKCanvas canvas, DataRepository dataMaxLen, float dataMaxDuration, bool dual)
+            private void RenderMassAxis(SKCanvas canvas, DataRepositoryBase dataMaxLen, float dataMaxDuration, bool dual)
             {
                 var shift = -FontPaint.TextSize * FontPaint.TextScaleX / 3;
                 var marginStart = -FontPaint.TextSize * 1.1f;
@@ -405,7 +404,7 @@ namespace _3DSpectrumVisualizer
                 }
             }
 
-            private void RenderTimeAxis(SKCanvas canvas, DataRepository dataMaxLen)
+            private void RenderTimeAxis(SKCanvas canvas, DataRepositoryBase dataMaxLen)
             {
                 int step = (int)MathF.Ceiling(FontPaint.TextSize * TimeAxisInterval / ScanSpacing); //in seconds, since default Y unit is 1S
                 float stepScaled = step * ScanSpacing;
@@ -424,7 +423,7 @@ namespace _3DSpectrumVisualizer
                 }
             }
 
-            private void RenderRegions(SKCanvas canvas)
+            /*private void RenderRegions(SKCanvas canvas)
             {
 
             }
@@ -432,7 +431,7 @@ namespace _3DSpectrumVisualizer
             private void RenderTemperatureProfile(SKCanvas canvas)
             {
 
-            }
+            }*/
         }
 
         #endregion

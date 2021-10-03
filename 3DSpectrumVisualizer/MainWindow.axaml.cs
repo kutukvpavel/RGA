@@ -91,13 +91,13 @@ namespace _3DSpectrumVisualizer
             CoordsLabel = this.FindControl<Label>("CoordsLabel");
             LstColors = this.FindControl<ListBox>("lstColors");
             LightEmulation = this.FindControl<Slider>("sldLight");
-            LightEmulation.Value = DataRepository.LightGradient[1].Alpha;
+            LightEmulation.Value = DataRepositoryBase.LightGradient[1].Alpha;
             LogarithmicIntensity = this.FindControl<CheckBox>("chkLog10");
             LogarithmicIntensity.Click += OnLogarithmicChecked;
             SectionPlot = this.FindControl<SkiaSectionPlot>("SpectrumSection");
             SectionPlot.DataRepositories = Program.Repositories;
             SectionPlot.PropertyChanged += SectionPlot_PropertyChanged;
-            SectionPlot.AMURoundingDigits = DataRepository.AMURoundingDigits;
+            SectionPlot.AMURoundingDigits = DataRepositoryBase.AMURoundingDigits;
             SectionCoords = this.FindControl<Label>("lblSectionCoords");
             SectionAMUSlider = this.FindControl<Slider>("SectionAMUSlider");
             SectionAMUSlider.PropertyChanged += SectionAMUSlider_PropertyChanged;
@@ -152,13 +152,13 @@ namespace _3DSpectrumVisualizer
 
         public void RepoInitCallback(object s, EventArgs e)
         {
-            Dispatcher.UIThread.Post(() =>
+            Dispatcher.UIThread.InvokeAsync(() =>
             {
                 LoadingLabel.Background = Brushes.Yellow;
                 Title = $"{Title}: ";
                 foreach (var item in Program.Repositories)
                 {
-                    Title += $"{item.Folder.Split(Path.DirectorySeparatorChar).LastOrDefault()}, ";
+                    Title += $"{item.Location.Split(Path.DirectorySeparatorChar).LastOrDefault()}, ";
                 }
                 Title = Title.Remove(Title.Length - 2, 2);
             });
@@ -166,7 +166,7 @@ namespace _3DSpectrumVisualizer
 
         public void RepoLoadedCallback(object s, EventArgs e)
         {
-            Dispatcher.UIThread.Post(() =>
+            Dispatcher.UIThread.InvokeAsync(() =>
             {
                 bool allLog = Program.Repositories.All(x => x.LogarithmicIntensity);
                 bool allLin = Program.Repositories.All(x => !x.LogarithmicIntensity);
@@ -217,7 +217,7 @@ namespace _3DSpectrumVisualizer
             ExportSectionButton.Background = Brushes.Gray;
             try
             {
-                await Task.Run(() => DataRepository.ExportSections(Program.Repositories, SectionPlot.AMU, path));
+                await Task.Run(() => FolderDataRepository.ExportSections(Program.Repositories, SectionPlot.AMU, path));
             }
             catch (Exception ex)
             {
@@ -331,7 +331,7 @@ namespace _3DSpectrumVisualizer
 
         private void OnHorizontalGradientChecked(object sender, RoutedEventArgs e)
         {
-            DataRepository.UseHorizontalGradient = (bool)HorizontalGradient.IsChecked;
+            FolderDataRepository.UseHorizontalGradient = (bool)HorizontalGradient.IsChecked;
             foreach (var item in Program.Repositories)
             {
                 item.RecalculateShader();
@@ -361,7 +361,7 @@ namespace _3DSpectrumVisualizer
                 if (e.NewValue == null || !e.IsEffectiveValueChange) return;
                 try
                 {
-                    DataRepository.LightGradient[1] = DataRepository.LightGradient[1].WithAlpha((byte)(double)e.NewValue);
+                    FolderDataRepository.LightGradient[1] = FolderDataRepository.LightGradient[1].WithAlpha((byte)(double)e.NewValue);
                     foreach (var item in Program.Repositories)
                     {
                         item.RecalculateShader();
@@ -402,7 +402,7 @@ namespace _3DSpectrumVisualizer
                 for (int i = 0; i < Program.Repositories.Count; i++)
                 {
                     using TextWriter w = new StreamWriter(@$"E:\dump{i}.csv");
-                    using CsvWriter c = new CsvWriter(w, DataRepository.ExportCsvConfig);
+                    using CsvWriter c = new CsvWriter(w, FolderDataRepository.ExportCsvConfig);
                     foreach (var item in Program.Repositories[i].Results)
                     {
                         foreach (var point in item.Path2D.Points)

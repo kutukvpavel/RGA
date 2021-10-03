@@ -74,7 +74,7 @@ namespace _3DSpectrumVisualizer
             }
         }
 
-        public IEnumerable<DataRepository> DataRepositories { get; set; } = new List<DataRepository>();
+        public IEnumerable<DataRepositoryBase> DataRepositories { get; set; } = new List<DataRepositoryBase>();
 
         public float XTranslate { get; set; } = 0;
 
@@ -254,7 +254,7 @@ namespace _3DSpectrumVisualizer
             private readonly bool ShowGasRegions;
             private readonly bool ShowTemperatureProfile;
             private readonly float LastMouseY;
-            private readonly IEnumerable<DataRepository> Data;
+            private readonly IEnumerable<DataRepositoryBase> Data;
 
             public DrawSectionPlot(SkiaSectionPlot parent, float lastMouseY) : base(parent)
             {
