@@ -38,8 +38,16 @@
 		</Style>
 	</Window.Styles>
 	<Grid ColumnDefinitions="auto,*" RowDefinitions="auto,*, auto">
-		<Expander Grid.Row="1" Grid.RowSpan="2" Grid.Column="0" ExpandDirection="Right" IsExpanded="True" Padding="0,10,0,0">
-			<ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Visible" Padding="0,0,10,0">
+		<Expander Grid.Row="1" Grid.RowSpan="2" Grid.Column="0" ExpandDirection="Right" IsExpanded="True" Padding="0">
+			<Expander.Resources>
+				<Thickness x:Key="ExpanderContentPadding">3</Thickness>
+			</Expander.Resources>
+			<Expander.Styles>
+				<Style Selector="Border#ExpandCollapseChevronBorder">
+					<Setter Property="Margin" Value="0"></Setter>
+				</Style>
+			</Expander.Styles>
+			<ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Visible">
 				<StackPanel Orientation="Vertical">
 					<CheckBox x:Name="chkHorizontalGradient" Margin="0,0,20,10" 
 							  IsChecked="{x:Static local:DataRepositoryBase.UseHorizontalGradient}"
@@ -102,11 +110,14 @@ Gradient</CheckBox>
 			</Label>
 		</StackPanel>
 		<local:Skia3DSpectrum x:Name="Spectrum3D" Grid.Row="1" Grid.Column="1"></local:Skia3DSpectrum>
-		<Expander ExpandDirection="Up" Grid.Row="2" Grid.Column="1"
+		<Expander ExpandDirection="Up" Grid.Row="2" Grid.Column="1" HorizontalContentAlignment="Stretch"
 				  IsExpanded="{Binding !#SpectrumSection.DisableRendering, Mode=TwoWay}" x:Name="SpectrumSectionExpander">
 			<Expander.Header>
 				<TextBlock>Single AMU Section</TextBlock>
 			</Expander.Header>
+			<Expander.Resources>
+				<Thickness x:Key="ExpanderContentPadding">0</Thickness>
+			</Expander.Resources>
 			<DockPanel LastChildFill="True">
 				<DockPanel DockPanel.Dock="Top" LastChildFill="True">
 					<CheckBox x:Name="chkSnap" DockPanel.Dock="Right" Margin="10,0,10,0">0.1 AMU Ticks</CheckBox>
@@ -114,7 +125,7 @@ Gradient</CheckBox>
 					<TextBlock DockPanel.Dock="Left" Margin="5,10,10,10" FontSize="16"
 							   Text="{Binding #SectionAMUSlider.Value, Mode=OneWay, Converter={x:Static local:MainWindow.AMUStringValueConverter}}"></TextBlock>
 					<Slider SmallChange="0.1" LargeChange="1" DockPanel.Dock="Left" Minimum="1" Maximum="65"
-							Value="{Binding #SpectrumSection.AMU, Mode=TwoWay, Converter={x:Static local:MainWindow.AMURoundingValueConverter}}" 
+							Value="{Binding #SpectrumSection.AMU, Mode=TwoWay, Converter={x:Static local:MainWindow.AMURoundingValueConverter}}"
 							x:Name="SectionAMUSlider" TickFrequency="1" IsSnapToTickEnabled="{Binding !#chkSnap.IsChecked}"></Slider>
 				</DockPanel>
 				<StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal">
@@ -122,7 +133,7 @@ Gradient</CheckBox>
 							  Click="OnShowTempProfileClick">Temperature</CheckBox>
 					<CheckBox IsChecked="{Binding #SpectrumSection.RenderGasRegions, Mode=TwoWay}"
 							  Click="OnShowGasRegionsClick">Gases</CheckBox>
-					<Button Background="#FABDA5" Button.Click="OnExportSectionClick" 
+					<Button Background="#FABDA5" Button.Click="OnExportSectionClick"
 							IsEnabled="{Binding #SpectrumSection.AMUPresent}" x:Name="btnExportSection">
 						Export
 					</Button>
