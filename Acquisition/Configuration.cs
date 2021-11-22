@@ -1,9 +1,8 @@
-﻿using System;
+﻿using CsvHelper.Configuration;
+using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Text;
-using CsvHelper.Configuration;
-using Newtonsoft.Json;
 
 namespace Acquisition
 {
@@ -15,11 +14,14 @@ namespace Acquisition
         public string TemperatureFileName { get; set; } = "Temp.txt";
         public string GasFileName { get; set; } = "Gas.txt";
         public string UVFileName { get; set; } = "UV.txt";
+        public string SensorFileName { get; set; } = "Sensor{0}.txt";
+        public string SensorNumberFormat { get; set; } = "E3";
         public string InfoLineFormat { get; set; } = "{0} | {1}";
         public string TemperatureFormat { get; set; } = "F1";
         public string AMUFormat { get; set; } = "F2";
         public string IntensityFormat { get; set; } = "E4";
-        public string PipeName { get; set; } = "LabPID_Profile_Broadcast";
+        public string LabPidPipeName { get; set; } = "LabPID_Profile_Broadcast";
+        public string MgaPipeName { get; set; } = "MGA_Broadcast_Pipe";
         [JsonIgnore]
         public static string WorkingDirectory { get => Environment.CurrentDirectory; }
         [JsonIgnore]

@@ -82,7 +82,7 @@ namespace Acquisition
             CommandSet.SetNoiseFloor.Parameter = Config.NoiseFloorSetting.ToString();
             InitBackgroundRemoval();
             InitDevice(args[0]);
-            InitPipe(Config.PipeName);
+            InitPipe(Config.LabPidPipeName, Config.MgaPipeName);
             VerifyDirectoryExists(Configuration.WorkingDirectory);
             VerifyDirectoryExists(Configuration.WorkingDirectory, Config.BackupSubfolderName);
             VerifyDirectoryExists(Configuration.WorkingDirectory, Config.InfoSubfolderName);
@@ -323,9 +323,9 @@ namespace Acquisition
 
         #endregion
 
-        #region Temperature and Gases
+        #region Temperature, Gases and Sensors
 
-        private static void InitPipe(string name)
+        private static void InitPipe(string labPidName, string mgaName)
         {
             Pipe.GasNames = Config.GasNames;
             Pipe.ExcludeUnknownGasNames = Config.ExcludeUnknownGasIndexes;
@@ -337,7 +337,8 @@ namespace Acquisition
             Pipe.TemperatureReceived += Pipe_TemperatureReceived;
             Pipe.UVStateReceived += Pipe_UVStateReceived;
             Pipe.GasStateReceived += Pipe_GasStateReceived;
-            Pipe.Initialize(name);
+            Pipe.MgaPacketReceived += Pipe_MgaPacketReceived;
+            Pipe.Initialize(labPidName, mgaName);
         }
 
         private static void Pipe_GasStateReceived(object sender, string e)
@@ -354,6 +355,12 @@ namespace Acquisition
         {
             AppendLine(Config.TemperatureFileName, 
                 e.ToString(Config.TemperatureFormat, CultureInfo.InvariantCulture));
+        }
+
+        private static void Pipe_MgaPacketReceived(object sender, MgaPacket e)
+        {
+            AppendLine(string.Format(Config.SensorFileName, e.SensorIndex), 
+                e.Conductance.ToString(Config.SensorNumberFormat, CultureInfo.InvariantCulture));
         }
 
         private static void AppendLine(string fileName, string payload)
