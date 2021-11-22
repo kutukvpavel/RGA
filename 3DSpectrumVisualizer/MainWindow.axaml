@@ -38,7 +38,7 @@
 		</Style>
 	</Window.Styles>
 	<Grid ColumnDefinitions="auto,*" RowDefinitions="auto,*, auto">
-		<Expander Grid.Row="1" Grid.RowSpan="2" Grid.Column="0" ExpandDirection="Right" IsExpanded="True" Padding="0">
+		<Expander x:Name="expLeft" Grid.Row="1" Grid.RowSpan="2" Grid.Column="0" ExpandDirection="Right" IsExpanded="True" Padding="0">
 			<Expander.Resources>
 				<Thickness x:Key="ExpanderContentPadding">3</Thickness>
 			</Expander.Resources>

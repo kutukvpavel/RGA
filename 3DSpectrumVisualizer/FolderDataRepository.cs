@@ -1,15 +1,10 @@
-﻿using CsvHelper;
-using CsvHelper.Configuration;
-using MoreLinq;
-using SkiaSharp;
+﻿using MoreLinq;
 using System;
-using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Timers;
+using System.Text.RegularExpressions;
 
 namespace _3DSpectrumVisualizer
 {
@@ -35,9 +30,14 @@ namespace _3DSpectrumVisualizer
 
         public override void Initialize()
         {
-            _UVPath = Path.Combine(Location, InfoSubfolder, UVFileName);
-            _GasPath = Path.Combine(Location, InfoSubfolder, GasFileName);
-            _TempPath = Path.Combine(Location, InfoSubfolder, TemperatureFileName);
+            string infoSubfolder = Path.Combine(Location, InfoSubfolder);
+            _UVPath = Path.Combine(infoSubfolder, UVFileName);
+            _GasPath = Path.Combine(infoSubfolder, GasFileName);
+            _TempPath = Path.Combine(infoSubfolder, TemperatureFileName);
+            string sensorsPattern = 
+                $@"^{Regex.Escape(infoSubfolder + Path.DirectorySeparatorChar)}{SensorFileName.Replace("{0}", "[0-9]+").Replace(".", @"\.")}$";
+            _SensorPathes = Directory.GetFiles(infoSubfolder).Where(x => Regex.IsMatch(x, sensorsPattern)).ToArray();
+            _SensorStreams = new TextReader[_SensorPathes.Length];
         }
 
         public override void LoadData()
@@ -74,6 +74,10 @@ namespace _3DSpectrumVisualizer
                 ReadAvailableInfoLines(ref _TempStream, _TempPath, AddTempInfoLine);
                 ReadAvailableInfoLines(ref _UVStream, _UVPath, AddUVInfoLine);
                 ReadAvailableInfoLines(ref _GasStream, _GasPath, AddGasInfoLine);
+                for (int i = 0; i < _SensorStreams.Length; i++)
+                {
+                    ReadAvailableInfoLines(ref _SensorStreams[i], _SensorPathes[i], x => AddSensorInfoLine(x, i));
+                }
             }
             catch (Exception ex)
             {
@@ -93,9 +97,11 @@ namespace _3DSpectrumVisualizer
         private string _TempPath;
         private string _UVPath;
         private string _GasPath;
+        private string[] _SensorPathes;
         private TextReader _TempStream;
         private TextReader _UVStream;
         private TextReader _GasStream;
+        private TextReader[] _SensorStreams;
         private DateTime _LastFileCreationTime = DateTime.MinValue;
         private readonly System.Timers.Timer _PollTimer;
         private bool ReadAvailableInfoLines(ref TextReader s, string path, Action<string> addMethod)
@@ -104,6 +110,7 @@ namespace _3DSpectrumVisualizer
             bool res = false;
             while ((l = TryReadLine(ref s, path)) != null)
             {
+                if (l.Length == 0) continue;
                 try
                 {
                     addMethod(l);

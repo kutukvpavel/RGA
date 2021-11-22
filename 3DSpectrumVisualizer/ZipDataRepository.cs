@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text.RegularExpressions;
-using System.IO.Compression;
-using System.Collections.ObjectModel;
-using System.Linq;
 using System.IO;
+using System.IO.Compression;
+using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace _3DSpectrumVisualizer
 {
@@ -31,6 +30,8 @@ namespace _3DSpectrumVisualizer
             _UVInfoEntry = e.FirstOrDefault(x => x.FullName == dataPattern);
             dataPattern = infoDir + GasFileName;
             _GasInfoEntry = e.FirstOrDefault(x => x.FullName == dataPattern);
+            dataPattern = $@"^{Regex.Escape(infoDir)}{SensorFileName.Replace("{0}", "[0-9]+").Replace(".", @"\.")}$";
+            _SensorEntries = e.Where(x => Regex.IsMatch(x.FullName, dataPattern)).OrderBy(x => x.Name).ToArray();
             dataPattern = $@"^{Regex.Escape(root)}[^/]{Filter.Replace(".", @"\.")}$";
             _DataEntries = e.Where(x => Regex.IsMatch(x.FullName, dataPattern));
         }
@@ -50,13 +51,17 @@ namespace _3DSpectrumVisualizer
                     }
                     catch (Exception ex)
                     {
-
+                        
                     }
                 }
                 //Load info
                 if (_TempInfoEntry != null) LoadInfoFile(_TempInfoEntry, AddTempInfoLine);
                 if (_UVInfoEntry != null) LoadInfoFile(_UVInfoEntry, AddUVInfoLine);
                 if (_GasInfoEntry != null) LoadInfoFile(_GasInfoEntry, AddGasInfoLine);
+                for (int i = 0; i < _SensorEntries.Length; i++)
+                {
+                    LoadInfoFile(_SensorEntries[i], x => AddSensorInfoLine(x, i));
+                }
             }
             _Archive.Dispose();
             RaiseDataAdded(this);
@@ -76,11 +81,14 @@ namespace _3DSpectrumVisualizer
 
         private ZipArchiveEntry _GasInfoEntry;
 
+        private ZipArchiveEntry[] _SensorEntries;
+
         private void LoadInfoFile(ZipArchiveEntry f, Action<string> addLineMethod)
         {
             using StreamReader r = new StreamReader(f.Open());
             foreach (var item in ReadLines(r))
             {
+                if ((item?.Length ?? 0) == 0) continue;
                 addLineMethod(item);
             }
         }

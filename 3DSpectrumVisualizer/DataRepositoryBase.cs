@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -58,6 +57,7 @@ namespace _3DSpectrumVisualizer
         public static string TemperatureFileName { get; set; }
         public static string UVFileName { get; set; }
         public static string GasFileName { get; set; }
+        public static string SensorFileName { get; set; }
         public static bool UseHorizontalGradient { get; set; } = false;
         public static int AMURoundingDigits { get; set; }
         public static ParallelOptions ParallelOptions { get; set; } = new ParallelOptions()
@@ -180,6 +180,7 @@ namespace _3DSpectrumVisualizer
         public string Location { get; }
         public string Filter { get; set; }
         public List<ScanResult> Results { get; } = new List<ScanResult>();
+        public List<SKPath> SensorProfiles { get; } = new List<SKPath>();
         public SKPath TemperatureProfile { get; } = new SKPath();
         public List<UVRegion> UVProfile { get; } = new List<UVRegion>();
         public List<GasRegion> GasProfile { get; } = new List<GasRegion>();
@@ -222,6 +223,7 @@ namespace _3DSpectrumVisualizer
         };
         public Dictionary<string, SKColor> GasRegionColor { get; set; } = new Dictionary<string, SKColor>();
         public ICollection<GradientColor> ColorScheme { get; set; } = new GradientColor[0];
+        public SKPaint[] SensorColors { get; set; } = new SKPaint[0];
         public SKPaint TemperaturePaint { get; set; } = new SKPaint()
         {
             Color = FallbackColor,
@@ -499,6 +501,21 @@ namespace _3DSpectrumVisualizer
             else
             {
                 TemperatureProfile.MoveTo(t, val);
+            }
+        }
+        protected void AddSensorInfoLine(string l, int index)
+        {
+            l = ParseInfoLine(l, out float t);
+            float val = float.Parse(l, CultureInfo.InvariantCulture);
+            while (SensorProfiles.Count <= index) SensorProfiles.Add(new SKPath());
+            var p = SensorProfiles[index];
+            if (p.PointCount > 0)
+            {
+                p.LineTo(t, val);
+            }
+            else
+            {
+                p.MoveTo(t, val);
             }
         }
         protected string ParseInfoLine(string l, out float time)

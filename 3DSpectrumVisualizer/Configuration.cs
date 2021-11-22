@@ -45,6 +45,15 @@ namespace _3DSpectrumVisualizer
         };
 
         [JsonProperty(ItemConverterType = typeof(SKColorJsonConverter))]
+        public SKColor[] SensorColors { get; set; } = new SKColor[]
+        {
+            SKColor.Parse("#1B1B1B"),
+            SKColor.Parse("#D900FF"),
+            SKColor.Parse("#FF9200"),
+            SKColor.Parse("#1E6FFF")
+        };
+
+        [JsonProperty(ItemConverterType = typeof(SKColorJsonConverter))]
         public SKColor[] UVRegionColors { get; set; } = new SKColor[] { SKColor.Parse("#38B088FF") };
 
         [JsonProperty(ItemConverterType = typeof(SKColorJsonConverter))]
@@ -68,6 +77,7 @@ namespace _3DSpectrumVisualizer
         public string TemperatureFileName { get; set; } = "Temp.txt";
         public string UVFileName { get; set; } = "UV.txt";
         public string GasFileName { get; set; } = "Gas.txt";
+        public string SensorFileName { get; set; } = "Sensor{0}.txt";
         public double GradientPositionSliderLawPower { get; set; } = 2.5;
         public int AMURoundingDigits { get; set; } = 1;
         public string RepositoryFileFilter { get; set; } = "*.csv";
@@ -91,6 +101,8 @@ namespace _3DSpectrumVisualizer
         public float ZScalingLowerLimit { get; set; } = 0.001f;
         public bool EnableRenderCaching { get; set; } = true;
         public string IntensityLabelFormat { get; set; } = "0.#E+0";
+        public int SensorCount { get; set; } = 4;
+        public bool LeftPanelVisible { get; set; } = true;
 
         public void Save(string priorityFolder = null)
         {

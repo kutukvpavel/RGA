@@ -1,6 +1,6 @@
 ﻿using Avalonia;
-using Avalonia.Input;
 using Avalonia.Data;
+using Avalonia.Input;
 using SkiaSharp;
 using System;
 using System.Collections.Generic;
@@ -43,6 +43,8 @@ namespace _3DSpectrumVisualizer
         public bool RenderGasRegions { get; set; } = true;
 
         public bool RenderTemperatureProfile { get; set; } = true;
+
+        public bool[] RenderSensorProfiles { get; set; } = new bool[0];
 
         public new SKColor Background
         {
@@ -242,6 +244,8 @@ namespace _3DSpectrumVisualizer
 
         private class DrawSectionPlot : CustomDrawOp
         {
+            public static float HeightReduction { get; set; } = 0.95f;
+
             private readonly float XTr;
             private readonly float YTr;
             private readonly float XSc;
@@ -253,6 +257,7 @@ namespace _3DSpectrumVisualizer
             private readonly float ResultsEnd;
             private readonly bool ShowGasRegions;
             private readonly bool ShowTemperatureProfile;
+            private readonly bool[] ShowSensors;
             private readonly float LastMouseY;
             private readonly IEnumerable<DataRepositoryBase> Data;
 
@@ -270,6 +275,7 @@ namespace _3DSpectrumVisualizer
                 ResultsEnd = 1 - parent.HideLastPercentOfResults;
                 ShowGasRegions = parent.RenderGasRegions;
                 ShowTemperatureProfile = parent.RenderTemperatureProfile;
+                ShowSensors = parent.RenderSensorProfiles;
                 LastMouseY = lastMouseY;
             }
 
@@ -277,6 +283,7 @@ namespace _3DSpectrumVisualizer
             {
                 if (!Data.Any()) return;
                 canvas.Clear(BackgroundColor);
+                var h = canvas.LocalClipBounds.Height * HeightReduction;
                 using (SKAutoCanvasRestore ar = new SKAutoCanvasRestore(canvas))
                 {
                     canvas.Translate(XTr, 0);
@@ -284,11 +291,22 @@ namespace _3DSpectrumVisualizer
                     RenderRegions(canvas);
                     if (ShowTemperatureProfile)
                     {
-                        var h = canvas.LocalClipBounds.Height * 0.95f;
-                        var s = h / Data.Max(x => x.TemperatureProfile.Bounds.Height) * 0.95f;
+                        var s = h / Data.Max(x => x.TemperatureProfile.Bounds.Height) * HeightReduction;
                         canvas.Translate(0, h + Data.Min(x => x.TemperatureProfile.Bounds.Top) * s);
                         canvas.Scale(1, -s);
                         RenderTemperatureProfile(canvas);
+                    }
+                }
+                using (SKAutoCanvasRestore ar = new SKAutoCanvasRestore(canvas))
+                {
+                    canvas.Translate(XTr, 0);
+                    var s = Data.Max(x =>
+                        x.SensorProfiles.Any() ? x.SensorProfiles.Max(y => y.Bounds.Height) : 0) * HeightReduction;
+                    if (s != 0)
+                    {
+                        s = h / s;
+                        canvas.Scale(XSc, -s);
+                        RenderSensorProfiles(canvas);
                     }
                 }
                 using (SKAutoCanvasRestore ar = new SKAutoCanvasRestore(canvas))
@@ -362,6 +380,19 @@ namespace _3DSpectrumVisualizer
                 {
                     canvas.DrawPath(item.TemperatureProfile, item.TemperaturePaint);
                 }
+            }
+
+            private void RenderSensorProfiles(SKCanvas canvas)
+            {
+                foreach (var item in Data)
+                {
+                    for (int i = 0; i < item.SensorProfiles.Count; i++)
+                    {
+                        if (!ShowSensors[i]) continue;
+                        canvas.DrawPath(item.SensorProfiles[i],
+                            item.SensorColors.Length > i ? item.SensorColors[i] : item.PaintWideStroke);
+                    }
+                }   
             }
         }
 

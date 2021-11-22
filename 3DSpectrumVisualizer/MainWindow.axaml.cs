@@ -42,6 +42,7 @@ namespace _3DSpectrumVisualizer
                 Spectrum3D.FastMode = Program.Config.FastMode;
                 Last3DCoords = Program.Config.Last3DCoords;
                 OnRestore3DViewClick(this, null);
+                this.FindControl<Expander>("expLeft").IsExpanded = Program.Config.LeftPanelVisible;
             };
             this.Closing += (s, e) =>
             {
@@ -54,6 +55,7 @@ namespace _3DSpectrumVisualizer
                 Program.Config.FastMode = Spectrum3D.FastMode;
                 Save3DCoords();
                 Program.Config.Last3DCoords = Last3DCoords;
+                Program.Config.LeftPanelVisible = this.FindControl<Expander>("expLeft").IsExpanded;
             };
         }
 

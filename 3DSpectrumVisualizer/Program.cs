@@ -19,7 +19,7 @@ namespace _3DSpectrumVisualizer
         public static object UpdateSynchronizingObject { get; } = new object();
         public static Configuration Config { get; private set; }
 
-        private static L Log = new L();
+        private static readonly L Log = new L();
 
         // Initialization code. Don't use any Avalonia, third-party APIs or any
         // SynchronizationContext-reliant code before AppMain is called: things aren't initialized
@@ -61,6 +61,12 @@ namespace _3DSpectrumVisualizer
                         Config.UVRegionColors[i] : Config.UVRegionColors[0];
                     dr.TemperaturePaint.Color = (Config.TemperatureProfileColors.Length > i) ? 
                         Config.TemperatureProfileColors[i] : Config.TemperatureProfileColors[0];
+                    dr.SensorColors = Config.SensorColors.Select(x => 
+                        new SkiaSharp.SKPaint() { 
+                            Color = x, 
+                            StrokeWidth = dr.TemperaturePaint.StrokeWidth,
+                            IsAntialias = true
+                        }).ToArray();
                     if (Config.ColorSchemes.Count > i)
                     {
                         dr.PaintStroke.Color = Config.ColorSchemes[i][0].Color;
@@ -95,6 +101,7 @@ namespace _3DSpectrumVisualizer
             DataRepositoryBase.LightGradient = Config.LightGradient;
             DataRepositoryBase.TemperatureFileName = Config.TemperatureFileName;
             DataRepositoryBase.UVFileName = Config.UVFileName;
+            DataRepositoryBase.SensorFileName = Config.SensorFileName;
             DataRepositoryBase.LightGradient[1] = DataRepositoryBase.LightGradient[1].WithAlpha(Config.LastLightSliderPosition);
             DataRepositoryBase.UseHorizontalGradient = Config.UseHorizontalGradient;
             DataRepositoryBase.ColorPositionSliderPrecision = Config.ColorPositionSliderPrecision;
