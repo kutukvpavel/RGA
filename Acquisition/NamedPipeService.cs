@@ -45,7 +45,7 @@ namespace Acquisition
                 _LabPidClient.ServerMessage += LabPidClient_ServerMessage;
                 if ((mgaPipeName?.Length ?? 0) > 0)
                 {
-                    _MgaClient = new NamedPipeClient<string>(labPidPipeName);
+                    _MgaClient = new NamedPipeClient<string>(mgaPipeName);
                     _MgaClient.Start();
                     _MgaClient.ServerMessage += MgaClient_ServerMessage;
                 }
