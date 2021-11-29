@@ -341,20 +341,29 @@ namespace Acquisition
             Pipe.Initialize(labPidName, mgaName);
         }
 
+        private static string _LastGas = string.Empty;
         private static void Pipe_GasStateReceived(object sender, string e)
         {
+            if (_LastGas == e) return;
             AppendLine(Config.GasFileName, e);
+            _LastGas = e;
         }
 
+        private static bool _LastUV = false;
         private static void Pipe_UVStateReceived(object sender, bool e)
         {
+            if (_LastUV == e) return;
             AppendLine(Config.UVFileName, e.ToString(CultureInfo.InvariantCulture));
+            _LastUV = e;
         }
 
+        private static float _LastTemperature = 0;
         private static void Pipe_TemperatureReceived(object sender, float e)
         {
+            if (_LastTemperature == e) return;
             AppendLine(Config.TemperatureFileName, 
                 e.ToString(Config.TemperatureFormat, CultureInfo.InvariantCulture));
+            _LastTemperature = e;
         }
 
         private static void Pipe_MgaPacketReceived(object sender, MgaPacket e)
@@ -363,10 +372,20 @@ namespace Acquisition
                 e.Conductance.ToString(Config.SensorNumberFormat, CultureInfo.InvariantCulture));
         }
 
+        private static List<Task> _PendingTasks = new List<Task>();
         private static void AppendLine(string fileName, string payload)
         {
+            for (int i = 0; i < _PendingTasks.Count; i++)
+            {
+                if (_PendingTasks[i].IsCompleted) _PendingTasks.RemoveAt(i--);
+            }
+            if (_PendingTasks.Count > Config.WriterThreadLimit)
+            {
+                Log("Writer thread limit reached!");
+                return;
+            }
             var t = DateTime.Now.ToString(CultureInfo.InvariantCulture);
-            Task.Factory.StartNew(() =>
+            var task = Task.Factory.StartNew(() =>
             {
                 try
                 {
@@ -399,6 +418,7 @@ namespace Acquisition
                     Log("ERROR: Can't append an info file!", ex);
                 }
             });
+            _PendingTasks.Add(task);
         }
 
         #endregion
