@@ -44,7 +44,7 @@ namespace _3DSpectrumVisualizer
 
         public bool RenderTemperatureProfile { get; set; } = true;
 
-        public bool[] RenderSensorProfiles { get; set; } = new bool[0];
+        public bool[] RenderSensorProfiles { get; set; } = new bool[1];
 
         public new SKColor Background
         {

@@ -81,6 +81,13 @@ Gradient</CheckBox>
 							Maximum="1" Minimum="0" SmallChange="0.005"
 							PropertyChanged="OnPositionSchemeEdited">
 					</Slider>
+					<ListBox x:Name="lstSensors" DataContext="{Binding #SpectrumSection}" Items="{Binding RenderSensorProfiles}">
+						<ListBox.ItemTemplate>
+							<DataTemplate>
+								<CheckBox IsChecked="{Binding}">Render Sensor</CheckBox>
+							</DataTemplate>
+						</ListBox.ItemTemplate>
+					</ListBox>
 				</StackPanel>
 			</ScrollViewer>
 		</Expander>
