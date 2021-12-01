@@ -1,7 +1,6 @@
 ﻿using NamedPipeWrapper;
 using Newtonsoft.Json;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 
 namespace Acquisition
@@ -9,11 +8,10 @@ namespace Acquisition
     public class NamedPipeService
     {
         public static NamedPipeService Instance { get; } = new NamedPipeService();
-
-        public Dictionary<int, string> GasNames { get; set; } = new Dictionary<int, string>();
-        public int UVGpioIndex { get; set; } = 0;
-        public int GasGpioOffset { get; set; } = 5;
-        public bool ExcludeUnknownGasNames { get; set; } = false;
+        public static string[] GasPriority { get; set; }
+        public static int GasGpioOffset { get; set; }
+        public static string NoGasLabel { get; set; }
+        public static string UVGpioLabel { get; set; }
 
         public event EventHandler<float> TemperatureReceived;
         public event EventHandler<bool> UVStateReceived;
@@ -75,42 +73,13 @@ namespace Acquisition
         {
             try
             {
-                LogEvent?.Invoke(this, message);
-            }
-            catch (Exception)
-            { }
-            try
-            {
-                char t = message[0];
-                var v = message.Remove(0, 1);
-                switch (t)
-                {
-                    case 'C':
-                        var split = v.Split('\n').Select(x => x.Trim('\r', '\n').Replace(" ", "")).ToArray();
-                        try
-                        {
-                            UVStateReceived?.Invoke(this, split[1][UVGpioIndex] != '0');
-                        }
-                        catch (Exception ex)
-                        {
-                            LogException?.Invoke(this, new ExceptionEventArgs(ex, "UVStateReceived handler threw an exception."));
-                        }
-                        int i = split[1].IndexOf('1', GasGpioOffset);
-                        if (ExcludeUnknownGasNames)
-                        {
-                            if (GasNames.ContainsKey(i)) GasStateReceived?.Invoke(this, GasNames[i]);
-                        }
-                        else
-                        {
-                            GasStateReceived?.Invoke(this, GasNames.ContainsKey(i) ? GasNames[i] : $"Gas #{i}");
-                        }
-                        break;
-                    case 'T':
-                        TemperatureReceived?.Invoke(this, float.Parse(v));
-                        break;
-                    default:
-                        break;
-                }
+                var p = JsonConvert.DeserializeObject<LabPidPacket>(message);
+                var activeLabeledOutputs = p.Gpio.OutputLabels.Where(x => p.Gpio.Outputs[x.Key]);
+                UVStateReceived?.Invoke(this, activeLabeledOutputs.Any(x => (x.Key < GasGpioOffset) && (x.Value == UVGpioLabel)));
+                TemperatureReceived?.Invoke(this, p.Temperature);
+                GasStateReceived?.Invoke(this, 
+                    GasPriority.FirstOrDefault(x => activeLabeledOutputs.Any(y => (y.Key >= GasGpioOffset) && (y.Value == x))) 
+                    ?? NoGasLabel);
             }
             catch (Exception ex)
             {

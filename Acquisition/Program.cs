@@ -327,10 +327,10 @@ namespace Acquisition
 
         private static void InitPipe(string labPidName, string mgaName)
         {
-            Pipe.GasNames = Config.GasNames;
-            Pipe.ExcludeUnknownGasNames = Config.ExcludeUnknownGasIndexes;
-            Pipe.GasGpioOffset = Config.GasGpioOffset;
-            Pipe.UVGpioIndex = Config.UVGpioIndex;
+            NamedPipeService.GasGpioOffset = Config.GasGpioOffset;
+            NamedPipeService.GasPriority = Config.GasPriority;
+            NamedPipeService.NoGasLabel = Config.NoGasLabel;
+            NamedPipeService.UVGpioLabel = Config.UVGpioLabel;
             if (Config.LogPipeMessages) Pipe.LogEvent += (x, y) => { Log("Pipe message received: " + y); };
             else Pipe.LogEvent += (x, y) => Console.WriteLine(y);
             Pipe.LogException += (x, y) => { Log(y.LogString); };
@@ -375,6 +375,7 @@ namespace Acquisition
         private static List<Task> _PendingTasks = new List<Task>();
         private static void AppendLine(string fileName, string payload)
         {
+            var t = DateTime.Now.ToString(CultureInfo.InvariantCulture);
             for (int i = 0; i < _PendingTasks.Count; i++)
             {
                 if (_PendingTasks[i].IsCompleted) _PendingTasks.RemoveAt(i--);
@@ -384,9 +385,9 @@ namespace Acquisition
                 Log("Writer thread limit reached!");
                 return;
             }
-            var t = DateTime.Now.ToString(CultureInfo.InvariantCulture);
             var task = Task.Factory.StartNew(() =>
             {
+                Console.WriteLine($"Writing info: {payload}");
                 try
                 {
                     var p = Path.Combine(
