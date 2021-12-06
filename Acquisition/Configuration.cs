@@ -27,7 +27,7 @@ namespace Acquisition
         public static CsvConfiguration CsvConfig { get; } = new CsvConfiguration(CultureInfo.InvariantCulture);
         public string BackgroundFolderName { get; set; } = "background";
         public string BackgroundSearchPattern { get; set; } = "*.csv";
-        public int GasGpioOffset { get; set; } = 5;
+        public int GasGpioOffset { get; set; } = 1;
         public string[] GasPriority { get; set; } = new string[]
         {
             "Electrolysis",

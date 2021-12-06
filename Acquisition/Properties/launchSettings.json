@@ -2,8 +2,8 @@
   "profiles": {
     "Acquisition": {
       "commandName": "Project",
-      "commandLineArgs": "-restore",
-      "workingDirectory": "C:\\RESULTS\\ZNO_NO2_30_50_100_150"
+      "commandLineArgs": "COM1 11 50 10 1",
+      "workingDirectory": "C:\\RESULTS\\LabPID_FIX_TEST"
     }
   }
 }

@@ -74,7 +74,8 @@ namespace Acquisition
             try
             {
                 var p = JsonConvert.DeserializeObject<LabPidPacket>(message);
-                var activeLabeledOutputs = p.Gpio.OutputLabels.Where(x => p.Gpio.Outputs[x.Key]);
+                var activeLabeledOutputs = p.Gpio.GetActiveOutputs();
+                LogEvent?.Invoke(this, $"Pipe message: {p}");
                 UVStateReceived?.Invoke(this, activeLabeledOutputs.Any(x => (x.Key < GasGpioOffset) && (x.Value == UVGpioLabel)));
                 TemperatureReceived?.Invoke(this, p.Temperature);
                 GasStateReceived?.Invoke(this, 
