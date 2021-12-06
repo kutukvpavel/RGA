@@ -34,7 +34,7 @@ Active GPIO=({Gpio})";
         }
         public override string ToString()
         {
-            return $"I={GetActiveInputs().Select(x => x.Value)}, O={GetActiveOutputs().Select(x => x.Value)}";
+            return $"I={string.Join(',', GetActiveInputs().Select(x => x.Value))}, O={string.Join(',', GetActiveOutputs().Select(x => x.Value))}";
         }
     }
 }
