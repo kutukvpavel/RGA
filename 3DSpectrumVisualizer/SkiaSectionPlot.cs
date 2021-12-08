@@ -44,8 +44,6 @@ namespace _3DSpectrumVisualizer
 
         public bool RenderTemperatureProfile { get; set; } = true;
 
-        public bool[] RenderSensorProfiles { get; set; } = new bool[1];
-
         public new SKColor Background
         {
             get => base.Background;
@@ -275,7 +273,11 @@ namespace _3DSpectrumVisualizer
                 ResultsEnd = 1 - parent.HideLastPercentOfResults;
                 ShowGasRegions = parent.RenderGasRegions;
                 ShowTemperatureProfile = parent.RenderTemperatureProfile;
-                ShowSensors = parent.RenderSensorProfiles;
+                ShowSensors = new bool[Data.Any() ? Data.Max(x => x.SensorProfiles.Count) : 0];
+                for (int i = 0; i < ShowSensors.Length; i++)
+                {
+                    ShowSensors[i] = true;
+                }
                 LastMouseY = lastMouseY;
             }
 
@@ -284,30 +286,46 @@ namespace _3DSpectrumVisualizer
                 if (!Data.Any()) return;
                 canvas.Clear(BackgroundColor);
                 var h = canvas.LocalClipBounds.Height * HeightReduction;
+                Exception lastError = null;
                 using (SKAutoCanvasRestore ar = new SKAutoCanvasRestore(canvas))
                 {
-                    canvas.Translate(XTr, 0);
-                    canvas.Scale(XSc, 1);
-                    RenderRegions(canvas);
-                    if (ShowTemperatureProfile)
+                    try
                     {
-                        var s = h / Data.Max(x => x.TemperatureProfile.Bounds.Height) * HeightReduction;
-                        canvas.Translate(0, h + Data.Min(x => x.TemperatureProfile.Bounds.Top) * s);
-                        canvas.Scale(1, -s);
-                        RenderTemperatureProfile(canvas);
+                        canvas.Translate(XTr, 0);
+                        canvas.Scale(XSc, 1);
+                        RenderRegions(canvas);
+                        if (ShowTemperatureProfile)
+                        {
+                            var s = h / Data.Max(x => x.TemperatureProfile.Bounds.Height) * HeightReduction;
+                            canvas.Translate(0, h + Data.Min(x => x.TemperatureProfile.Bounds.Top) * s);
+                            canvas.Scale(1, -s);
+                            RenderTemperatureProfile(canvas);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        lastError = ex;
                     }
                 }
                 using (SKAutoCanvasRestore ar = new SKAutoCanvasRestore(canvas))
                 {
-                    canvas.Translate(XTr, 0);
-                    var s = Data.Max(x =>
-                        x.SensorProfiles.Any() ? x.SensorProfiles.Max(y => y.Bounds.Height) : 0) * HeightReduction;
-                    if (s != 0)
+                    try
                     {
-                        s = h / s;
-                        canvas.Scale(XSc, -s);
-                        RenderSensorProfiles(canvas);
+                        canvas.Translate(XTr, 0);
+                        var s = Data.Max(x =>
+                            x.SensorProfiles.Any() ? x.SensorProfiles.Max(y => y.Bounds.Height) : 0) * HeightReduction;
+                        if (s != 0)
+                        {
+                            s = h / s;
+                            canvas.Scale(XSc, -s);
+                            RenderSensorProfiles(canvas);
+                        }
                     }
+                    catch (Exception ex)
+                    {
+                        lastError = ex;
+                    }
+                    
                 }
                 using (SKAutoCanvasRestore ar = new SKAutoCanvasRestore(canvas))
                 {
@@ -329,6 +347,7 @@ namespace _3DSpectrumVisualizer
                 }
                 RenderTimeAxis(canvas);
                 RenderIntensityAxis(canvas);
+                if (lastError != null) throw lastError;
             }
 
             private void RenderTimeAxis(SKCanvas canvas)
