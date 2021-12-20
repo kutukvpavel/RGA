@@ -101,8 +101,9 @@ namespace _3DSpectrumVisualizer
         public float ZScalingLowerLimit { get; set; } = 0.001f;
         public bool EnableRenderCaching { get; set; } = true;
         public string IntensityLabelFormat { get; set; } = "0.#E+0";
-        public int SensorCount { get; set; } = 4;
         public bool LeftPanelVisible { get; set; } = true;
+        public bool EnableExportExtremumSearch { get; set; } = true;
+        public bool[] RenderSensorProfiles { get; set; } = new bool[0];
 
         public void Save(string priorityFolder = null)
         {

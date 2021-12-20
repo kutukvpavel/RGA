@@ -34,6 +34,11 @@ namespace _3DSpectrumVisualizer
             {
                 SectionPlot.RenderTemperatureProfile = Program.Config.ShowTemperatureProfile;
                 SectionPlot.RenderGasRegions = Program.Config.ShowGasRegions;
+                int i = 0;
+                foreach (var item in Program.Config.RenderSensorProfiles)
+                {
+                    SectionPlot.RenderSensorProfiles.Add(new SensorVisibility() { Index = i++, Visible = item });
+                }
                 ColorPositionSlider.SmallChange = Program.Config.ColorPositionSliderPrecision;
                 AutoupdateXScaleCheckbox.IsChecked = Program.Config.AutoupdateXScale;
                 GLLabel.Background = SkiaCustomControl.OpenGLEnabled ? Brushes.Lime : Brushes.OrangeRed;
@@ -46,6 +51,7 @@ namespace _3DSpectrumVisualizer
             };
             this.Closing += (s, e) =>
             {
+                Program.Config.RenderSensorProfiles = SectionPlot.RenderSensorProfiles.Select(x => x.Visible).ToArray();
                 Program.Config.ShowGasRegions = SectionPlot.RenderGasRegions;
                 Program.Config.ShowTemperatureProfile = SectionPlot.RenderTemperatureProfile;
                 Program.Config.AutoupdateXScale = AutoupdateXScaleCheckbox.IsChecked.Value;
@@ -80,6 +86,7 @@ namespace _3DSpectrumVisualizer
         private Slider ColorPositionSlider;
         private Slider HideFirstSlider;
         private Slider HideLastSlider;
+        private ListBox SensorVisibleList;
 
         private void InitializeComponent()
         {
@@ -112,26 +119,7 @@ namespace _3DSpectrumVisualizer
             HideLastSlider = this.Find<Slider>("sldHideEnd");
             HideFirstSlider.PropertyChanged += HideFirstSlider_PropertyChanged;
             HideLastSlider.PropertyChanged += HideLastSlider_PropertyChanged;
-        }
-
-        private void HideLastSlider_PropertyChanged(object sender, AvaloniaPropertyChangedEventArgs e)
-        {
-            if (!IsInitialized) return;
-            if (e.Property == Slider.ValueProperty)
-            {
-                if (e.NewValue == null || !e.IsEffectiveValueChange) return;
-                SectionPlot.HideLastPercentOfResults = (float)(double)e.NewValue;
-            }
-        }
-
-        private void HideFirstSlider_PropertyChanged(object sender, AvaloniaPropertyChangedEventArgs e)
-        {
-            if (!IsInitialized) return;
-            if (e.Property == Slider.ValueProperty)
-            {
-                if (e.NewValue == null || !e.IsEffectiveValueChange) return;
-                SectionPlot.HideFirstPercentOfResults = (float)(double)e.NewValue;
-            }
+            SensorVisibleList = this.FindControl<ListBox>("lstSensors");
         }
 
         private void Save3DCoords()
@@ -177,6 +165,8 @@ namespace _3DSpectrumVisualizer
                 SectionPlot.AutoscaleX(false);
                 SectionPlot.AutoscaleYForAllSections();
                 LoadingLabel.IsVisible = false;
+                SectionPlot.UpdateRepos();
+                InvalidateSpectrum(this, null);
             });
         }
 
@@ -190,6 +180,27 @@ namespace _3DSpectrumVisualizer
         #endregion
 
         #region UI events
+
+        private void HideLastSlider_PropertyChanged(object sender, AvaloniaPropertyChangedEventArgs e)
+        {
+            if (!IsInitialized) return;
+            if (e.Property == Slider.ValueProperty)
+            {
+                if (e.NewValue == null || !e.IsEffectiveValueChange) return;
+                SectionPlot.HideLastPercentOfResults = (float)(double)e.NewValue;
+            }
+        }
+
+        private void HideFirstSlider_PropertyChanged(object sender, AvaloniaPropertyChangedEventArgs e)
+        {
+            if (!IsInitialized) return;
+            if (e.Property == Slider.ValueProperty)
+            {
+                if (e.NewValue == null || !e.IsEffectiveValueChange) return;
+                SectionPlot.HideFirstPercentOfResults = (float)(double)e.NewValue;
+            }
+        }
+
         private void OnShowTempProfileClick(object sender, RoutedEventArgs e)
         {
             SectionPlot.InvalidateVisual();

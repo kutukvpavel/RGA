@@ -36,7 +36,7 @@ namespace _3DSpectrumVisualizer
             _DataEntries = e.Where(x => Regex.IsMatch(x.FullName, dataPattern));
         }
 
-        public override void LoadData()
+        protected override void LoadDataInternal()
         {
             if (_Archive == null) throw new InvalidOperationException("Zip repository is not initialized.");
             lock (UpdateSynchronizingObject)
@@ -51,7 +51,7 @@ namespace _3DSpectrumVisualizer
                     }
                     catch (Exception ex)
                     {
-                        
+                        Program.LogException(this, ex);
                     }
                 }
                 //Load info
@@ -64,7 +64,6 @@ namespace _3DSpectrumVisualizer
                 }
             }
             _Archive.Dispose();
-            RaiseDataAdded(this);
         }
 
         #endregion

@@ -4,6 +4,8 @@ using Avalonia.Input;
 using SkiaSharp;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Linq;
 
 namespace _3DSpectrumVisualizer
@@ -26,6 +28,7 @@ namespace _3DSpectrumVisualizer
                     AMU = e.NewValue.Value;
                 }
             });
+            RenderSensorProfiles.CollectionChanged += RenderSensorProfiles_CollectionChanged;
         }
 
         #region Properties
@@ -39,6 +42,8 @@ namespace _3DSpectrumVisualizer
             Color = SKColor.Parse("#ECE2E2"), StrokeWidth = 1, TextSize = 14.0f, TextScaleX = 1,
             IsAntialias = true
         };
+
+        public ObservableCollection<SensorVisibility> RenderSensorProfiles { get; set; } = new ObservableCollection<SensorVisibility>();
 
         public bool RenderGasRegions { get; set; } = true;
 
@@ -108,6 +113,14 @@ namespace _3DSpectrumVisualizer
 
         #region Public Methods
 
+        public void UpdateRepos()
+        {
+            foreach (var item in DataRepositories)
+            {
+                item.DataAdded += Item_DataAdded;
+            }
+            Item_DataAdded(this, null);
+        }
         public void Autoscale()
         {
             AutoscaleX(false);
@@ -166,6 +179,45 @@ namespace _3DSpectrumVisualizer
 
         private Point _LastPoint;
         private Point? _LastPressedPoint;
+
+        private void RenderSensorProfiles_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        {
+            if (!IsInitialized) return;
+            if (e.NewItems != null)
+            {
+                foreach (var item in e.NewItems)
+                {
+                    (item as SensorVisibility).PropertyChanged += SensorVisibility_PropertyChanged;
+                }
+            }
+            if (e.OldItems != null)
+            {
+                foreach (var item in e.OldItems)
+                {
+                    (item as SensorVisibility).PropertyChanged -= SensorVisibility_PropertyChanged;
+                }
+            }
+        }
+
+        private void SensorVisibility_PropertyChanged(object sender, AvaloniaPropertyChangedEventArgs e)
+        {
+            if (e.IsEffectiveValueChange)
+            {
+                (e.Sender as SensorVisibility).Visible = (bool)e.NewValue;
+                InvalidateVisual();
+            }
+        }
+
+        private void Item_DataAdded(object sender, EventArgs e)
+        {
+            int max = DataRepositories.Max(x => x.SensorProfiles.Any() ? x.SensorProfiles.Count : 0);
+            while (max > RenderSensorProfiles.Count) RenderSensorProfiles.Add(
+                new SensorVisibility()
+                { 
+                    Index = RenderSensorProfiles.Count,
+                    Visible = true
+                });
+        }
 
         private void AutoscalingYEngine(float min, float max, bool invalidate)
         {
@@ -255,7 +307,7 @@ namespace _3DSpectrumVisualizer
             private readonly float ResultsEnd;
             private readonly bool ShowGasRegions;
             private readonly bool ShowTemperatureProfile;
-            private readonly bool[] ShowSensors;
+            private readonly List<bool> ShowSensors;
             private readonly float LastMouseY;
             private readonly IEnumerable<DataRepositoryBase> Data;
 
@@ -273,11 +325,7 @@ namespace _3DSpectrumVisualizer
                 ResultsEnd = 1 - parent.HideLastPercentOfResults;
                 ShowGasRegions = parent.RenderGasRegions;
                 ShowTemperatureProfile = parent.RenderTemperatureProfile;
-                ShowSensors = new bool[Data.Any() ? Data.Max(x => x.SensorProfiles.Count) : 0];
-                for (int i = 0; i < ShowSensors.Length; i++)
-                {
-                    ShowSensors[i] = true;
-                }
+                ShowSensors = parent.RenderSensorProfiles.Select(x => x.Visible).ToList();
                 LastMouseY = lastMouseY;
             }
 
@@ -312,11 +360,15 @@ namespace _3DSpectrumVisualizer
                     try
                     {
                         canvas.Translate(XTr, 0);
-                        var s = Data.Max(x =>
-                            x.SensorProfiles.Any() ? x.SensorProfiles.Max(y => y.Bounds.Height) : 0) * HeightReduction;
+                        var nonEmpty = Data.Select(x => x.SensorProfiles
+                            .Where((y, i) => !y.IsEmpty && (i < ShowSensors.Count ? ShowSensors[i] : true)))
+                            .Where(x => x.Any());
+                        var s = nonEmpty.Max(x => x.Max(y => y.Bounds.Height));
                         if (s != 0)
                         {
-                            s = h / s;
+                            s = h * HeightReduction / s;
+                            canvas.Translate(0, 
+                                h + nonEmpty.Min(x => x.Min(y => y.Bounds.Top)) * s);
                             canvas.Scale(XSc, -s);
                             RenderSensorProfiles(canvas);
                         }
@@ -407,7 +459,7 @@ namespace _3DSpectrumVisualizer
                 {
                     for (int i = 0; i < item.SensorProfiles.Count; i++)
                     {
-                        if (!ShowSensors[i]) continue;
+                        if (!(i < ShowSensors.Count ? ShowSensors[i] : true)) continue;
                         canvas.DrawPath(item.SensorProfiles[i],
                             item.SensorColors.Length > i ? item.SensorColors[i] : item.PaintWideStroke);
                     }
@@ -416,5 +468,27 @@ namespace _3DSpectrumVisualizer
         }
 
         #endregion
+    }
+
+    public class SensorVisibility : AvaloniaObject
+    {
+        public SensorVisibility() : base()
+        {
+            
+        }
+
+        AvaloniaProperty<bool> VisibleProperty = AvaloniaProperty.Register<SensorVisibility, bool>(
+            nameof(Visible), true, defaultBindingMode: BindingMode.TwoWay);
+
+        public bool Visible
+        {
+            get => (bool)GetValue(VisibleProperty);
+            set
+            {
+                SetValue(VisibleProperty, value);
+            }
+        }
+        public string Name { get => $"Sensor {Index}"; }
+        public int Index { get; set; }
     }
 }

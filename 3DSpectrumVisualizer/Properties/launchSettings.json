@@ -2,7 +2,7 @@
   "profiles": {
     "3DSpectrumVisualizer": {
       "commandName": "Project",
-      "commandLineArgs": "\"C:\\RESULTS\\In2O3_NO2_Reduction_Test\""
+      "commandLineArgs": "\"I:\\temp\\ZnO_Reduced_150_O2.zip\""
     }
   }
 }

@@ -40,9 +40,8 @@ namespace _3DSpectrumVisualizer
             _SensorStreams = new TextReader[_SensorPathes.Length];
         }
 
-        public override void LoadData()
+        protected override void LoadDataInternal()
         {
-            bool raiseDataAdded = false;
             bool lockTaken = Monitor.TryEnter(UpdateSynchronizingObject, 10);
             if (!lockTaken) return;
             try
@@ -60,7 +59,6 @@ namespace _3DSpectrumVisualizer
                         AddFile(ReadLines(r), item.Name);
                         if (item.CreationTimeUtc > _LastFileCreationTime)
                             _LastFileCreationTime = item.CreationTimeUtc;
-                        raiseDataAdded = true;
                     }
                     catch (IOException)
                     { }
@@ -87,7 +85,6 @@ namespace _3DSpectrumVisualizer
             {
                 Monitor.Exit(UpdateSynchronizingObject);
             }
-            if (raiseDataAdded) RaiseDataAdded(this);
         }
 
         #endregion

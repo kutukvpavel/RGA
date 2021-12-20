@@ -37,8 +37,8 @@
 			<Setter Property="Margin" Value="3,0,5,0"></Setter>
 		</Style>
 	</Window.Styles>
-	<Grid ColumnDefinitions="auto,*" RowDefinitions="auto,*, auto">
-		<Expander x:Name="expLeft" Grid.Row="1" Grid.RowSpan="2" Grid.Column="0" ExpandDirection="Right" IsExpanded="True" Padding="0">
+	<Grid ColumnDefinitions="auto,*" RowDefinitions="auto,1.6*,4,*">
+		<Expander x:Name="expLeft" Grid.Row="1" Grid.RowSpan="3" Grid.Column="0" ExpandDirection="Right" IsExpanded="True" Padding="0">
 			<Expander.Resources>
 				<Thickness x:Key="ExpanderContentPadding">3</Thickness>
 			</Expander.Resources>
@@ -81,10 +81,11 @@ Gradient</CheckBox>
 							Maximum="1" Minimum="0" SmallChange="0.005"
 							PropertyChanged="OnPositionSchemeEdited">
 					</Slider>
-					<ListBox x:Name="lstSensors" DataContext="{Binding #SpectrumSection}" Items="{Binding RenderSensorProfiles}">
+					<ListBox x:Name="lstSensors" DataContext="{Binding #SpectrumSection}"
+							 Items="{Binding RenderSensorProfiles}">
 						<ListBox.ItemTemplate>
 							<DataTemplate>
-								<CheckBox IsChecked="{Binding}">Render Sensor</CheckBox>
+								<CheckBox IsChecked="{Binding Visible, Mode=TwoWay}" Content="{Binding Name}"></CheckBox>
 							</DataTemplate>
 						</ListBox.ItemTemplate>
 					</ListBox>
@@ -117,7 +118,44 @@ Gradient</CheckBox>
 			</Label>
 		</StackPanel>
 		<local:Skia3DSpectrum x:Name="Spectrum3D" Grid.Row="1" Grid.Column="1"></local:Skia3DSpectrum>
-		<Expander ExpandDirection="Up" Grid.Row="2" Grid.Column="1" HorizontalContentAlignment="Stretch"
+		<GridSplitter Grid.Row="2" Grid.Column="1" ResizeDirection="Rows" Background="#6F6F6F"></GridSplitter>
+		<Grid Grid.Row="3" Grid.Column="1" ColumnDefinitions="*" RowDefinitions="auto,*,auto">
+			<DockPanel Grid.Row="0" LastChildFill="True">
+				<CheckBox x:Name="chkSnap" DockPanel.Dock="Right" Margin="10,0,10,0">0.1 AMU Ticks</CheckBox>
+				<TextBlock DockPanel.Dock="Left" Margin="10,10,0,10" FontSize="16">AMU: </TextBlock>
+				<TextBlock DockPanel.Dock="Left" Margin="5,10,10,10" FontSize="16"
+						   Text="{Binding #SectionAMUSlider.Value, Mode=OneWay, Converter={x:Static local:MainWindow.AMUStringValueConverter}}"></TextBlock>
+				<Slider SmallChange="0.1" LargeChange="1" DockPanel.Dock="Left" Minimum="1" Maximum="65"
+						Value="{Binding #SpectrumSection.AMU, Mode=TwoWay, Converter={x:Static local:MainWindow.AMURoundingValueConverter}}"
+						x:Name="SectionAMUSlider" TickFrequency="1" IsSnapToTickEnabled="{Binding !#chkSnap.IsChecked}"></Slider>
+			</DockPanel>
+			<local:SkiaSectionPlot x:Name="SpectrumSection" Margin="10,0,10,0" Grid.Row="1" ClipToBounds="True">
+			</local:SkiaSectionPlot>
+			<StackPanel Grid.Row="2" Orientation="Horizontal">
+				<CheckBox IsChecked="{Binding #SpectrumSection.RenderTemperatureProfile, Mode=TwoWay}"
+						  Click="OnShowTempProfileClick">Temperature</CheckBox>
+				<CheckBox IsChecked="{Binding #SpectrumSection.RenderGasRegions, Mode=TwoWay}"
+						  Click="OnShowGasRegionsClick">Gases</CheckBox>
+				<Button Background="#FABDA5" Button.Click="OnExportSectionClick"
+						IsEnabled="{Binding #SpectrumSection.AMUPresent}" x:Name="btnExportSection">
+					Export
+				</Button>
+				<Button Background="#ADE6B7" Button.Click="OnSectionAutoscaleYClick"
+						IsEnabled="{Binding #SpectrumSection.AMUPresent}">
+					Auto Y
+				</Button>
+				<Button Background="#ADE2E6" Button.Click="OnSectionAutoscaleXClick"
+						IsEnabled="{Binding #SpectrumSection.AMUPresent}">
+					Auto X
+				</Button>
+				<CheckBox x:Name="chkAutoX">Autoupdate X Scale</CheckBox>
+				<Label x:Name="lblSectionCoords" FontSize="16" DockPanel.Dock="Bottom" MinHeight="30"
+					   Margin="3">Coords...</Label>
+			</StackPanel>
+		</Grid>
+		<!--
+		<Expander ExpandDirection="Up" Grid.Row="3" Grid.Column="1" HorizontalContentAlignment="Stretch"
+				  VerticalContentAlignment="Stretch"
 				  IsExpanded="{Binding !#SpectrumSection.DisableRendering, Mode=TwoWay}" x:Name="SpectrumSectionExpander">
 			<Expander.Header>
 				<TextBlock>Single AMU Section</TextBlock>
@@ -125,41 +163,8 @@ Gradient</CheckBox>
 			<Expander.Resources>
 				<Thickness x:Key="ExpanderContentPadding">0</Thickness>
 			</Expander.Resources>
-			<DockPanel LastChildFill="True">
-				<DockPanel DockPanel.Dock="Top" LastChildFill="True">
-					<CheckBox x:Name="chkSnap" DockPanel.Dock="Right" Margin="10,0,10,0">0.1 AMU Ticks</CheckBox>
-					<TextBlock DockPanel.Dock="Left" Margin="10,10,0,10" FontSize="16">AMU: </TextBlock>
-					<TextBlock DockPanel.Dock="Left" Margin="5,10,10,10" FontSize="16"
-							   Text="{Binding #SectionAMUSlider.Value, Mode=OneWay, Converter={x:Static local:MainWindow.AMUStringValueConverter}}"></TextBlock>
-					<Slider SmallChange="0.1" LargeChange="1" DockPanel.Dock="Left" Minimum="1" Maximum="65"
-							Value="{Binding #SpectrumSection.AMU, Mode=TwoWay, Converter={x:Static local:MainWindow.AMURoundingValueConverter}}"
-							x:Name="SectionAMUSlider" TickFrequency="1" IsSnapToTickEnabled="{Binding !#chkSnap.IsChecked}"></Slider>
-				</DockPanel>
-				<StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal">
-					<CheckBox IsChecked="{Binding #SpectrumSection.RenderTemperatureProfile, Mode=TwoWay}"
-							  Click="OnShowTempProfileClick">Temperature</CheckBox>
-					<CheckBox IsChecked="{Binding #SpectrumSection.RenderGasRegions, Mode=TwoWay}"
-							  Click="OnShowGasRegionsClick">Gases</CheckBox>
-					<Button Background="#FABDA5" Button.Click="OnExportSectionClick"
-							IsEnabled="{Binding #SpectrumSection.AMUPresent}" x:Name="btnExportSection">
-						Export
-					</Button>
-					<Button Background="#ADE6B7" Button.Click="OnSectionAutoscaleYClick"
-							IsEnabled="{Binding #SpectrumSection.AMUPresent}">
-						Auto Y
-					</Button>
-					<Button Background="#ADE2E6" Button.Click="OnSectionAutoscaleXClick"
-							IsEnabled="{Binding #SpectrumSection.AMUPresent}">
-						Auto X
-					</Button>
-					<CheckBox x:Name="chkAutoX">Autoupdate X Scale</CheckBox>
-					<Label x:Name="lblSectionCoords" FontSize="16" DockPanel.Dock="Bottom" MinHeight="30"
-						   Margin="3">Coords...</Label>
-				</StackPanel>
-				<local:SkiaSectionPlot x:Name="SpectrumSection" MinHeight="200" Margin="10,0,10,0"
-									   DockPanel.Dock="Bottom">
-				</local:SkiaSectionPlot>
-			</DockPanel>
+			
 		</Expander>
+		-->
 	</Grid>
 </Window>

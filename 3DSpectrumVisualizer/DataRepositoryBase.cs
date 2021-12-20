@@ -39,9 +39,8 @@ namespace _3DSpectrumVisualizer
 
         #region Abstract
 
-        public abstract void LoadData();
-
         public abstract void Initialize();
+        protected abstract void LoadDataInternal();
 
         #endregion
 
@@ -103,6 +102,8 @@ namespace _3DSpectrumVisualizer
                 using TextWriter tw = new StreamWriter(path, false);
                 using CsvWriter cw = new CsvWriter(tw, ExportCsvConfig);
                 int len = repos.Max(x => x.Sections[amu].LinearPath.PointCount);
+                int[] tempIndex = new int[repos.Count];
+                List<int[]> sensorIndex = new List<int[]>(repos.Count);
                 foreach (var item in repos)
                 {
                     cw.WriteField(item.Location.Split(Path.DirectorySeparatorChar).LastOrDefault());
@@ -110,9 +111,13 @@ namespace _3DSpectrumVisualizer
                     cw.WriteField("Temperature");
                     cw.WriteField("UV");
                     cw.WriteField("Gas");
+                    for (int i = 0; i < item.SensorProfiles.Count; i++)
+                    {
+                        cw.WriteField($"Sensor{i}");
+                    }
+                    sensorIndex.Add(new int[item.SensorProfiles.Count]);
                 }
                 cw.NextRecord();
-                int[] tempIndex = new int[repos.Count];
                 for (int i = 0; i < len; i++)
                 {
                     try
@@ -127,17 +132,7 @@ namespace _3DSpectrumVisualizer
                                 cw.WriteField(p.X.ToString(Program.Config.ExportXFormat));
                                 cw.WriteField(p.Y.ToString(Program.Config.ExportYFormat));
                                 //Temperature
-                                string t = "";
-                                try
-                                {
-                                    if (item.TemperatureProfile[tempIndex[j]].X <= p.X)
-                                    {
-                                        while (item.TemperatureProfile[tempIndex[j]].X < p.X) tempIndex[j]++;
-                                        t = item.TemperatureProfile[tempIndex[j]].Y.ToString("F1");
-                                    }
-                                }
-                                catch (IndexOutOfRangeException)
-                                { }
+                                string t = FindProfilePoint(item.TemperatureProfile, p, ref tempIndex[j], "F1");
                                 cw.WriteField(t);
                                 //UV
                                 cw.WriteField(item.HitTestUVRegion(p.X) ?
@@ -145,10 +140,17 @@ namespace _3DSpectrumVisualizer
                                 //Gas
                                 t = item.HitTestGasRegion(p.X);
                                 cw.WriteField(t ?? "");
+                                //Sensors
+                                for (int k = 0; k < item.SensorProfiles.Count; k++)
+                                {
+                                    t = FindProfilePoint(item.TemperatureProfile, p, ref sensorIndex[j][k], "E3");
+                                    cw.WriteField(t);
+                                }
                             }
                             else
                             {
-                                for (int k = 0; k < 5; k++)
+                                int columns = 5 + item.SensorProfiles.Count;
+                                for (int k = 0; k < columns; k++)
                                 {
                                     cw.WriteField("");
                                 }
@@ -169,6 +171,22 @@ namespace _3DSpectrumVisualizer
                     Monitor.Exit(item.UpdateSynchronizingObject);
                 }
             }
+        }
+
+        private static string FindProfilePoint(SKPath profile, SKPoint p, ref int index, string format)
+        {
+            string t = "";
+            try
+            {
+                if (profile[index].X <= p.X)
+                {
+                    while (profile[index].X < p.X) index++;
+                    t = profile[index].Y.ToString(format);
+                }
+            }
+            catch (IndexOutOfRangeException)
+            { }
+            return t;
         }
 
         #endregion
@@ -248,9 +266,15 @@ namespace _3DSpectrumVisualizer
         public Dictionary<float, SpectrumSection> Sections { get; protected set; } = new Dictionary<float, SpectrumSection>();
 
         #endregion
-
+         
         #region Public Methods
 
+        public void LoadData()
+        {
+            LoadDataInternal();
+            LoadDataFinished();
+            RaiseDataAdded(this);
+        }
         public void RecalculateShader()
         {
             float min = LogarithmicIntensity ? MathF.Log10(PositiveMin) : Min;
@@ -346,6 +370,14 @@ namespace _3DSpectrumVisualizer
 
         #region Protected Methods
 
+        protected void LoadDataFinished()
+        {
+            var p = GasProfile.LastOrDefault();
+            if (p != null)
+            {
+                p.EndTimeOffset = (float)(EndTime - StartTime).TotalSeconds;
+            }
+        }
         protected IEnumerable<string> ReadLines(StreamReader r)
         {
             string line;

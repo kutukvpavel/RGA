@@ -65,7 +65,8 @@ namespace _3DSpectrumVisualizer
                         new SkiaSharp.SKPaint() { 
                             Color = x, 
                             StrokeWidth = dr.TemperaturePaint.StrokeWidth,
-                            IsAntialias = true
+                            IsAntialias = dr.TemperaturePaint.IsAntialias,
+                            Style = dr.TemperaturePaint.Style
                         }).ToArray();
                     if (Config.ColorSchemes.Count > i)
                     {
