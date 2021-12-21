@@ -230,7 +230,7 @@ namespace _3DSpectrumVisualizer
             ExportSectionButton.Background = Brushes.Gray;
             try
             {
-                await Task.Run(() => FolderDataRepository.ExportSections(Program.Repositories, SectionPlot.AMU, path));
+                await Task.Run(() => DataRepositoryBase.ExportSections(Program.Repositories, SectionPlot.AMU, path));
             }
             catch (Exception ex)
             {

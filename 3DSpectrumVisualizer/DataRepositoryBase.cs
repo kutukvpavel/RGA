@@ -143,7 +143,7 @@ namespace _3DSpectrumVisualizer
                                 //Sensors
                                 for (int k = 0; k < item.SensorProfiles.Count; k++)
                                 {
-                                    t = FindProfilePoint(item.TemperatureProfile, p, ref sensorIndex[j][k], "E3");
+                                    t = FindProfilePoint(item.SensorProfiles[k], p, ref sensorIndex[j][k], "E3");
                                     cw.WriteField(t);
                                 }
                             }
