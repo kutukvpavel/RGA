@@ -363,14 +363,17 @@ namespace _3DSpectrumVisualizer
                         var nonEmpty = Data.Select(x => x.SensorProfiles
                             .Where((y, i) => !y.IsEmpty && (i < ShowSensors.Count ? ShowSensors[i] : true)))
                             .Where(x => x.Any());
-                        var s = nonEmpty.Max(x => x.Max(y => y.Bounds.Height));
-                        if (s != 0)
+                        if (nonEmpty.Any())
                         {
-                            s = h * HeightReduction / s;
-                            canvas.Translate(0, 
-                                h + nonEmpty.Min(x => x.Min(y => y.Bounds.Top)) * s);
-                            canvas.Scale(XSc, -s);
-                            RenderSensorProfiles(canvas);
+                            var s = nonEmpty.Max(x => x.Max(y => y.Bounds.Height));
+                            if (s != 0)
+                            {
+                                s = h * HeightReduction / s;
+                                canvas.Translate(0,
+                                    h + nonEmpty.Min(x => x.Min(y => y.Bounds.Top)) * s);
+                                canvas.Scale(XSc, -s);
+                                RenderSensorProfiles(canvas);
+                            }
                         }
                     }
                     catch (Exception ex)
