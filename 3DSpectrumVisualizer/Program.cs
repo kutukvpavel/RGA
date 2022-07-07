@@ -37,6 +37,7 @@ namespace _3DSpectrumVisualizer
         public static void AppMain(Application app, string[] args)
         {
             Configuration.LogException += LogException;
+            if (args.Length == 0) args = new string[] { Environment.CurrentDirectory };
             string singleRepo = args.Length == 1 ? args[0] : null;
             Config = Configuration.Load(singleRepo);
             InitStaticSettings();

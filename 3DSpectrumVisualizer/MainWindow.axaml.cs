@@ -45,7 +45,8 @@ namespace _3DSpectrumVisualizer
                 Spectrum3D.Background = Program.Config.SpectraBackground;
                 Spectrum3D.TimeAxisInterval = Program.Config.LastTimeAxisInterval;
                 Spectrum3D.FastMode = Program.Config.FastMode;
-                Last3DCoords = Program.Config.Last3DCoords;
+                LastViewCoords.Add(ViewStates._3D, Program.Config.Last3DCoords);
+                Load3DCords(ViewStates._3D);
                 OnRestore3DViewClick(this, null);
                 this.FindControl<Expander>("expLeft").IsExpanded = Program.Config.LeftPanelVisible;
             };
@@ -60,13 +61,21 @@ namespace _3DSpectrumVisualizer
                 Program.Config.SpectraBackground = Spectrum3D.Background;
                 Program.Config.FastMode = Spectrum3D.FastMode;
                 Save3DCoords();
-                Program.Config.Last3DCoords = Last3DCoords;
+                Program.Config.Last3DCoords = LastViewCoords[ViewStates._3D];
                 Program.Config.LeftPanelVisible = this.FindControl<Expander>("expLeft").IsExpanded;
             };
         }
 
         #region Private
 
+        private enum ViewStates
+        {
+            _3D,
+            Top,
+            Front
+        }
+
+        private Dictionary<ViewStates, float[]> LastViewCoords = new Dictionary<ViewStates, float[]>();
         private int ExportSectionReentrancyTracker = 0;
         private Button ExportSectionButton;
         private Skia3DSpectrum Spectrum3D;
@@ -74,14 +83,13 @@ namespace _3DSpectrumVisualizer
         private Label GLLabel;
         private Label CoordsLabel;
         private ListBox LstColors;
-        private bool ViewStateTop = false;
+        private ViewStates ViewState = ViewStates._3D;
         private Slider LightEmulation;
         private SkiaSectionPlot SectionPlot;
         private Label SectionCoords;
         private Slider SectionAMUSlider;
         private CheckBox HorizontalGradient;
         private Label LoadingLabel;
-        private float[] Last3DCoords;
         private CheckBox AutoupdateXScaleCheckbox;
         private Slider ColorPositionSlider;
         private Slider HideFirstSlider;
@@ -124,7 +132,8 @@ namespace _3DSpectrumVisualizer
 
         private void Save3DCoords()
         {
-            Last3DCoords = new float[] {
+            if (!LastViewCoords.ContainsKey(ViewState)) LastViewCoords.Add(ViewState, null);
+            LastViewCoords[ViewState] = new float[] {
                     Spectrum3D.XTranslate,
                     Spectrum3D.YTranslate,
                     Spectrum3D.XRotate,
@@ -136,6 +145,65 @@ namespace _3DSpectrumVisualizer
                 };
         }
 
+        private bool Load3DCords(ViewStates vs)
+        {
+            if (!LastViewCoords.ContainsKey(vs)) return false;
+            Spectrum3D.XTranslate = LastViewCoords[vs][0];
+            Spectrum3D.YTranslate = LastViewCoords[vs][1];
+            Spectrum3D.XRotate = LastViewCoords[vs][2];
+            Spectrum3D.YRotate = LastViewCoords[vs][3];
+            Spectrum3D.ZRotate = LastViewCoords[vs][4];
+            Spectrum3D.ScalingFactor = LastViewCoords[vs][5];
+            Spectrum3D.ZScalingFactor = LastViewCoords[vs][6];
+            Spectrum3D.ScanSpacing = LastViewCoords[vs][7];
+            return true;
+        }
+
+        private void SetUpFrontView()
+        {
+            float max = Program.Repositories.Max(x => x.Max);
+            float min;
+            float extraY = 0;
+            if (Program.Repositories.Any(x => x.LogarithmicIntensity))
+            {
+                max = MathF.Log10(max);
+                min = MathF.Log10(Program.Repositories.Min(x => x.PositiveMin));
+            }
+            else
+            {
+                extraY = Spectrum3D.FontPaint.TextSize;
+                min = Program.Repositories.Min(x => x.Min);
+            }
+            if (min < -extraY) extraY = extraY / 3;
+            float shiftX = Spectrum3D.FontPaint.TextSize * Spectrum3D.FontPaint.TextScaleX;
+            Spectrum3D.XRotate = 0;
+            Spectrum3D.YRotate = 0;
+            Spectrum3D.ZRotate = 0;
+            Spectrum3D.ScalingFactor = (float)Spectrum3D.Bounds.Width /
+                (Program.Repositories.Max(x => x.Right - x.Left) + shiftX);
+            extraY *= Spectrum3D.ScalingFactor;
+            Spectrum3D.XTranslate = -shiftX * Spectrum3D.ScalingFactor;
+            Spectrum3D.ScanSpacing = float.Epsilon;
+            Spectrum3D.ZScalingFactor = ((float)Spectrum3D.Bounds.Height - extraY) / (max - min) / Spectrum3D.ScalingFactor;
+            Spectrum3D.YTranslate = (max + min) / 2 * Spectrum3D.ZScalingFactor * Spectrum3D.ScalingFactor - extraY;
+        }
+
+        private void SetUpTopView()
+        {
+            float shiftX = Spectrum3D.FontPaint.TextSize * Spectrum3D.FontPaint.TextScaleX * 10;
+            float extraY = Spectrum3D.FontPaint.TextSize * 6;
+            Spectrum3D.XRotate = 90;
+            Spectrum3D.YRotate = 0;
+            Spectrum3D.ZRotate = 0;
+            Spectrum3D.XTranslate = -shiftX * 8;
+            Spectrum3D.YTranslate = 0;
+            Spectrum3D.ScalingFactor = (float)Spectrum3D.Bounds.Width /
+                (Program.Repositories.Max(x => x.Right - x.Left) + shiftX);
+            Spectrum3D.ScanSpacing = (float)(Spectrum3D.Bounds.Height - extraY * Spectrum3D.ScalingFactor) /
+                (Program.Repositories.Max(x => x.Duration) * Spectrum3D.ScalingFactor);
+            Spectrum3D.ZScalingFactor = Skia3DSpectrum.ScalingLowerLimit;
+        }
+
         #endregion
 
         #region Public Methods
@@ -145,12 +213,14 @@ namespace _3DSpectrumVisualizer
             Dispatcher.UIThread.InvokeAsync(() =>
             {
                 LoadingLabel.Background = Brushes.Yellow;
-                Title = $"{Title}: ";
+                string appTitle = Title;
+                Title = "";
                 foreach (var item in Program.Repositories)
                 {
                     Title += $"{item.Location.Split(Path.DirectorySeparatorChar).LastOrDefault()}, ";
                 }
                 Title = Title.Remove(Title.Length - 2, 2);
+                Title += $"\t--- {appTitle}";
             });
         }
 
@@ -161,6 +231,8 @@ namespace _3DSpectrumVisualizer
                 bool allLog = Program.Repositories.All(x => x.LogarithmicIntensity);
                 bool allLin = Program.Repositories.All(x => !x.LogarithmicIntensity);
                 LogarithmicIntensity.IsChecked = (allLog ^ allLin) ? (bool?)allLog : null;
+                SectionAMUSlider.Maximum = Program.Repositories.Max(x => x.Right);
+                SectionAMUSlider.Minimum = Program.Repositories.Min(x => x.Left);
                 SectionPlot.AMU = Program.Config.LastAMUSection;
                 SectionPlot.AutoscaleX(false);
                 SectionPlot.AutoscaleYForAllSections();
@@ -400,7 +472,7 @@ namespace _3DSpectrumVisualizer
 
         private void Spectrum3D_PointerPressed(object sender, PointerPressedEventArgs e)
         {
-            if (e.GetCurrentPoint(null).Properties.IsRightButtonPressed) ViewStateTop = false;
+            if (e.GetCurrentPoint(null).Properties.IsRightButtonPressed) ViewState = ViewStates._3D;
         }
 
         private void OnRenderChecked(object sender, RoutedEventArgs e)
@@ -427,7 +499,6 @@ namespace _3DSpectrumVisualizer
                 }
             }
         }
-
         private void OnSectionAutoscaleXClick(object sender, RoutedEventArgs e)
         {
             SectionPlot.AutoscaleX();
@@ -440,36 +511,42 @@ namespace _3DSpectrumVisualizer
 
         private void OnRestore3DViewClick(object sender, RoutedEventArgs e)
         {
-            Spectrum3D.XTranslate = Last3DCoords[0];
-            Spectrum3D.YTranslate = Last3DCoords[1];
-            Spectrum3D.XRotate = Last3DCoords[2];
-            Spectrum3D.YRotate = Last3DCoords[3];
-            Spectrum3D.ZRotate = Last3DCoords[4];
-            Spectrum3D.ScalingFactor = Last3DCoords[5];
-            Spectrum3D.ZScalingFactor = Last3DCoords[6];
-            Spectrum3D.ScanSpacing = Last3DCoords[7];
+            Save3DCoords();
+            Load3DCords(ViewStates._3D);
             Spectrum3D.InvalidateVisual();
-            ViewStateTop = false;
+            ViewState = ViewStates._3D;
         }
 
         private void OnTopViewClick(object sender, RoutedEventArgs e)
         {
-            if (!ViewStateTop) Save3DCoords();
             if (!Program.Repositories.Any()) return;
-            float shiftX = Spectrum3D.FontPaint.TextSize * Spectrum3D.FontPaint.TextScaleX * 10;
-            float extraY = Spectrum3D.FontPaint.TextSize * 6;
-            Spectrum3D.XRotate = 90;
-            Spectrum3D.YRotate = 0;
-            Spectrum3D.ZRotate = 0;
-            Spectrum3D.XTranslate = -shiftX * 8;
-            Spectrum3D.YTranslate = 0;
-            Spectrum3D.ScalingFactor = (float)Spectrum3D.Bounds.Width / 
-                (Program.Repositories.Max(x => x.Right - x.Left) + shiftX);
-            Spectrum3D.ScanSpacing = (float)(Spectrum3D.Bounds.Height - extraY * Spectrum3D.ScalingFactor) / 
-                (Program.Repositories.Max(x => x.Duration) * Spectrum3D.ScalingFactor);
-            Spectrum3D.ZScalingFactor = Skia3DSpectrum.ScalingLowerLimit;
+            Save3DCoords();
+            if (ViewState != ViewStates.Top)
+            {
+                if (!Load3DCords(ViewStates.Top)) SetUpTopView();
+            }
+            else
+            {
+                SetUpTopView();
+            }
             Spectrum3D.InvalidateVisual();
-            ViewStateTop = true;
+            ViewState = ViewStates.Top;
+        }
+
+        private void OnFrontViewClick(object sender, RoutedEventArgs e)
+        {
+            if (!Program.Repositories.Any()) return;
+            Save3DCoords();
+            if (ViewState != ViewStates.Front)
+            {
+                if (!Load3DCords(ViewStates.Front)) SetUpFrontView();
+            }
+            else
+            {
+                SetUpFrontView();
+            }
+            Spectrum3D.InvalidateVisual();
+            ViewState = ViewStates.Front;
         }
 
         #endregion

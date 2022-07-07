@@ -103,6 +103,7 @@ Gradient</CheckBox>
 			<Slider x:Name="sldHideEnd" Minimum="0" Maximum="1" SmallChange="0.01" Width="100"
 					Value="{Binding #Spectrum3D.HideLastPercentOfResults, Mode=TwoWay}"></Slider>
 			<Button Content="Top View" Background="LightBlue" Button.Click="OnTopViewClick"></Button>
+			<Button Content="Front View" Background="LightBlue" Button.Click="OnFrontViewClick"></Button>
 			<Button Content="3D View" Background="LightGreen" Button.Click="OnRestore3DViewClick"></Button>
 			<Button IsVisible="False" Content="Dump Data" Button.Click="OnDumpDataClick"></Button>
 			<CheckBox x:Name="chkLog10" IsThreeState="True">Log10</CheckBox>
