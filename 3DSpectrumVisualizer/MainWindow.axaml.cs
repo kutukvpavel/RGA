@@ -220,7 +220,7 @@ namespace _3DSpectrumVisualizer
                     Title += $"{item.Location.Split(Path.DirectorySeparatorChar).LastOrDefault()}, ";
                 }
                 Title = Title.Remove(Title.Length - 2, 2);
-                Title += $"\t--- {appTitle}";
+                Title += $"  --- {appTitle}";
             });
         }
 
