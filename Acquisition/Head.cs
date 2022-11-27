@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Linq;
 using Timer = System.Timers.Timer;
+using System.Threading.Tasks;
 
 namespace Acquisition
 {
@@ -37,7 +38,7 @@ namespace Acquisition
         public event EventHandler ScanCompleted;
         public object SynchronizingObject { get; } = new object();
 
-        public Head(Port port)
+        public Head(Port port, int scanTimeout)
         {
             CommunicationPort = port;
             CommunicationPort.SerialPort.ReceivedBytesThreshold = 2;
@@ -48,6 +49,7 @@ namespace Acquisition
             CommunicationPort.BytesReceived += CommunicationPort_BytesReceived;
             CommunicationPort.CommandTransmitted += (s, e) => { TerminalLog?.Invoke(s, e); };
             CommunicationPort.SerialPort.Open();
+            _ScanTimeoutTimer.Interval = scanTimeout;
             _ScanTimeoutTimer.Elapsed += ScanTimeoutTimer_Elapsed;
         }
 
@@ -91,17 +93,37 @@ namespace Acquisition
             {
                 try
                 {
-                    ExceptionLog?.BeginInvoke(this, new ExceptionEventArgs(new TimeoutException("Scan timeout."),
-                        $@"Current buffered bytes: {string.Join(' ', _ScanBuffer.Select(x => x.ToString("X2")))};
+                    try
+                    {
+                        var eea = new ExceptionEventArgs(new TimeoutException("Scan timeout."),
+                            $@"Current buffered bytes: {string.Join(' ', _ScanBuffer.Select(x => x.ToString("X2")))};
 Current resuslts: {string.Join(' ', _ScanResult.Select(x => x.ToString()))};
 Scan points: expected {TotalScanPoints}, current {_ScanResult.Count};
 Port queue length: {CommunicationPort.SerialPort.BytesToRead} in, {CommunicationPort.SerialPort.BytesToWrite} out."
-                        ), null, null);
+                        );
+                        Task.Run(() =>
+                        {
+                            ExceptionLog?.Invoke(this, eea);
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        ExceptionLog?.Invoke(this, new ExceptionEventArgs(ex, "Unable to save scan timeout log"));
+                    }
+
                     CommunicationPort.DiscardBuffers();
-                    
                     _ScanBuffer.Clear();
                     _ScanResult.Clear();
                     State = HeadState.ReadyToScan;
+                }
+                catch (Exception ex)
+                {
+                    try
+                    {
+                        ExceptionLog?.Invoke(this, new ExceptionEventArgs(ex, "Scan timeout handler emergency log"));
+                    }
+                    catch (Exception)
+                    { }
                 }
                 finally
                 {
@@ -159,15 +181,16 @@ Port queue length: {CommunicationPort.SerialPort.BytesToRead} in, {Communication
                 }
                 if (scanFinished)
                 {
-                    //Not really a good solution to the concurrency problem:
-                    //This handler seems to run on a separate thread, and setting State to ReadyToScan
-                    //before ScanCompleted handler was executed sometimes caused a race conditon
-                    //between ScanCompleted handler and AcquisitonMain 
-                    //(that switched pointers to averaging buffers when the gap is used, causing container mixup and NaNs)
-                    //
-                    //TODO: probably get rid of container switching altogether by making the containers AMU-aware
-                    //or use locks??
                     _ScanTimeoutTimer.Stop();
+                    /**
+                     * This handles synchronously copies current MovingAverage data,
+                     * therefore AppMain can safely swap Gap buffers after this line.
+                     * This handler also spawns two separate threads for IO operations,
+                     * that run asynchronously.
+                     * First one copies a reference to Device.LastScanResult,
+                     * therefore Device can safely update that property.
+                     * Second one uses a deep copy of MovingAverage data.
+                     */
                     ScanCompleted?.Invoke(this, new EventArgs());
                     State = HeadState.ReadyToScan;
                 }

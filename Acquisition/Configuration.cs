@@ -46,5 +46,6 @@ namespace Acquisition
         public bool LogTerminalCommunication { get; set; } = false;
         public int NoiseFloorSetting { get; set; } = 3;
         public int WriterThreadLimit { get; set; } = 12;
+        public int ScanTimeout { get; set; } = 30000;
     }
 }

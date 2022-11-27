@@ -223,7 +223,7 @@ namespace Acquisition
 
         private static void InitDevice(string port)
         {
-            Device = new Head(new Port(new RJCP.IO.Ports.SerialPortStream(port)));
+            Device = new Head(new Port(new RJCP.IO.Ports.SerialPortStream(port)), Config.ScanTimeout);
             if (Config.LogTerminalCommunication) Device.TerminalLog += (s, t) => Log(t);
             else Device.TerminalLog += (s, t) => Console.WriteLine(t);
             Device.ScanCompleted += Device_ScanCompleted;
@@ -232,6 +232,7 @@ namespace Acquisition
 
         private static void Device_ScanCompleted(object sender, EventArgs e)
         {
+            var lastScanResult = Device.LastScanResult; //Copies a reference, intended
             Console.WriteLine("\nScan completed.");
             double increment = 1.0 / Device.PointsPerAMU;
             var now = string.Format(Config.FileNameFormat, DateTime.Now);
@@ -246,10 +247,10 @@ namespace Acquisition
                     cw.NextRecord();
                     cw.NextRecord();
                     double x = Device.StartAMU;
-                    for (int i = 0; i < Device.LastScanResult.Length; i++)
+                    for (int i = 0; i < lastScanResult.Length; i++)
                     {
                         cw.WriteField(x.ToString(Config.AMUFormat, CultureInfo.InvariantCulture));
-                        cw.WriteField(Device.LastScanResult[i].ToString(Config.IntensityFormat, CultureInfo.InvariantCulture));
+                        cw.WriteField(lastScanResult[i].ToString(Config.IntensityFormat, CultureInfo.InvariantCulture));
                         x += increment;
                         cw.NextRecord();
                     }
@@ -260,13 +261,13 @@ namespace Acquisition
                 }
             });
             t.Start();
-            //Calculate derived data
+            //Calculate derived data (this section runs sychronously)
             IEnumerable<double> y;
             try
             {
-                Average.Enqueue(Device.LastScanResult);
-                var a = Average.CurrentAverage;
-                if (a.Length != Device.LastScanResult.Length)
+                Average.Enqueue(lastScanResult);
+                var a = Average.CurrentAverage; //Returns a deep copy
+                if (a.Length != lastScanResult.Length)
                 {
                     Log("Improper action of MovingAveragingContainer detected: output array length is not equal to the input array length.");
                     return;
