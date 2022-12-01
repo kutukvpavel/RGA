@@ -2,7 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-		xmlns:dialog="clr-namespace:Egorozh.ColorPicker.Dialog;assembly=Egorozh.ColorPicker.Avalonia.Dialog"
+		xmlns:colorpicker="clr-namespace:AvaloniaColorPicker;assembly=AvaloniaColorPicker"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="AvaloniaDebugHelper.MainWindow"
         Title="AvaloniaDebugHelper">
@@ -10,6 +10,6 @@
 		<ListBox MaxHeight="100" MaxWidth="100">
 			<ListBoxItem>Test</ListBoxItem>
 		</ListBox>
-		<dialog:ColorPickerButton MinHeight="50" MinWidth="50" Cursor="Hand" Color="Black">Edit Color</dialog:ColorPickerButton>
+		<colorpicker:ColorButton MinHeight="50" MinWidth="50" Cursor="Hand" Color="Black">Edit Color</colorpicker:ColorButton>
 	</StackPanel>
 </Window>

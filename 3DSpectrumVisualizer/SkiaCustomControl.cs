@@ -6,7 +6,6 @@ using Avalonia.Platform;
 using Avalonia.Rendering.SceneGraph;
 using Avalonia.Skia;
 using Avalonia.Threading;
-using Avalonia.VisualTree;
 using SkiaSharp;
 using System;
 using System.Threading;
@@ -99,11 +98,7 @@ namespace _3DSpectrumVisualizer
 
             public bool HitTest(Point p)
             {
-                if (_Parent.TransformedBounds == null) return false;
-                var pp = _Parent.GetVisualRoot().PointToScreen(p);
-                var br =_Parent.PointToScreen(_Parent.TransformedBounds.Value.Clip.BottomRight);
-                var tl = _Parent.PointToScreen(_Parent.TransformedBounds.Value.Clip.TopLeft);
-                return (tl.X < pp.X) && (pp.X < br.X) && (tl.Y < pp.Y) && (pp.Y < br.Y);
+                return true;
             }
 
             public void Render(IDrawingContextImpl context)

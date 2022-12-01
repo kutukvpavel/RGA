@@ -130,7 +130,7 @@ Gradient</CheckBox>
 						Value="{Binding #SpectrumSection.AMU, Mode=TwoWay, Converter={x:Static local:MainWindow.AMURoundingValueConverter}}"
 						x:Name="SectionAMUSlider" TickFrequency="1" IsSnapToTickEnabled="{Binding !#chkSnap.IsChecked}"></Slider>
 			</DockPanel>
-			<local:SkiaSectionPlot x:Name="SpectrumSection" Margin="10,0,10,0" Grid.Row="1" ClipToBounds="True">
+			<local:SkiaSectionPlot x:Name="SpectrumSection" Margin="10,0,10,0" Grid.Row="1" >
 			</local:SkiaSectionPlot>
 			<StackPanel Grid.Row="2" Orientation="Horizontal">
 				<CheckBox IsChecked="{Binding #SpectrumSection.RenderTemperatureProfile, Mode=TwoWay}"

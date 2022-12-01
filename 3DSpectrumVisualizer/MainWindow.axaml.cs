@@ -416,7 +416,7 @@ namespace _3DSpectrumVisualizer
 
         private void OnHorizontalGradientChecked(object sender, RoutedEventArgs e)
         {
-            FolderDataRepository.UseHorizontalGradient = (bool)HorizontalGradient.IsChecked;
+            DataRepositoryBase.UseHorizontalGradient = (bool)HorizontalGradient.IsChecked;
             foreach (var item in Program.Repositories)
             {
                 item.RecalculateShader();
@@ -434,6 +434,17 @@ namespace _3DSpectrumVisualizer
                 item.LogarithmicIntensity = c;
                 item.RecalculateShader();
             }
+            float scaleFactor = Program.Repositories.Max(x => x.Max) - Program.Repositories.Min(x => x.PositiveMin);
+            scaleFactor = c ? (scaleFactor / MathF.Log10(scaleFactor)) : (MathF.Log10(scaleFactor) / scaleFactor);
+            if (float.IsFinite(scaleFactor))
+            {
+                Spectrum3D.ZScalingFactor *= scaleFactor;
+                SectionPlot.YScaling *= scaleFactor;
+            }
+            else
+            {
+                Program.LogInfo(this, $"Log/lin rescaling failed, multiplier: {scaleFactor}");
+            }
             Spectrum3D.InvalidateVisual();
             SectionPlot.InvalidateVisual();
         }
@@ -446,7 +457,7 @@ namespace _3DSpectrumVisualizer
                 if (e.NewValue == null || !e.IsEffectiveValueChange) return;
                 try
                 {
-                    FolderDataRepository.LightGradient[1] = FolderDataRepository.LightGradient[1].WithAlpha((byte)(double)e.NewValue);
+                    DataRepositoryBase.LightGradient[1] = DataRepositoryBase.LightGradient[1].WithAlpha((byte)(double)e.NewValue);
                     foreach (var item in Program.Repositories)
                     {
                         item.RecalculateShader();

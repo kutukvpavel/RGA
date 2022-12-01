@@ -55,7 +55,14 @@ namespace _3DSpectrumVisualizer
         public float ScalingFactor
         {
             get => _ScalingFactor;
-            set { if (value >= ScalingLowerLimit) _ScalingFactor = value; }
+            set 
+            {
+                if (value >= ScalingLowerLimit)
+                {
+                    _ScalingFactor = value;
+                    RaiseCoordsChanged();
+                }
+            }
         }
         public float XTranslate { get; set; } = 10;
         public float YTranslate { get; set; } = 10;
@@ -87,13 +94,27 @@ namespace _3DSpectrumVisualizer
         public float ZScalingFactor
         {
             get => _ZScalingFactor;
-            set { if (value >= ScalingLowerLimit) _ZScalingFactor = value; }
+            set 
+            {
+                if (value >= ScalingLowerLimit)
+                {
+                    _ZScalingFactor = value;
+                    RaiseCoordsChanged();
+                }
+            }
         }
         private float _ScanSpacing = 0.1f;
         public float ScanSpacing
         {
             get => _ScanSpacing;
-            set { if (value > 0) _ScanSpacing = value; }
+            set 
+            {
+                if (value > 0)
+                {
+                    _ScanSpacing = value;
+                    RaiseCoordsChanged();
+                }
+            }
         }
         private bool _FastMode = false;
         public bool FastMode
