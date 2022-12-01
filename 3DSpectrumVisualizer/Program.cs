@@ -4,6 +4,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using LLibrary;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -132,6 +133,13 @@ namespace _3DSpectrumVisualizer
         public static void LogInfo(object s, string i)
         {
             Log.Info($"Info from object '{s?.GetType()?.FullName ?? "null/static"}': {i}");
+        }
+
+        public static void LogMemoryFootprint()
+        {
+            Log.Debug(
+                $"Memory usage: managed = {GC.GetTotalMemory(false)}, total = {Process.GetCurrentProcess().VirtualMemorySize64}"
+                );
         }
     }
 }

@@ -247,6 +247,7 @@ namespace _3DSpectrumVisualizer
             if (AutoupdateXScaleCheckbox.IsChecked == true) SectionPlot.AutoscaleX(false);
             Spectrum3D.InvalidateVisual();
             SectionPlot.InvalidateVisual();
+            Program.LogMemoryFootprint();
         }
 
         #endregion
