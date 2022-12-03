@@ -191,7 +191,7 @@ namespace _3DSpectrumVisualizer
 
         private void Skia3DSpectrum_PointerWheelChanged(object sender, PointerWheelEventArgs e)
         {
-            var delta = (float)e.Delta.Y / 10;
+            var delta = (float)(e.Delta.Y != 0 ? e.Delta.Y : e.Delta.X) / 10;
             if (e.KeyModifiers.HasFlag(KeyModifiers.Control))
                 ZScalingFactor += ZScalingFactor * delta;
             else if (e.KeyModifiers.HasFlag(KeyModifiers.Shift))

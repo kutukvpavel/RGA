@@ -248,7 +248,7 @@ namespace _3DSpectrumVisualizer
         {
             var point = e.GetCurrentPoint(this);
             var pos = point.Position;
-            var delta = (float)e.Delta.Y / 10;
+            var delta = (float)(e.Delta.Y != 0 ? e.Delta.Y : e.Delta.X) / 10;
             float correction;
             if (!e.KeyModifiers.HasFlag(KeyModifiers.Shift))
             {
