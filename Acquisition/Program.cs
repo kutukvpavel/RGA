@@ -143,12 +143,20 @@ namespace Acquisition
             string searchPattern = null;
             try
             {
-                if (Directory.Exists(args[1])) target = args[1];
+                if (Directory.Exists(args[1]))
+                {
+                    target = args[1];
+                }
+                Console.WriteLine($"Will be saving into: {target}");
                 searchPattern = args[2];
+            }
+            catch (IndexOutOfRangeException)
+            {
+                Log("Using default restore folder.", null);
             }
             catch (Exception ex)
             {
-                Log("Using default restore folder.", ex);
+                Log("Using default restore folder due to an error.", ex);
             }
             if (target == null) target = BackupRestore.BackupData.DefaultRestoreLocation;
             if (searchPattern == null) searchPattern = "*.csv";

@@ -12,12 +12,13 @@ namespace Acquisition.BackupRestore
 {
     public class BackupData
     {
-        public const string DefaultRestoreLocation = @"..\restored";
+        public static readonly string DefaultRestoreLocation = @$"..{Path.DirectorySeparatorChar}restored";
 
         public BackupData(string path)
         {
-            if (!Directory.Exists(path)) throw new DirectoryNotFoundException("Backup directory can not be found.");
+            if (!Directory.Exists(path)) throw new DirectoryNotFoundException($"Backup directory '{path}' can not be found.");
             FolderPath = path;
+            Sensor.LogException += Sensor_LogException;
         }
 
         public event EventHandler<ExceptionEventArgs> LogException;
@@ -61,7 +62,7 @@ namespace Acquisition.BackupRestore
             }
             catch (Exception ex)
             {
-                LogException?.Invoke(this, new ExceptionEventArgs(ex, "Failed to parse a SENSOR backup file."));
+                LogException?.Invoke(this, new ExceptionEventArgs(ex, "Failed to get SENSOR backup files."));
             }
         }
 
@@ -133,7 +134,7 @@ namespace Acquisition.BackupRestore
             {
                 try
                 {
-                    var sensorFilePath = Path.GetFullPath(targetFolder + $".\\info\\Sensor{item.Key}.csv");
+                    var sensorFilePath = Path.Combine(targetFolder, $"info{Path.DirectorySeparatorChar}Sensor{item.Key}.txt");
                     string dir = Path.GetDirectoryName(sensorFilePath);
                     if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
                     using var sensorFile = File.CreateText(sensorFilePath);
@@ -159,11 +160,23 @@ namespace Acquisition.BackupRestore
             ts = new string(ts.Select((x, i) => i > timeIndex ? (x == '-' ? ':' : x) : x).ToArray()); //Replace dashes with colons for time string
             return DateTime.Parse(ts, CultureInfo.InvariantCulture);
         }
+
+        private void Sensor_LogException(object sender, ExceptionEventArgs e)
+        {
+            LogException?.Invoke(this, e);
+        }
     }
 
     public abstract class Sensor
     {
+        public static event EventHandler<ExceptionEventArgs> LogException;
+
         public SortedList<DateTime, double> Data { get; protected set; }
+
+        protected static void RaiseLogException(object sender, Exception ex, string message = null)
+        {
+            LogException?.Invoke(sender, new ExceptionEventArgs(ex, message));
+        }
     }
     public class GpibSensor : Sensor
     {
@@ -176,8 +189,7 @@ namespace Acquisition.BackupRestore
         private void Parse(string path)
         {
             var lines = File.ReadLines(path);
-            lines.Skip(1);
-            Exception lastException = null;
+            lines = lines.Skip(1);
             foreach (var item in lines)
             {
                 try
@@ -186,15 +198,10 @@ namespace Acquisition.BackupRestore
                     DateTime dateTime = DateTime.Parse(halves[0], CultureInfo.InvariantCulture);
                     string[] values = halves[1].Split(',');
                     Data.Add(dateTime, double.Parse(values[1], NumberStyles.Float | NumberStyles.AllowLeadingSign));
-                    lastException = null;
                 }
                 catch (Exception ex)
                 {
-                    if (lastException == null || lastException?.GetType() != ex.GetType())
-                    {
-                        Console.WriteLine($"Failed to parse sensor data line: {ex.Message}");
-                    }
-                    lastException = ex;
+                    RaiseLogException(this, ex, "Failed to parse sensor data line.");
                 }
             }
         }
