@@ -47,5 +47,6 @@ namespace Acquisition
         public int NoiseFloorSetting { get; set; } = 3;
         public int WriterThreadLimit { get; set; } = 12;
         public int ScanTimeout { get; set; } = 30000;
+        public string GpibPipeName { get; set; } = "GPIBServer_Broadcast_Pipe";
     }
 }

@@ -12,7 +12,7 @@ namespace Acquisition
 {
     public class Program
     {
-        private const string BackupRestoreKey = "-restore";
+        private const string BackupRestoreKey = "--restore";
 
         private static bool CancellationRequested = false;
         private static string StartAMU = "1";
@@ -82,7 +82,7 @@ namespace Acquisition
             CommandSet.SetNoiseFloor.Parameter = Config.NoiseFloorSetting.ToString();
             InitBackgroundRemoval();
             InitDevice(args[0]);
-            InitPipe(Config.LabPidPipeName, Config.MgaPipeName);
+            InitPipe(Config.LabPidPipeName, Config.MgaPipeName, Config.GpibPipeName);
             VerifyDirectoryExists(Configuration.WorkingDirectory);
             VerifyDirectoryExists(Configuration.WorkingDirectory, Config.BackupSubfolderName);
             VerifyDirectoryExists(Configuration.WorkingDirectory, Config.InfoSubfolderName);
@@ -326,7 +326,7 @@ namespace Acquisition
 
         #region Temperature, Gases and Sensors
 
-        private static void InitPipe(string labPidName, string mgaName)
+        private static void InitPipe(string labPidName, string mgaName, string gpibPipe)
         {
             NamedPipeService.GasGpioOffset = Config.GasGpioOffset;
             NamedPipeService.GasPriority = Config.GasPriority;
@@ -339,7 +339,8 @@ namespace Acquisition
             Pipe.UVStateReceived += Pipe_UVStateReceived;
             Pipe.GasStateReceived += Pipe_GasStateReceived;
             Pipe.MgaPacketReceived += Pipe_MgaPacketReceived;
-            Pipe.Initialize(labPidName, mgaName);
+            Pipe.GpibPacketReceived += Pipe_GpibPacketReceived;
+            Pipe.Initialize(labPidName, mgaName, gpibPipe);
         }
 
         private static string _LastGas = string.Empty;
@@ -371,6 +372,11 @@ namespace Acquisition
         {
             AppendLine(string.Format(Config.SensorFileName, e.SensorIndex), 
                 e.Conductance.ToString(Config.SensorNumberFormat, CultureInfo.InvariantCulture));
+        }
+        private static void Pipe_GpibPacketReceived(object sender, GpibPacket e)
+        {
+            AppendLine(string.Format(Config.SensorFileName, 0), 
+                e.Current.ToString(Config.SensorNumberFormat, CultureInfo.InvariantCulture));
         }
 
         private static List<Task> _PendingTasks = new List<Task>();
