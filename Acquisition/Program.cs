@@ -162,10 +162,8 @@ namespace Acquisition
             if (searchPattern == null) searchPattern = "*.csv";
             Console.WriteLine("Loading backup data...");
             BackupRestore.BackupData backupData = new BackupRestore.BackupData(
-                Path.Combine(Configuration.WorkingDirectory, Config.BackupSubfolderName))
-            {
-                CsvConfig = Configuration.CsvConfig
-            };
+                Path.Combine(Configuration.WorkingDirectory, Config.BackupSubfolderName),
+                Config);
             backupData.LogException += (s, e) => Log(e.LogString);
             backupData.Load(searchPattern);
             Console.WriteLine("Restoring...");

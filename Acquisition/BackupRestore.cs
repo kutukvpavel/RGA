@@ -14,11 +14,12 @@ namespace Acquisition.BackupRestore
     {
         public static readonly string DefaultRestoreLocation = @$"..{Path.DirectorySeparatorChar}restored";
 
-        public BackupData(string path)
+        public BackupData(string path, Configuration cfg)
         {
             if (!Directory.Exists(path)) throw new DirectoryNotFoundException($"Backup directory '{path}' can not be found.");
             FolderPath = path;
             Sensor.LogException += Sensor_LogException;
+            _Config = cfg;
         }
 
         public event EventHandler<ExceptionEventArgs> LogException;
@@ -26,7 +27,6 @@ namespace Acquisition.BackupRestore
         public string FolderPath { get; }
         public SortedList<DateTime, Spectrum> Spectra { get; private set; }
         public SortedList<int, Sensor> Sensors { get; private set; }
-        public CsvConfiguration CsvConfig { get; set; } = new CsvConfiguration(CultureInfo.InvariantCulture);
 
         public void Load(string searchPattern)
         {
@@ -37,7 +37,7 @@ namespace Acquisition.BackupRestore
                 try
                 {
                     Spectra.Add(ParseFileName(item),
-                        new Spectrum(item, CsvConfig, Spectra.Count > 0 ? Spectra.Last().Value.DataPoints.Count : 65));
+                        new Spectrum(item, Configuration.CsvConfig, Spectra.Count > 0 ? Spectra.Last().Value.DataPoints.Count : 65));
                 }
                 catch (Exception ex)
                 {
@@ -114,7 +114,7 @@ namespace Acquisition.BackupRestore
                     using TextWriter tw = new StreamWriter(
                         Path.Combine(targetFolder, string.Format(cfg.FileNameFormat, Spectra.Keys[i]))
                         );
-                    using CsvWriter cw = new CsvWriter(tw, CsvConfig);
+                    using CsvWriter cw = new CsvWriter(tw, Configuration.CsvConfig);
                     cw.NextRecord();
                     cw.NextRecord();
                     int j = 0;
@@ -134,14 +134,15 @@ namespace Acquisition.BackupRestore
             {
                 try
                 {
-                    var sensorFilePath = Path.Combine(targetFolder, $"info{Path.DirectorySeparatorChar}Sensor{item.Key}.txt");
+                    var sensorFilePath = Path.Combine(targetFolder, 
+                        string.Format(CultureInfo.InvariantCulture, $"info{Path.DirectorySeparatorChar}{_Config.SensorFileName}", item.Key));
                     string dir = Path.GetDirectoryName(sensorFilePath);
                     if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
                     using var sensorFile = File.CreateText(sensorFilePath);
                     foreach (var line in item.Value.Data)
                     {
                         sensorFile.WriteLine(
-                            $"{line.Key.ToString(CultureInfo.InvariantCulture)} | {line.Value}");
+                            $"{line.Key.ToString(CultureInfo.InvariantCulture)} | {line.Value.ToString(_Config.SensorNumberFormat, CultureInfo.InvariantCulture)}");
                     }
                     sensorFile.Close();
                 }
@@ -160,6 +161,8 @@ namespace Acquisition.BackupRestore
             ts = new string(ts.Select((x, i) => i > timeIndex ? (x == '-' ? ':' : x) : x).ToArray()); //Replace dashes with colons for time string
             return DateTime.Parse(ts, CultureInfo.InvariantCulture);
         }
+
+        private Configuration _Config;
 
         private void Sensor_LogException(object sender, ExceptionEventArgs e)
         {
@@ -197,7 +200,8 @@ namespace Acquisition.BackupRestore
                     string[] halves = item.Split(';');
                     DateTime dateTime = DateTime.Parse(halves[0], CultureInfo.InvariantCulture);
                     string[] values = halves[1].Split(',');
-                    Data.Add(dateTime, double.Parse(values[1], NumberStyles.Float | NumberStyles.AllowLeadingSign));
+                    Data.Add(dateTime, double.Parse(values[1], NumberStyles.Float | NumberStyles.AllowLeadingSign,
+                        CultureInfo.InvariantCulture));
                 }
                 catch (Exception ex)
                 {
