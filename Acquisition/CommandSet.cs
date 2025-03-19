@@ -102,7 +102,7 @@ namespace Acquisition
         public static Command FilamentCurrentQuery = new Command("FL", ParseFilamentCurrent, QueryParameter);
         public static Command TurnHVOFF = new Command("HV", ParseStatusByte, 0.0);
         public static Command HighVoltageQuery = new Command("HV", ParseHighVoltage, QueryParameter);
-        public static Command TurnHVON = new Command("HV", ParseStatusByte, 1449);
+        public static Command TurnHVON = new Command("HV", ParseStatusByte, 1);
         public static Command StartAnalogScan = new Command("SC", null, 1, true);
         public static Command SetStartAMU = new Command("MI", null, 29, true);
         public static Command SetEndAMU = new Command("MF", null, 200, true); //Use default values here

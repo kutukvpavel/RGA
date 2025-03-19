@@ -2,7 +2,7 @@
   "profiles": {
     "3DSpectrumVisualizer": {
       "commandName": "Project",
-      "commandLineArgs": "\"I:\\temp\\MF_Acetone_SnO2_1\\MF_Acetone_SnO2_1\""
+      "commandLineArgs": "\"C:\\RESULTS\\csvs_05042024_h2s_ads\""
     }
   }
 }

@@ -95,6 +95,7 @@ namespace _3DSpectrumVisualizer
         private Slider HideFirstSlider;
         private Slider HideLastSlider;
         private ListBox SensorVisibleList;
+        private CheckBox SnapAMUCheckbox;
 
         private void InitializeComponent()
         {
@@ -128,6 +129,7 @@ namespace _3DSpectrumVisualizer
             HideFirstSlider.PropertyChanged += HideFirstSlider_PropertyChanged;
             HideLastSlider.PropertyChanged += HideLastSlider_PropertyChanged;
             SensorVisibleList = this.FindControl<ListBox>("lstSensors");
+            SnapAMUCheckbox = this.FindControl<CheckBox>("chkSnap");
         }
 
         private void Save3DCoords()
@@ -325,6 +327,7 @@ namespace _3DSpectrumVisualizer
             if (e.Property == Slider.ValueProperty)
             {
                 if (e.NewValue == null || !e.IsEffectiveValueChange) return;
+                if (SnapAMUCheckbox.IsChecked ?? false) SectionPlot.AutoscaleY(false);
                 SectionPlot.InvalidateVisual();
             }
         }
