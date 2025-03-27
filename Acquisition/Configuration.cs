@@ -21,6 +21,10 @@ namespace Acquisition
         public string IntensityFormat { get; set; } = "E4";
         public string LabPidPipeName { get; set; } = "LabPID_Profile_Broadcast";
         public string MgaPipeName { get; set; } = "MGA_Broadcast_Pipe";
+        public string GpibPipeName { get; set; } = "GPIBServer_Broadcast_Pipe0";
+        public string FirstGpibInstrument { get; set; } = "ElectrolysisSource";
+        public string SecondGpibInstrument { get; set; } = "ResistanceMeter";
+        public int GpibResponseFieldIndex { get; set; } = 0;
         [JsonIgnore]
         public static string WorkingDirectory { get => Environment.CurrentDirectory; }
         [JsonIgnore]
@@ -47,6 +51,5 @@ namespace Acquisition
         public int NoiseFloorSetting { get; set; } = 3;
         public int WriterThreadLimit { get; set; } = 12;
         public int ScanTimeout { get; set; } = 30000;
-        public string GpibPipeName { get; set; } = "GPIBServer_Broadcast_Pipe";
     }
 }

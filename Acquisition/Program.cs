@@ -7,13 +7,12 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using CommandLine;
 
 namespace Acquisition
 {
     public class Program
     {
-        private const string BackupRestoreKey = "--restore";
-
         private static bool CancellationRequested = false;
         private static string StartAMU = "1";
         private static string EndAMU = "65";
@@ -21,21 +20,16 @@ namespace Acquisition
         private static readonly L Logger = new L();
         private static Configuration Config = new Configuration();
         private static MovingAverageContainer Average;
-        private static MovingAverageContainer GapSwappedAverage;
+        private static List<MovingAverageContainer> GapSwappedAverages = new List<MovingAverageContainer>();
+        private static List<Tuple<string, string>> Gaps;
+        private static int GapIndex = 0;
         
         public static SpectrumBackground Background { get; private set; }
-        public static string GapStartAMU { get; private set; } = null;
-        public static string GapEndAMU { get; private set; } = null;
         public static Head Device { get; private set; }
 
         static void Main(string[] args)
         {
             Console.CancelKeyPress += Console_CancelKeyPress;
-            if (args.Length == 0)
-            {
-                Log("No arguments. Shutting down.");
-                return;
-            }
             //Load Settings
             try
             {
@@ -49,14 +43,10 @@ namespace Acquisition
             }
             try
             {
-                if (args[0] == BackupRestoreKey)
-                {
-                    BackupRestoreMain(args);
-                }
-                else
-                {
-                    AcquisitionMain(args);
-                }
+                Parser.Default.ParseArguments<AcquisitionOptions, RestoreOptions>(args).MapResult(
+                    (AcquisitionOptions opts) => AcquisitionMain(opts),
+                    (RestoreOptions opts) => BackupRestoreMain(opts),
+                    errs => 1);
             }
             catch (Exception ex)
             {
@@ -75,40 +65,53 @@ namespace Acquisition
             }
         }
 
-        static void AcquisitionMain(string[] args)
+        static int AcquisitionMain(AcquisitionOptions args)
         {
-            Average = new MovingAverageContainer(Config.MovingAverageWindowWidth);
+            int returnCode = 0;
             //Init
             CommandSet.SetNoiseFloor.Parameter = Config.NoiseFloorSetting.ToString();
             InitBackgroundRemoval();
-            InitDevice(args[0]);
+            InitDevice(args.Port);
             InitPipe(Config.LabPidPipeName, Config.MgaPipeName, Config.GpibPipeName);
             VerifyDirectoryExists(Configuration.WorkingDirectory);
             VerifyDirectoryExists(Configuration.WorkingDirectory, Config.BackupSubfolderName);
             VerifyDirectoryExists(Configuration.WorkingDirectory, Config.InfoSubfolderName);
-            Console.WriteLine("RGA Acquisition Helper v1.0 started!");
+            Console.WriteLine("RGA Acquisition Helper v1.8 started!");
             Log($"Background data found for {Background.Count} AMUs.");
             //CLI
-            try
-            {
-                CommandSet.SetStartAMU.Parameter = args[1];
-                CommandSet.SetEndAMU.Parameter = args[2];
-                CommandSet.SetPointsPerAMU.Parameter = args[3];
-                CommandSet.TurnHVON.Parameter = args[4];
-                GapStartAMU = args[5];
-                GapEndAMU = args[6];
-            }
-            catch (IndexOutOfRangeException)
-            {
-
-            }
+            CommandSet.SetStartAMU.Parameter = args.StartAMU;
+            StartAMU = args.StartAMU;
+            EndAMU = args.StopAMU;
+            if (args.PointsPerAMU != null) CommandSet.SetPointsPerAMU.Parameter = args.PointsPerAMU;
+            if (!args.UseCDEM) CommandSet.TurnHVON.Parameter = "0";
             Config.GapEnabled = false;
-            if (GapStartAMU != null && GapEndAMU != null)
+            if (args.Gaps != null)
             {
-                Config.GapEnabled = true;
-                StartAMU = args[1];
-                EndAMU = args[2];
-                GapSwappedAverage = new MovingAverageContainer(Average.Width);
+                int gapCount = args.Gaps.Count();
+                Config.GapEnabled = gapCount > 0;
+                if (Config.GapEnabled) GapSwappedAverages.AddRange(new MovingAverageContainer[gapCount + 1]);
+            }
+            if (Config.GapEnabled)
+            {
+                Average = GapSwappedAverages[0];
+                try
+                {
+                    Gaps = args.Gaps.Select((x) => {
+                        string[] splt = x.Split(',');
+                        return new Tuple<string, string>(splt[0], splt[1]);
+                    }).ToList();
+                }
+                catch (Exception ex)
+                {
+                    Log("Failed to parse gap arguments.", ex);
+                    return 2;
+                }
+                CommandSet.SetEndAMU.Parameter = Gaps.First().Item1;
+            }
+            else
+            {
+                Average = new MovingAverageContainer(Config.MovingAverageWindowWidth);
+                CommandSet.SetEndAMU.Parameter = args.StopAMU;
             }
             //Acquisition cycle
             try
@@ -129,46 +132,43 @@ namespace Acquisition
             catch (Exception ex)
             {
                 Log("Fatal error in the acquisition loop.", ex);
+                returnCode = 1;
             }
             finally
             {
                 Config.CdemGain = Device.CdemGain;
                 Device.Dispose();
             }
+            return returnCode;
         }
 
-        static void BackupRestoreMain(string[] args)
+        static int BackupRestoreMain(RestoreOptions args)
         {
             string target = null;
             string searchPattern = null;
             try
             {
-                if (Directory.Exists(args[1]))
-                {
-                    target = args[1];
-                }
-                Console.WriteLine($"Will be saving into: {target}");
-                searchPattern = args[2];
-            }
-            catch (IndexOutOfRangeException)
-            {
-                Log("Using default restore folder.", null);
+                if (Directory.Exists(args.BackupDirectory)) target = args.BackupDirectory;
+                searchPattern = args.SearchPattern;
             }
             catch (Exception ex)
             {
-                Log("Using default restore folder due to an error.", ex);
+                Log("Using default restore folder.", ex);
             }
             if (target == null) target = BackupRestore.BackupData.DefaultRestoreLocation;
             if (searchPattern == null) searchPattern = "*.csv";
             Console.WriteLine("Loading backup data...");
             BackupRestore.BackupData backupData = new BackupRestore.BackupData(
-                Path.Combine(Configuration.WorkingDirectory, Config.BackupSubfolderName),
-                Config);
+                Path.Combine(Configuration.WorkingDirectory, Config.BackupSubfolderName))
+            {
+                CsvConfig = Configuration.CsvConfig
+            };
             backupData.LogException += (s, e) => Log(e.LogString);
             backupData.Load(searchPattern);
             Console.WriteLine("Restoring...");
             backupData.SaveWith(target, Config);
             Console.WriteLine("Done.");
+            return 0;
         }
 
         #region Misc
@@ -186,20 +186,24 @@ namespace Acquisition
         }
 
         private static void ToggleAroundGap()
-        { 
-            if (CommandSet.SetEndAMU.Parameter == EndAMU)
+        {
+            GapIndex = ++GapIndex % Gaps.Count;
+            if (GapIndex == 0)
             {
                 CommandSet.SetStartAMU.Parameter = StartAMU;
-                CommandSet.SetEndAMU.Parameter = GapStartAMU;
+                CommandSet.SetEndAMU.Parameter = Gaps.First().Item1;
+            }
+            else if (GapIndex == (Gaps.Count - 1))
+            {
+                CommandSet.SetStartAMU.Parameter = Gaps.Last().Item2;
+                CommandSet.SetEndAMU.Parameter = EndAMU;
             }
             else
             {
-                CommandSet.SetStartAMU.Parameter = GapEndAMU;
-                CommandSet.SetEndAMU.Parameter = EndAMU;
+                CommandSet.SetStartAMU.Parameter = Gaps[GapIndex - 1].Item2;
+                CommandSet.SetEndAMU.Parameter = Gaps[GapIndex].Item1;
             }
-            MovingAverageContainer temp = Average;
-            Average = GapSwappedAverage;
-            GapSwappedAverage = temp;
+            Average = GapSwappedAverages[GapIndex];
         }
 
         private static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)
@@ -332,7 +336,7 @@ namespace Acquisition
 
         #region Temperature, Gases and Sensors
 
-        private static void InitPipe(string labPidName, string mgaName, string gpibPipe)
+        private static void InitPipe(string labPidName, string mgaName, string gpibName)
         {
             NamedPipeService.GasGpioOffset = Config.GasGpioOffset;
             NamedPipeService.GasPriority = Config.GasPriority;
@@ -346,7 +350,7 @@ namespace Acquisition
             Pipe.GasStateReceived += Pipe_GasStateReceived;
             Pipe.MgaPacketReceived += Pipe_MgaPacketReceived;
             Pipe.GpibPacketReceived += Pipe_GpibPacketReceived;
-            Pipe.Initialize(labPidName, mgaName, gpibPipe);
+            Pipe.Initialize(labPidName, mgaName, gpibName);
         }
 
         private static string _LastGas = string.Empty;
@@ -379,10 +383,25 @@ namespace Acquisition
             AppendLine(string.Format(Config.SensorFileName, e.SensorIndex), 
                 e.Conductance.ToString(Config.SensorNumberFormat, CultureInfo.InvariantCulture));
         }
-        private static void Pipe_GpibPacketReceived(object sender, GpibPacket e)
+
+        private static void Pipe_GpibPacketReceived(object sender, GPIBServerPacket e)
         {
-            AppendLine(string.Format(Config.SensorFileName, 0), 
-                e.Current.ToString(Config.SensorNumberFormat, CultureInfo.InvariantCulture));
+            try
+            {
+                double response = ConditionGpibOutput(e.Response);
+                if (e.InstrumentName == Config.FirstGpibInstrument)
+                {
+                    AppendLine(string.Format(Config.SensorFileName, 0), response.ToString(Config.SensorNumberFormat, CultureInfo.InvariantCulture));
+                }
+                else if (e.InstrumentName == Config.SecondGpibInstrument)
+                {
+                    AppendLine(string.Format(Config.SensorFileName, 1), response.ToString(Config.SensorNumberFormat, CultureInfo.InvariantCulture));
+                }
+            }
+            catch (Exception ex)
+            {
+                Log("ERROR: GPIB output conditioning failed!", ex);
+            }
         }
 
         private static List<Task> _PendingTasks = new List<Task>();
@@ -433,6 +452,20 @@ namespace Acquisition
                 }
             });
             _PendingTasks.Add(task);
+        }
+        private static char[] GpibNumberSign = { '+', '-' };
+        private static double ConditionGpibOutput(string response)
+        {
+            if (response.Contains(','))
+            {
+                response = response.Split(',')[Config.GpibResponseFieldIndex];
+            }
+            int signIndex = response.IndexOfAny(GpibNumberSign);
+            if (signIndex > 0)
+            {
+                response = response.Remove(0, signIndex);
+            }
+            return double.Parse(response, NumberStyles.Float, CultureInfo.InvariantCulture);
         }
 
         #endregion
