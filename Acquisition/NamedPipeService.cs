@@ -19,9 +19,11 @@ namespace Acquisition
         public event EventHandler<string> LogEvent;
         public event EventHandler<ExceptionEventArgs> LogException;
         public event EventHandler<MgaPacket> MgaPacketReceived;
+        public event EventHandler<GPIBServerPacket> GpibPacketReceived;
 
         private NamedPipeClient<string> _LabPidClient;
         private NamedPipeClient<string> _MgaClient;
+        private NamedPipeClient<string> _GPIBClient;
 
         private NamedPipeService()
         {
@@ -32,9 +34,10 @@ namespace Acquisition
         {
             if (_LabPidClient != null) _LabPidClient.Stop();
             if (_MgaClient != null) _MgaClient.Stop();
+            if (_GPIBClient != null) _GPIBClient.Stop();
         }
 
-        public bool Initialize(string labPidPipeName, string mgaPipeName)
+        public bool Initialize(string labPidPipeName, string mgaPipeName, string gpibPipeName)
         {
             try
             {
@@ -47,12 +50,31 @@ namespace Acquisition
                     _MgaClient.Start();
                     _MgaClient.ServerMessage += MgaClient_ServerMessage;
                 }
+                if ((gpibPipeName?.Length ?? 0) > 0)
+                {
+                    _GPIBClient = new NamedPipeClient<string>(gpibPipeName);
+                    _GPIBClient.Start();
+                    _GPIBClient.ServerMessage += GPIBClient_ServerMessage;
+                }
                 return true;
             }
             catch (Exception ex)
             {
                 LogException?.Invoke(this, new ExceptionEventArgs(ex, "Unable to initialize named pipe client."));
                 return false;
+            }
+        }
+
+        private void GPIBClient_ServerMessage(NamedPipeConnection<string, string> connection, string message)
+        {
+            try
+            {
+                var packet = JsonConvert.DeserializeObject<GPIBServerPacket>(message);
+                if (packet != null) GpibPacketReceived?.Invoke(this, packet);
+            }
+            catch (Exception ex)
+            {
+                LogException?.Invoke(this, new ExceptionEventArgs(ex, "Can't parse GPIB packet."));
             }
         }
 

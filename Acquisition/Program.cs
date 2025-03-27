@@ -72,11 +72,11 @@ namespace Acquisition
             CommandSet.SetNoiseFloor.Parameter = Config.NoiseFloorSetting.ToString();
             InitBackgroundRemoval();
             InitDevice(args.Port);
-            InitPipe(Config.LabPidPipeName, Config.MgaPipeName);
+            InitPipe(Config.LabPidPipeName, Config.MgaPipeName, Config.GpibPipeName);
             VerifyDirectoryExists(Configuration.WorkingDirectory);
             VerifyDirectoryExists(Configuration.WorkingDirectory, Config.BackupSubfolderName);
             VerifyDirectoryExists(Configuration.WorkingDirectory, Config.InfoSubfolderName);
-            Console.WriteLine("RGA Acquisition Helper v1.1 started!");
+            Console.WriteLine("RGA Acquisition Helper v1.8 started!");
             Log($"Background data found for {Background.Count} AMUs.");
             //CLI
             CommandSet.SetStartAMU.Parameter = args.StartAMU;
@@ -336,7 +336,7 @@ namespace Acquisition
 
         #region Temperature, Gases and Sensors
 
-        private static void InitPipe(string labPidName, string mgaName)
+        private static void InitPipe(string labPidName, string mgaName, string gpibName)
         {
             NamedPipeService.GasGpioOffset = Config.GasGpioOffset;
             NamedPipeService.GasPriority = Config.GasPriority;
@@ -349,7 +349,8 @@ namespace Acquisition
             Pipe.UVStateReceived += Pipe_UVStateReceived;
             Pipe.GasStateReceived += Pipe_GasStateReceived;
             Pipe.MgaPacketReceived += Pipe_MgaPacketReceived;
-            Pipe.Initialize(labPidName, mgaName);
+            Pipe.GpibPacketReceived += Pipe_GpibPacketReceived;
+            Pipe.Initialize(labPidName, mgaName, gpibName);
         }
 
         private static string _LastGas = string.Empty;
@@ -381,6 +382,26 @@ namespace Acquisition
         {
             AppendLine(string.Format(Config.SensorFileName, e.SensorIndex), 
                 e.Conductance.ToString(Config.SensorNumberFormat, CultureInfo.InvariantCulture));
+        }
+
+        private static void Pipe_GpibPacketReceived(object sender, GPIBServerPacket e)
+        {
+            try
+            {
+                double response = ConditionGpibOutput(e.Response);
+                if (e.InstrumentName == Config.FirstGpibInstrument)
+                {
+                    AppendLine(string.Format(Config.SensorFileName, 0), response.ToString(Config.SensorNumberFormat, CultureInfo.InvariantCulture));
+                }
+                else if (e.InstrumentName == Config.SecondGpibInstrument)
+                {
+                    AppendLine(string.Format(Config.SensorFileName, 1), response.ToString(Config.SensorNumberFormat, CultureInfo.InvariantCulture));
+                }
+            }
+            catch (Exception ex)
+            {
+                Log("ERROR: GPIB output conditioning failed!", ex);
+            }
         }
 
         private static List<Task> _PendingTasks = new List<Task>();
@@ -431,6 +452,20 @@ namespace Acquisition
                 }
             });
             _PendingTasks.Add(task);
+        }
+        private static char[] GpibNumberSign = { '+', '-' };
+        private static double ConditionGpibOutput(string response)
+        {
+            if (response.Contains(','))
+            {
+                response = response.Split(',')[Config.GpibResponseFieldIndex];
+            }
+            int signIndex = response.IndexOfAny(GpibNumberSign);
+            if (signIndex > 0)
+            {
+                response = response.Remove(0, signIndex);
+            }
+            return double.Parse(response, NumberStyles.Float, CultureInfo.InvariantCulture);
         }
 
         #endregion
