@@ -87,7 +87,7 @@ namespace Acquisition
             }
             catch (Exception ex)
             {
-                LogException?.Invoke(this, new ExceptionEventArgs(ex, "Can't parse MGA packet."));
+                LogException?.Invoke(this, new ExceptionEventArgs(ex, "Can't parse an MGA packet."));
             }
         }
 
