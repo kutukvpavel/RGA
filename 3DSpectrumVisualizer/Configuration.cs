@@ -78,6 +78,9 @@ namespace _3DSpectrumVisualizer
         public string UVFileName { get; set; } = "UV.txt";
         public string GasFileName { get; set; } = "Gas.txt";
         public string SensorFileName { get; set; } = "Sensor{0}.txt";
+        public int VIModeVoltageSensorIndex { get; set; } = -1;
+        public int VIModeCurrentSensorIndex { get; set; } = -1;
+        public float VIModeCurrentMultiplier { get; set; } = 1;
         public double GradientPositionSliderLawPower { get; set; } = 2.5;
         public int AMURoundingDigits { get; set; } = 1;
         public string RepositoryFileFilter { get; set; } = "*.csv";

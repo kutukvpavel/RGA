@@ -57,6 +57,9 @@ namespace _3DSpectrumVisualizer
         public static string UVFileName { get; set; }
         public static string GasFileName { get; set; }
         public static string SensorFileName { get; set; }
+        public static int VIModeVoltageIndex { get; set; }
+        public static int VIModeCurrentIndex { get; set; }
+        public static float VIModeCurrentMultiplier { get; set; }
         public static bool UseHorizontalGradient { get; set; } = false;
         public static int AMURoundingDigits { get; set; }
         public static ParallelOptions ParallelOptions { get; set; } = new ParallelOptions()
@@ -200,6 +203,8 @@ namespace _3DSpectrumVisualizer
         public List<ScanResult> Results { get; } = new List<ScanResult>();
         public List<SKPath> SensorProfiles { get; } = new List<SKPath>();
         public SKPath TemperatureProfile { get; } = new SKPath();
+        public SKPath VIModeProfile { get; } = new SKPath();
+        public List<float> VIModeTimestamps { get; } = new List<float>();
         public List<UVRegion> UVProfile { get; } = new List<UVRegion>();
         public List<GasRegion> GasProfile { get; } = new List<GasRegion>();
         public SKPaint PaintStroke { get; set; } = new SKPaint()
@@ -548,6 +553,29 @@ namespace _3DSpectrumVisualizer
             else
             {
                 p.MoveTo(t, val);
+            }
+            // Handle VI mode
+            if ((index != VIModeCurrentIndex) && (index != VIModeVoltageIndex)) return;
+            int timePointsCount = Math.Min(SensorProfiles[VIModeVoltageIndex].PointCount, SensorProfiles[VIModeCurrentIndex].PointCount);
+            if (timePointsCount <= VIModeProfile.PointCount) return;
+            if (VIModeProfile.PointCount == 0)
+            {
+                VIModeProfile.MoveTo(new SKPoint(
+                    SensorProfiles[VIModeVoltageIndex][0].Y,
+                    SensorProfiles[VIModeCurrentIndex][0].Y * VIModeCurrentMultiplier
+                    ));
+                VIModeTimestamps.Add(SensorProfiles[VIModeCurrentIndex][0].X);
+            }
+            else
+            {
+                for (int i = VIModeProfile.PointCount; i < timePointsCount; i++)
+                {
+                    VIModeProfile.LineTo(new SKPoint(
+                        SensorProfiles[VIModeVoltageIndex][i].Y,
+                        SensorProfiles[VIModeCurrentIndex][i].Y * VIModeCurrentMultiplier
+                    ));
+                    VIModeTimestamps.Add(SensorProfiles[VIModeCurrentIndex][i].X);
+                }
             }
         }
         protected string ParseInfoLine(string l, out float time)

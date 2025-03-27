@@ -108,6 +108,9 @@ namespace _3DSpectrumVisualizer
             DataRepositoryBase.LightGradient[1] = DataRepositoryBase.LightGradient[1].WithAlpha(Config.LastLightSliderPosition);
             DataRepositoryBase.UseHorizontalGradient = Config.UseHorizontalGradient;
             DataRepositoryBase.ColorPositionSliderPrecision = Config.ColorPositionSliderPrecision;
+            DataRepositoryBase.VIModeVoltageIndex = Config.VIModeVoltageSensorIndex;
+            DataRepositoryBase.VIModeCurrentIndex = Config.VIModeCurrentSensorIndex;
+            DataRepositoryBase.VIModeCurrentMultiplier = Config.VIModeCurrentMultiplier;
             MainWindow.PositionValueConverter = new RootValueConverter(Config.GradientPositionSliderLawPower);
             Skia3DSpectrum.FastModeDepth = Config.FastModeDepth;
             Skia3DSpectrum.ScalingLowerLimit = Config.ZScalingLowerLimit;
