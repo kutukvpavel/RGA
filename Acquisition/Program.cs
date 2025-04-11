@@ -384,14 +384,21 @@ namespace Acquisition
         {
             try
             {
-                double response = ConditionGpibOutput(e.Response);
-                if (e.InstrumentName == Config.FirstGpibInstrument)
+                if (Config.FirstGpibInstrument != null && Config.SecondGpibInstrument != null)
                 {
-                    AppendLine(string.Format(Config.SensorFileName, 0), response.ToString(Config.SensorNumberFormat, CultureInfo.InvariantCulture));
+                    double response = ConditionGpibOutput(e.Response);
+                    if (e.InstrumentName == Config.FirstGpibInstrument)
+                    {
+                        AppendLine(string.Format(Config.SensorFileName, 0), response.ToString(Config.SensorNumberFormat, CultureInfo.InvariantCulture));
+                    }
+                    else if (e.InstrumentName == Config.SecondGpibInstrument)
+                    {
+                        AppendLine(string.Format(Config.SensorFileName, 1), response.ToString(Config.SensorNumberFormat, CultureInfo.InvariantCulture));
+                    }
                 }
-                else if (e.InstrumentName == Config.SecondGpibInstrument)
+                else if (Config.GenericGpibLogFileName != null)
                 {
-                    AppendLine(string.Format(Config.SensorFileName, 1), response.ToString(Config.SensorNumberFormat, CultureInfo.InvariantCulture));
+                    AppendLine(Config.GenericGpibLogFileName, e.ToString());
                 }
             }
             catch (Exception ex)

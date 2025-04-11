@@ -7,6 +7,8 @@ namespace Acquisition
 {
     public class Configuration
     {
+        public Configuration() { }
+
         public string BackupSubfolderName { get; set; } = "backup";
         public string InfoSubfolderName { get; set; } = "info";
         public string FileNameFormat { get; set; } = "Scan_{0:yyyy-MM-dd_HH-mm-ss}.csv";
@@ -14,6 +16,7 @@ namespace Acquisition
         public string GasFileName { get; set; } = "Gas.txt";
         public string UVFileName { get; set; } = "UV.txt";
         public string SensorFileName { get; set; } = "Sensor{0}.txt";
+        public string GenericGpibLogFileName { get; set; } = "gpib.txt";
         public string SensorNumberFormat { get; set; } = "E3";
         public string InfoLineFormat { get; set; } = "{0} | {1}";
         public string TemperatureFormat { get; set; } = "F1";

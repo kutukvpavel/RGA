@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Acquisition
 {
@@ -14,5 +12,10 @@ namespace Acquisition
         public string InstrumentName;
         public string Command;
         public string Response;
+
+        public override string ToString()
+        {
+            return $"{ControllerName},{InstrumentName},{Response}";
+        }
     }
 }
