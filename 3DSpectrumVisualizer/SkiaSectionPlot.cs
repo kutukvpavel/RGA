@@ -210,7 +210,7 @@ namespace _3DSpectrumVisualizer
 
         private void Item_DataAdded(object sender, EventArgs e)
         {
-            int max = DataRepositories.Max(x => x.SensorProfiles.Any() ? x.SensorProfiles.Count : 0);
+            int max = DataRepositories.Any() ? DataRepositories.Max(x => x.SensorProfiles.Any() ? x.SensorProfiles.Count : 0) : 0;
             while (max > RenderSensorProfiles.Count) RenderSensorProfiles.Add(
                 new SensorVisibility()
                 { 

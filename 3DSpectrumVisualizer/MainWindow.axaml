@@ -37,7 +37,7 @@
 			<Setter Property="Margin" Value="3,0,5,0"></Setter>
 		</Style>
 	</Window.Styles>
-	<Grid ColumnDefinitions="auto,*" RowDefinitions="auto,1.6*,4,*">
+	<Grid ColumnDefinitions="auto,1.5*,4,*" RowDefinitions="auto,1.6*,4,*" x:Name="grdMain">
 		<Expander x:Name="expLeft" Grid.Row="1" Grid.RowSpan="3" Grid.Column="0" ExpandDirection="Right" IsExpanded="True" Padding="0">
 			<Expander.Resources>
 				<Thickness x:Key="ExpanderContentPadding">3</Thickness>
@@ -153,24 +153,16 @@ Gradient</CheckBox>
 						IsEnabled="{Binding #SpectrumSection.AMUPresent}">
 					Auto X
 				</Button>
-				<CheckBox x:Name="chkAutoX">Autoupdate X Scale</CheckBox>
-				<CheckBox x:Name="chkAutoY">Autoupdate Y Scale</CheckBox>
+				<CheckBox x:Name="chkAutoX">Autoupdate X</CheckBox>
+				<CheckBox x:Name="chkAutoY">Autoupdate Y</CheckBox>
 				<Label x:Name="lblSectionCoords" FontSize="16" DockPanel.Dock="Bottom" MinHeight="30"
 					   Margin="3">Coords...</Label>
 			</StackPanel>
 		</Grid>
-		<!--
-		<Expander ExpandDirection="Up" Grid.Row="3" Grid.Column="1" HorizontalContentAlignment="Stretch"
-				  VerticalContentAlignment="Stretch"
-				  IsExpanded="{Binding !#SpectrumSection.DisableRendering, Mode=TwoWay}" x:Name="SpectrumSectionExpander">
-			<Expander.Header>
-				<TextBlock>Single AMU Section</TextBlock>
-			</Expander.Header>
-			<Expander.Resources>
-				<Thickness x:Key="ExpanderContentPadding">0</Thickness>
-			</Expander.Resources>
-			
-		</Expander>
-		-->
+		<GridSplitter Grid.Row="0" Grid.RowSpan="4" Grid.Column="2" ResizeDirection="Columns" Background="#6F6F6F"></GridSplitter>
+		<Grid Grid.Column="3" Grid.Row="0" Grid.RowSpan="4" ColumnDefinitions="*" RowDefinitions="auto,*" x:Name="grdVIPlot">
+			<TextBlock Grid.Column="0" Grid.Row="0" Margin="5">VI Plot</TextBlock>
+			<local:SkiaVIPlot Grid.Column="0" Grid.Row="1" x:Name="VIPlot" Margin="5"></local:SkiaVIPlot>
+		</Grid>
 	</Grid>
 </Window>

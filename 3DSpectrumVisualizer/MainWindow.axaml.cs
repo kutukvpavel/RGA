@@ -98,6 +98,8 @@ namespace _3DSpectrumVisualizer
         private CheckBox SnapAMUCheckbox;
         private CheckBox AutoYCheckbox;
         private CheckBox SensorLogScale;
+        private Grid VIPlotGrid;
+        private Grid MainGrid;
 
         private void InitializeComponent()
         {
@@ -135,6 +137,12 @@ namespace _3DSpectrumVisualizer
             AutoYCheckbox = this.FindControl<CheckBox>("chkAutoY");
             SensorLogScale = this.FindControl<CheckBox>("chkLogSensors");
             SensorLogScale.Click += SensorLogScale_Click;
+            VIPlotGrid = this.FindControl<Grid>("grdVIPlot");
+            MainGrid = this.FindControl<Grid>("grdMain");
+#if !DEBUG
+            SectionCoords.IsVisible = false;
+            CoordsLabel.IsVisible = false;
+#endif
         }
 
         private void Save3DCoords()
@@ -211,23 +219,26 @@ namespace _3DSpectrumVisualizer
             Spectrum3D.ZScalingFactor = Skia3DSpectrum.ScalingLowerLimit;
         }
 
-        #endregion
+#endregion
 
-        #region Public Methods
+#region Public Methods
 
         public void RepoInitCallback(object s, EventArgs e)
         {
             Dispatcher.UIThread.InvokeAsync(() =>
             {
                 LoadingLabel.Background = Brushes.Yellow;
-                string appTitle = Title;
-                Title = "";
-                foreach (var item in Program.Repositories)
+                if (Program.Repositories.Any())
                 {
-                    Title += $"{item.Location.Split(Path.DirectorySeparatorChar).LastOrDefault()}, ";
+                    string appTitle = Title;
+                    Title = "";
+                    foreach (var item in Program.Repositories)
+                    {
+                        Title += $"{item.Location.Split(Path.DirectorySeparatorChar).LastOrDefault()}, ";
+                    }
+                    Title = Title.Remove(Title.Length - 2, 2);
+                    Title += $"  --- {appTitle}";
                 }
-                Title = Title.Remove(Title.Length - 2, 2);
-                Title += $"  --- {appTitle}";
             });
         }
 
@@ -235,14 +246,21 @@ namespace _3DSpectrumVisualizer
         {
             Dispatcher.UIThread.InvokeAsync(() =>
             {
-                bool allLog = Program.Repositories.All(x => x.LogarithmicIntensity);
-                bool allLin = Program.Repositories.All(x => !x.LogarithmicIntensity);
-                LogarithmicIntensity.IsChecked = (allLog ^ allLin) ? (bool?)allLog : null;
-                SectionAMUSlider.Maximum = Program.Repositories.Max(x => x.Right);
-                SectionAMUSlider.Minimum = Program.Repositories.Min(x => x.Left);
-                SectionPlot.AMU = Program.Config.LastAMUSection;
-                SectionPlot.AutoscaleX(false);
-                SectionPlot.AutoscaleYForAllSections();
+                if (Program.Repositories.Any())
+                {
+                    bool allLog = Program.Repositories.All(x => x.LogarithmicIntensity);
+                    bool allLin = Program.Repositories.All(x => !x.LogarithmicIntensity);
+                    LogarithmicIntensity.IsChecked = (allLog ^ allLin) ? (bool?)allLog : null;
+                    SectionAMUSlider.Maximum = Program.Repositories.Max(x => x.Right);
+                    SectionAMUSlider.Minimum = Program.Repositories.Min(x => x.Left);
+                    SectionPlot.AMU = Program.Config.LastAMUSection;
+                    SectionPlot.AutoscaleX(false);
+                    SectionPlot.AutoscaleYForAllSections();
+                    if (!Program.Repositories.Any(x => x.SensorProfiles.Count > 0))
+                    {
+                        MainGrid.ColumnDefinitions[3].Width = new GridLength(0, GridUnitType.Auto);
+                    }
+                }
                 LoadingLabel.IsVisible = false;
                 SectionPlot.UpdateRepos();
                 InvalidateSpectrum(this, null);
@@ -258,9 +276,9 @@ namespace _3DSpectrumVisualizer
             Program.LogMemoryFootprint();
         }
 
-        #endregion
+#endregion
 
-        #region UI events
+#region UI events
 
         private void SensorLogScale_Click(object sender, RoutedEventArgs e)
         {
@@ -586,6 +604,6 @@ namespace _3DSpectrumVisualizer
             ViewState = ViewStates.Front;
         }
 
-        #endregion
+#endregion
     }
 }

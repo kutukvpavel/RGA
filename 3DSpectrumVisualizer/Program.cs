@@ -54,6 +54,7 @@ namespace _3DSpectrumVisualizer
                 for (int i = 0; i < args.Length; i++)
                 {
                     DataRepositoryBase dr = DataRepositoryFactory.CreateRepository(args[i]);
+                    if (dr == null) continue;
                     dr.Filter = Config.RepositoryFileFilter;
                     dr.UpdateSynchronizingObject = Program.UpdateSynchronizingObject;
                     dr.GasRegionColor = Config.GasRegionColor;

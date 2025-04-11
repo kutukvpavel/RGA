@@ -1,8 +1,7 @@
 {
   "profiles": {
     "3DSpectrumVisualizer": {
-      "commandName": "Project",
-      "commandLineArgs": "\"C:\\RESULTS\\csvs_05042024_h2s_ads\""
+      "commandName": "Project"
     }
   }
 }

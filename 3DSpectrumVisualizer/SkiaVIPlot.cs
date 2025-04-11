@@ -1,11 +1,8 @@
 using Avalonia;
-using Avalonia.Data;
 using Avalonia.Input;
 using SkiaSharp;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.Linq;
 
 namespace _3DSpectrumVisualizer
@@ -41,6 +38,12 @@ namespace _3DSpectrumVisualizer
         }
 
         public bool DisableRendering { get; set; } = false;
+
+        public float VoltageAxisInterval { get; set; } = 0.25f;
+
+        public string CurrentLabelFormat { get; set; } = "E2";
+
+        public string VoltageLabelFormat { get; set; } = "F2";
 
         public IEnumerable<DataRepositoryBase> DataRepositories { get; set; } = new List<DataRepositoryBase>();
 
@@ -151,11 +154,13 @@ namespace _3DSpectrumVisualizer
             e.Handled = true;
         }
 
+        #endregion
+
         #region Render
 
         private class DrawVIPlot : CustomDrawOp
         {
-            public static float HeightReduction { get; set; } = 0.95f;
+            public static float SizeReduction { get; set; } = 0.95f;
 
             private readonly float XTr;
             private readonly float YTr;
@@ -167,11 +172,14 @@ namespace _3DSpectrumVisualizer
             private readonly float LastMouseY;
             private readonly float LastMouseX;
             private readonly IEnumerable<DataRepositoryBase> Data;
+            private readonly float VoltageAxisInterval;
+            private readonly string CurrentLabelFormat;
+            private readonly string VoltageLabelFormat;
 
             public DrawVIPlot(SkiaVIPlot parent, float lastMouseX, float lastMouseY) : base(parent)
             {
-                XTr = parent.XTranslate;
-                YTr = parent.YTranslate + (float)parent.Bounds.Height /** 0.95f*/;
+                XTr = parent.XTranslate + (float)parent.Bounds.Width / 2;
+                YTr = parent.YTranslate + (float)parent.Bounds.Height / 2;
                 XSc = parent.XScaling;
                 YSc = parent.YScaling;
                 Data = parent.DataRepositories.Where(x => x.Enabled);
@@ -180,56 +188,79 @@ namespace _3DSpectrumVisualizer
                 ResultsEnd = 1 - parent.HideLastPercentOfResults;
                 LastMouseY = lastMouseY;
                 LastMouseX = lastMouseX;
+                VoltageAxisInterval = parent.VoltageAxisInterval;
+                CurrentLabelFormat = parent.CurrentLabelFormat;
+                VoltageLabelFormat = parent.VoltageLabelFormat;
             }
 
             protected override void RenderCanvas(SKCanvas canvas)
             {
                 if (!Data.Any()) return;
                 canvas.Clear(BackgroundColor);
-                var h = canvas.LocalClipBounds.Height * HeightReduction;
                 Exception lastError = null;
                 using (SKAutoCanvasRestore ar = new SKAutoCanvasRestore(canvas))
                 {
                     canvas.Translate(XTr, YTr);
-                    canvas.Scale(XSc, -YSc);
+                    canvas.Scale(XSc, YSc);
                     foreach (var item in Data)
                     {
                         SKPath path = item.VIModeProfile;
                         canvas.DrawPath(path, item.SectionPaint);
                     }
                 }
-                RenderTimeAxis(canvas);
-                RenderIntensityAxis(canvas);
+                RenderVoltageAxis(canvas);
+                RenderCurrentAxis(canvas);
                 if (lastError != null) throw lastError;
             }
 
-            private void RenderTimeAxis(SKCanvas canvas)
+            private void RenderVoltageAxis(SKCanvas canvas)
             {
-                int step = (int)MathF.Ceiling(FontPaint.TextSize * FontPaint.TextScaleX * TimeAxisInterval * 5);
-                int ticks = (int)MathF.Ceiling(canvas.LocalClipBounds.Width / step);
-                var min = Data.Min(x => x.StartTime);
+                SKPoint origin = new SKPoint(XTr * XSc, YTr * YSc);
+                var min = Data.Min(x =>
+                {
+                    if (x.VIModeProfile.GetBounds(out SKRect bounds))
+                    {
+                        return bounds.Left;
+                    }
+                    else
+                    {
+                        return 0;
+                    }
+                });
+                var max = Data.Max(x =>
+                {
+                    if (x.VIModeProfile.GetBounds(out SKRect bounds))
+                    {
+                        return bounds.Right;
+                    }
+                    else
+                    {
+                        return 0;
+                    }
+                });
+                int ticksPerSide = (int)MathF.Floor(canvas.LocalClipBounds.Width / (2 * VoltageAxisInterval));
                 float tripleStroke = FontPaint.StrokeWidth * 3;
-                float tickHeight = FontPaint.TextSize * 2 * TicksScale;
-                for (int i = 0; i < ticks; i++)
+                float tickHeightHalf = FontPaint.TextSize * 0.75f;
+                canvas.DrawText("0", origin.X + tripleStroke, origin.Y + FontPaint.TextSize, FontPaint);
+                canvas.DrawLine(origin.X, origin.Y - tickHeightHalf, origin.X, origin.Y + tickHeightHalf, FontPaint);
+                float step = VoltageAxisInterval * XSc;
+                for (int i = -ticksPerSide; i <= ticksPerSide; i++)
                 {
                     var x = MathF.FusedMultiplyAdd(i, step, FontPaint.StrokeWidth);
-                    var s = min.AddSeconds((x - XTr) / XSc).ToLongTimeString();
-                    canvas.DrawText(s, x + tripleStroke, FontPaint.TextSize, FontPaint);
-                    canvas.DrawLine(x, 0, x, tickHeight, FontPaint);
+                    canvas.DrawText((VoltageAxisInterval * i).ToString(VoltageLabelFormat), x + tripleStroke, origin.Y + FontPaint.TextSize, FontPaint);
+                    canvas.DrawLine(x, origin.Y - tickHeightHalf, x, origin.Y + tickHeightHalf, FontPaint);
                 }
             }
 
-            private void RenderIntensityAxis(SKCanvas canvas)
+            private void RenderCurrentAxis(SKCanvas canvas)
             {
                 float value = (YTr - LastMouseY) / YSc;
-                if (Data.Any(x => x.LogarithmicIntensity)) value = MathF.Pow(10, value);
-                string text = value.ToString(IntensityLabelFormat);
+                string text = value.ToString(CurrentLabelFormat);
                 canvas.DrawText(text, 0, LastMouseY + FontPaint.TextSize * 1.1f, FontPaint);
-                canvas.DrawLine(0, LastMouseY, FontPaint.MeasureText(text) * 1.5f * TicksScale, LastMouseY, FontPaint);
+                canvas.DrawLine(0, LastMouseY, FontPaint.MeasureText(text) * TicksScale, LastMouseY, FontPaint);
             }
         }
 
         #endregion
     }
-
 }
