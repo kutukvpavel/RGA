@@ -20,7 +20,7 @@ namespace Acquisition
         private static readonly L Logger = new L();
         private static Configuration Config = new Configuration();
         private static MovingAverageContainer Average;
-        private static List<MovingAverageContainer> GapSwappedAverages = new List<MovingAverageContainer>();
+        private static readonly List<MovingAverageContainer> GapSwappedAverages = new List<MovingAverageContainer>();
         private static List<Tuple<string, string>> Gaps;
         private static int GapIndex = 0;
         
@@ -158,11 +158,7 @@ namespace Acquisition
             if (target == null) target = BackupRestore.BackupData.DefaultRestoreLocation;
             if (searchPattern == null) searchPattern = "*.csv";
             Console.WriteLine("Loading backup data...");
-            BackupRestore.BackupData backupData = new BackupRestore.BackupData(
-                Path.Combine(Configuration.WorkingDirectory, Config.BackupSubfolderName))
-            {
-                CsvConfig = Configuration.CsvConfig
-            };
+            BackupRestore.BackupData backupData = new BackupRestore.BackupData(Path.Combine(Configuration.WorkingDirectory, Config.BackupSubfolderName), Config);
             backupData.LogException += (s, e) => Log(e.LogString);
             backupData.Load(searchPattern);
             Console.WriteLine("Restoring...");
@@ -404,7 +400,7 @@ namespace Acquisition
             }
         }
 
-        private static List<Task> _PendingTasks = new List<Task>();
+        private static readonly List<Task> _PendingTasks = new List<Task>();
         private static void AppendLine(string fileName, string payload)
         {
             var t = DateTime.Now.ToString(CultureInfo.InvariantCulture);
@@ -453,7 +449,7 @@ namespace Acquisition
             });
             _PendingTasks.Add(task);
         }
-        private static char[] GpibNumberSign = { '+', '-' };
+        private static readonly char[] GpibNumberSign = { '+', '-' };
         private static double ConditionGpibOutput(string response)
         {
             if (response.Contains(','))

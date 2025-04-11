@@ -463,7 +463,7 @@ namespace _3DSpectrumVisualizer
                     for (int i = 0; i < item.SensorProfiles.Count; i++)
                     {
                         if (!(i < ShowSensors.Count ? ShowSensors[i] : true)) continue;
-                        canvas.DrawPath(item.SensorProfiles[i],
+                        canvas.DrawPath(item.SensorLogScale ? item.LogSensorProfiles[i] : item.SensorProfiles[i],
                             item.SensorColors.Length > i ? item.SensorColors[i] : item.PaintWideStroke);
                     }
                 }   

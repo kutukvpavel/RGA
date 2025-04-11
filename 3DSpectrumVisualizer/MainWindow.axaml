@@ -81,6 +81,7 @@ Gradient</CheckBox>
 							Maximum="1" Minimum="0" SmallChange="0.005"
 							PropertyChanged="OnPositionSchemeEdited">
 					</Slider>
+					<CheckBox x:Name="chkLogSensors">Sensor Log Scale</CheckBox>
 					<ListBox x:Name="lstSensors" DataContext="{Binding #SpectrumSection}"
 							 Items="{Binding RenderSensorProfiles}">
 						<ListBox.ItemTemplate>
@@ -141,7 +142,10 @@ Gradient</CheckBox>
 						IsEnabled="{Binding #SpectrumSection.AMUPresent}" x:Name="btnExportSection">
 					Export
 				</Button>
-				<Button Background="#ADE6B7" Button.Click="OnSectionAutoscaleYClick"
+				<Button Background="#ADE6BF" Button.Click="OnSectionAutoscaleAllYClick">
+					Fit All Y
+				</Button>
+				<Button Background="#ADE6B0" Button.Click="OnSectionAutoscaleYClick"
 						IsEnabled="{Binding #SpectrumSection.AMUPresent}">
 					Auto Y
 				</Button>
@@ -150,6 +154,7 @@ Gradient</CheckBox>
 					Auto X
 				</Button>
 				<CheckBox x:Name="chkAutoX">Autoupdate X Scale</CheckBox>
+				<CheckBox x:Name="chkAutoY">Autoupdate Y Scale</CheckBox>
 				<Label x:Name="lblSectionCoords" FontSize="16" DockPanel.Dock="Bottom" MinHeight="30"
 					   Margin="3">Coords...</Label>
 			</StackPanel>

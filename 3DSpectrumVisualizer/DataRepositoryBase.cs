@@ -199,6 +199,7 @@ namespace _3DSpectrumVisualizer
         public string Filter { get; set; }
         public List<ScanResult> Results { get; } = new List<ScanResult>();
         public List<SKPath> SensorProfiles { get; } = new List<SKPath>();
+        public List<SKPath> LogSensorProfiles { get; } = new List<SKPath>();
         public SKPath TemperatureProfile { get; } = new SKPath();
         public List<UVRegion> UVProfile { get; } = new List<UVRegion>();
         public List<GasRegion> GasProfile { get; } = new List<GasRegion>();
@@ -261,6 +262,7 @@ namespace _3DSpectrumVisualizer
         public float MidX { get => Left + (Right - Left) / 2; }
         public float MidY { get => Min + (Max - Min) / 2; }
         public bool LogarithmicIntensity { get; set; } = false;
+        public bool SensorLogScale { get; set; } = false;
         public SKPath MassAxis { get; protected set; } = new SKPath();
         public SKPath TimeAxis { get; protected set; } = new SKPath();
         public Dictionary<float, SpectrumSection> Sections { get; protected set; } = new Dictionary<float, SpectrumSection>();
@@ -539,8 +541,14 @@ namespace _3DSpectrumVisualizer
         {
             l = ParseInfoLine(l, out float t);
             float val = float.Parse(l, CultureInfo.InvariantCulture);
-            while (SensorProfiles.Count <= index) SensorProfiles.Add(new SKPath());
+            float logVal = val > 0 ? MathF.Log10(val) : float.NaN;
+            while (SensorProfiles.Count <= index)
+            {
+                SensorProfiles.Add(new SKPath());
+                LogSensorProfiles.Add(new SKPath());
+            }
             var p = SensorProfiles[index];
+            var lp = LogSensorProfiles[index];
             if (p.PointCount > 0)
             {
                 p.LineTo(t, val);
@@ -548,6 +556,17 @@ namespace _3DSpectrumVisualizer
             else
             {
                 p.MoveTo(t, val);
+            }
+            if (float.IsFinite(logVal))
+            {
+                if (lp.PointCount > 0)
+                {
+                    lp.LineTo(t, logVal);
+                }
+                else
+                {
+                    lp.MoveTo(t, logVal);
+                }
             }
         }
         protected string ParseInfoLine(string l, out float time)

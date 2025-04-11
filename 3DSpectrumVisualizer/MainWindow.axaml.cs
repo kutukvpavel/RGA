@@ -96,6 +96,8 @@ namespace _3DSpectrumVisualizer
         private Slider HideLastSlider;
         private ListBox SensorVisibleList;
         private CheckBox SnapAMUCheckbox;
+        private CheckBox AutoYCheckbox;
+        private CheckBox SensorLogScale;
 
         private void InitializeComponent()
         {
@@ -130,6 +132,9 @@ namespace _3DSpectrumVisualizer
             HideLastSlider.PropertyChanged += HideLastSlider_PropertyChanged;
             SensorVisibleList = this.FindControl<ListBox>("lstSensors");
             SnapAMUCheckbox = this.FindControl<CheckBox>("chkSnap");
+            AutoYCheckbox = this.FindControl<CheckBox>("chkAutoY");
+            SensorLogScale = this.FindControl<CheckBox>("chkLogSensors");
+            SensorLogScale.Click += SensorLogScale_Click;
         }
 
         private void Save3DCoords()
@@ -247,6 +252,7 @@ namespace _3DSpectrumVisualizer
         public void InvalidateSpectrum(object sender, EventArgs e)
         {
             if (AutoupdateXScaleCheckbox.IsChecked == true) SectionPlot.AutoscaleX(false);
+            if (AutoYCheckbox.IsChecked == true) SectionPlot.AutoscaleY(false);
             Spectrum3D.InvalidateVisual();
             SectionPlot.InvalidateVisual();
             Program.LogMemoryFootprint();
@@ -255,6 +261,17 @@ namespace _3DSpectrumVisualizer
         #endregion
 
         #region UI events
+
+        private void SensorLogScale_Click(object sender, RoutedEventArgs e)
+        {
+            if (SensorLogScale.IsChecked == null) return;
+            bool c = (bool)SensorLogScale.IsChecked;
+            foreach (var item in Program.Repositories)
+            {
+                item.SensorLogScale = c;
+            }
+            SectionPlot.InvalidateVisual();
+        }
 
         private void HideLastSlider_PropertyChanged(object sender, AvaloniaPropertyChangedEventArgs e)
         {
@@ -284,6 +301,11 @@ namespace _3DSpectrumVisualizer
         private void OnShowGasRegionsClick(object sender, RoutedEventArgs e)
         {
             SectionPlot.InvalidateVisual();
+        }
+
+        private void OnSectionAutoscaleAllYClick(object sender, RoutedEventArgs e)
+        {
+            SectionPlot.AutoscaleYForAllSections();
         }
 
         private async void OnExportSectionClick(object sender, RoutedEventArgs e)
@@ -327,7 +349,7 @@ namespace _3DSpectrumVisualizer
             if (e.Property == Slider.ValueProperty)
             {
                 if (e.NewValue == null || !e.IsEffectiveValueChange) return;
-                if (SnapAMUCheckbox.IsChecked ?? false) SectionPlot.AutoscaleY(false);
+                if (AutoYCheckbox.IsChecked ?? false) SectionPlot.AutoscaleY(false);
                 SectionPlot.InvalidateVisual();
             }
         }
