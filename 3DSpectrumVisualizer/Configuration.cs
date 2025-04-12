@@ -80,6 +80,8 @@ namespace _3DSpectrumVisualizer
         public string SensorFileName { get; set; } = "Sensor{0}.txt";
         public int VIModeVoltageSensorIndex { get; set; } = -1;
         public int VIModeCurrentSensorIndex { get; set; } = -1;
+        [JsonIgnore]
+        public bool EnableVI => VIModeCurrentSensorIndex > 0 && VIModeVoltageSensorIndex > 0;
         public float VIModeCurrentMultiplier { get; set; } = 1;
         public double GradientPositionSliderLawPower { get; set; } = 2.5;
         public int AMURoundingDigits { get; set; } = 1;

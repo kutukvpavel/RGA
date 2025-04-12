@@ -256,7 +256,7 @@ namespace _3DSpectrumVisualizer
                     SectionPlot.AMU = Program.Config.LastAMUSection;
                     SectionPlot.AutoscaleX(false);
                     SectionPlot.AutoscaleYForAllSections();
-                    if (!Program.Repositories.Any(x => x.SensorProfiles.Count > 0))
+                    if (!Program.Repositories.Any(x => x.SensorProfiles.Count > 0) || !Program.Config.EnableVI)
                     {
                         MainGrid.ColumnDefinitions[3].Width = new GridLength(0, GridUnitType.Auto);
                     }

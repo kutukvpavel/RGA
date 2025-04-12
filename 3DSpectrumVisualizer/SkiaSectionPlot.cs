@@ -82,12 +82,11 @@ namespace _3DSpectrumVisualizer
         public IEnumerable<DataRepositoryBase> DataRepositories { get; set; } = new List<DataRepositoryBase>();
 
         public float XTranslate { get; set; } = 0;
-
         public float YTranslate { get; set; } = 0;
-
+        public float YTranslateSensors { get; set; } = 0;
         public float XScaling { get; set; } = 1;
-
         public float YScaling { get; set; } = 1;
+        public float YScalingSensors { get; set; } = 1;
 
         private float _HideLast = 0;
         private float _HideFirst = 0;
@@ -162,15 +161,37 @@ namespace _3DSpectrumVisualizer
                     return 0;
                 }
             });
-            AutoscalingYEngine(min, max, invalidate);
+            AutoscalingYEngine(min, max, invalidate, out float yScale, out float yTranslate);
+            YScaling = yScale;
+            YTranslate = yTranslate;
+        }
+        public void AutoscaleYSensors(bool invalidate = true)
+        {
+            if (!DataRepositories.Any()) return;
+            var nonEmpty = DataRepositories.Select(x => (x.SensorLogScale ? x.LogSensorProfiles : x.SensorProfiles)
+                            .Where((y, i) => !y.IsEmpty && (i < RenderSensorProfiles.Count ? RenderSensorProfiles[i].Visible : true)))
+                            .Where(x => x.Any());
+            float max = nonEmpty.Max(x => x.Max(y => y.Bounds.Top));
+            float min = nonEmpty.Min(x => x.Min(y => y.Bounds.Bottom));
+            if (max != min)
+            {
+                AutoscalingYEngine(min, max, invalidate, out float yScale, out float yTranslate);
+                YScalingSensors = yScale;
+                YTranslateSensors = yTranslate;
+            }
         }
 
         public void AutoscaleYForAllSections(bool invalidate = true)
         {
             if (!DataRepositories.Any()) return;
+            //MS
             float max = DataRepositories.Max(x => x.Max);
             float min = DataRepositories.Min(x => x.Min);
-            AutoscalingYEngine(min, max, invalidate);
+            AutoscalingYEngine(min, max, invalidate, out float yScale, out float yTranslate);
+            YScaling = yScale;
+            YTranslate = yTranslate;
+            //Sensors
+            AutoscaleYSensors(invalidate);
         }
 
         #endregion
@@ -219,10 +240,10 @@ namespace _3DSpectrumVisualizer
                 });
         }
 
-        private void AutoscalingYEngine(float min, float max, bool invalidate)
+        private void AutoscalingYEngine(float min, float max, bool invalidate, out float yScale, out float yTranslate)
         {
-            YScaling = (float)Bounds.Height * 0.9f / (max - min);
-            YTranslate = min * YScaling - (float)Bounds.Height * 0.05f;
+            yScale = (float)Bounds.Height * 0.9f / (max - min);
+            yTranslate = min * YScaling - (float)Bounds.Height * 0.05f;
             if (invalidate) InvalidateVisual();
         }
 
@@ -252,11 +273,22 @@ namespace _3DSpectrumVisualizer
             float correction;
             if (!e.KeyModifiers.HasFlag(KeyModifiers.Shift))
             {
-                correction = YScaling;
-                YScaling += YScaling * delta;
-                correction = YScaling / correction;
-                YTranslate *= correction;
-                YTranslate += (correction - 1) * (float)(Bounds.Height - pos.Y);
+                if (e.KeyModifiers.HasFlag(KeyModifiers.Alt))
+                {
+                    correction = YScalingSensors;
+                    YScalingSensors += YScalingSensors * delta;
+                    correction = YScalingSensors / correction;
+                    YTranslateSensors *= correction;
+                    YTranslateSensors += (correction - 1) * (float)(Bounds.Height - pos.Y);
+                }
+                else
+                {
+                    correction = YScaling;
+                    YScaling += YScaling * delta;
+                    correction = YScaling / correction;
+                    YTranslate *= correction;
+                    YTranslate += (correction - 1) * (float)(Bounds.Height - pos.Y);
+                }
             }
             if (!e.KeyModifiers.HasFlag(KeyModifiers.Control))
             {
@@ -279,8 +311,16 @@ namespace _3DSpectrumVisualizer
             if (point.Properties.IsLeftButtonPressed)
             {
                 XTranslate += (float)(pos.X - _LastPoint.X);
-                YTranslate += (float)(pos.Y - _LastPoint.Y);
-                RaiseCoordsChanged();
+                float diff = (float)(pos.Y - _LastPoint.Y);
+                if (e.KeyModifiers.HasFlag(KeyModifiers.Alt))
+                {
+                    YTranslateSensors += diff;
+                }
+                else
+                {
+                    YTranslate += diff;
+                    RaiseCoordsChanged();
+                }
                 _LastPressedPoint = pos;
                 InvalidateVisual();
             }
@@ -300,6 +340,8 @@ namespace _3DSpectrumVisualizer
             private readonly float YTr;
             private readonly float XSc;
             private readonly float YSc;
+            private readonly float YTrS;
+            private readonly float YScS;
             private readonly float AMU;
             private readonly SKPaint FontPaint;
             private readonly float TimeAxisInterval;
@@ -317,6 +359,8 @@ namespace _3DSpectrumVisualizer
                 YTr = parent.YTranslate + (float)parent.Bounds.Height /** 0.95f*/;
                 XSc = parent.XScaling;
                 YSc = parent.YScaling;
+                YTrS = parent.YTranslateSensors + (float)parent.Bounds.Height /** 0.95f*/;
+                YScS = parent.YScalingSensors;
                 AMU = MathF.Round(parent.AMU, parent.AMURoundingDigits);
                 Data = parent.DataRepositories.Where(x => x.Enabled);
                 FontPaint = parent.FontPaint;
@@ -359,28 +403,14 @@ namespace _3DSpectrumVisualizer
                 {
                     try
                     {
-                        canvas.Translate(XTr, 0);
-                        var nonEmpty = Data.Select(x => x.SensorProfiles
-                            .Where((y, i) => !y.IsEmpty && (i < ShowSensors.Count ? ShowSensors[i] : true)))
-                            .Where(x => x.Any());
-                        if (nonEmpty.Any())
-                        {
-                            var s = nonEmpty.Max(x => x.Max(y => y.Bounds.Height));
-                            if (s != 0)
-                            {
-                                s = h * HeightReduction / s;
-                                canvas.Translate(0,
-                                    h + nonEmpty.Min(x => x.Min(y => y.Bounds.Top)) * s);
-                                canvas.Scale(XSc, -s);
-                                RenderSensorProfiles(canvas);
-                            }
-                        }
+                        canvas.Translate(XTr, YTrS);
+                        canvas.Scale(XSc, -YScS);
+                        RenderSensorProfiles(canvas);
                     }
                     catch (Exception ex)
                     {
                         lastError = ex;
                     }
-                    
                 }
                 using (SKAutoCanvasRestore ar = new SKAutoCanvasRestore(canvas))
                 {
@@ -423,11 +453,20 @@ namespace _3DSpectrumVisualizer
 
             private void RenderIntensityAxis(SKCanvas canvas)
             {
+                //MS
                 float value = (YTr - LastMouseY) / YSc;
                 if (Data.Any(x => x.LogarithmicIntensity)) value = MathF.Pow(10, value);
                 string text = value.ToString(IntensityLabelFormat);
                 canvas.DrawText(text, 0, LastMouseY + FontPaint.TextSize * 1.1f, FontPaint);
                 canvas.DrawLine(0, LastMouseY, FontPaint.MeasureText(text) * 1.5f * TicksScale, LastMouseY, FontPaint);
+                //Sensors
+                value = (YTrS - LastMouseY) / YScS;
+                if (Data.Any(x => x.SensorLogScale)) value = MathF.Pow(10, value);
+                text = value.ToString(IntensityLabelFormat);
+                float labelWidth = FontPaint.MeasureText(text);
+                canvas.DrawText(text, canvas.LocalClipBounds.Width - labelWidth * 1.1f, LastMouseY + FontPaint.TextSize * 1.1f, FontPaint);
+                canvas.DrawLine(canvas.LocalClipBounds.Width - labelWidth * 1.5f * TicksScale, 
+                    LastMouseY, canvas.LocalClipBounds.Width, LastMouseY, FontPaint);
             }
 
             private void RenderRegions(SKCanvas canvas)
