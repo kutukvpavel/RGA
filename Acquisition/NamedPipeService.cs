@@ -42,6 +42,7 @@ namespace Acquisition
             try
             {
                 _LabPidClient = new NamedPipeClient<string>(labPidPipeName);
+                _LabPidClient.AutoReconnect = true;
                 _LabPidClient.Start();
                 _LabPidClient.ServerMessage += LabPidClient_ServerMessage;
                 if ((mgaPipeName?.Length ?? 0) > 0)
