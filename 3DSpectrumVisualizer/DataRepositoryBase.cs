@@ -382,7 +382,7 @@ namespace _3DSpectrumVisualizer
             var p = GasProfile.LastOrDefault();
             if (p != null)
             {
-                p.EndTimeOffset = (float)(EndTime - StartTime).TotalSeconds;
+                p.Complete((float)(EndTime - StartTime).TotalSeconds);
             }
         }
         protected IEnumerable<string> ReadLines(StreamReader r)
@@ -485,7 +485,7 @@ namespace _3DSpectrumVisualizer
             var reg = GasProfile.LastOrDefault();
             if (reg != null)
             {
-                reg.EndTimeOffset = t;
+                reg.Complete(t);
                 if (reg.Name == l) return;
             }
             if (GasRegionColor.ContainsKey(l))
@@ -520,12 +520,12 @@ namespace _3DSpectrumVisualizer
                 }
                 else
                 {
-                    if (lastRegion != null) lastRegion.EndTimeOffset = t;
+                    if (lastRegion != null) lastRegion.Complete(t);
                 }
             }
             else
             {
-                if (val && (lastRegion != null)) lastRegion.EndTimeOffset = t;
+                if (val && (lastRegion != null)) lastRegion.Complete(t);
             }
             _LastUVState = val;
         }

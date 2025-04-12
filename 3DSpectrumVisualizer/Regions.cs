@@ -6,11 +6,13 @@ namespace _3DSpectrumVisualizer
 {
     public interface IRegion
     {
+        public bool HasCompleted { get; }
         public float StartTimeOffset { get; }
         public float EndTimeOffset { get; }
+        public DataRepositoryBase Parent { get; }
         public static SKRect GetRect(IRegion reg, float y1, float y2)
         {
-            return new SKRect(reg.StartTimeOffset, y2, reg.EndTimeOffset, y1);
+            return new SKRect(reg.StartTimeOffset, y2, reg.HasCompleted ? reg.EndTimeOffset : (float)((reg.Parent.EndTime - reg.Parent.StartTime).TotalSeconds), y1);
         }
     }
 
@@ -20,12 +22,20 @@ namespace _3DSpectrumVisualizer
         {
             Parent = parent;
             StartTimeOffset = startTimeOffset;
-            EndTimeOffset = endTimeOffset < 0 ? startTimeOffset : endTimeOffset;
+            HasCompleted = endTimeOffset >= 0;
+            EndTimeOffset = HasCompleted ? endTimeOffset : startTimeOffset;
         }
 
-        public float StartTimeOffset { get; }
-        public float EndTimeOffset { get; set; }
         public DataRepositoryBase Parent { get; }
+        public float StartTimeOffset { get; }
+        public float EndTimeOffset { get; protected set; }
+        public bool HasCompleted { get; protected set; }
+
+        public void Complete(float endTimeOffset)
+        {
+            EndTimeOffset = endTimeOffset;
+            HasCompleted = true;
+        }
     }
 
     public class GasRegion : UVRegion
