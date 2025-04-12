@@ -39,9 +39,10 @@ namespace Acquisition
 
         private List<Accumulator> accumulators;
 
-        public MovingAverageContainer(int windowWidth, int capacity = 65) : base(windowWidth)
+        public MovingAverageContainer(int windowWidth, int capacity = 650) : base(windowWidth)
         {
             Width = windowWidth;
+            if (Width < 2) throw new ArgumentOutOfRangeException("Moving average window width has to be at least 2");
             accumulators = new List<Accumulator>(capacity);
         }
 

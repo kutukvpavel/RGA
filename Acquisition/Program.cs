@@ -22,7 +22,7 @@ namespace Acquisition
         private static MovingAverageContainer Average;
         private static readonly List<MovingAverageContainer> GapSwappedAverages = new List<MovingAverageContainer>();
         private static List<Tuple<string, string>> Gaps;
-        private static int GapIndex = 0;
+        private static int PartIndex = 0;
         
         public static SpectrumBackground Background { get; private set; }
         public static Head Device { get; private set; }
@@ -82,14 +82,41 @@ namespace Acquisition
             CommandSet.SetStartAMU.Parameter = args.StartAMU;
             StartAMU = args.StartAMU;
             EndAMU = args.StopAMU;
+            int startAMU;
+            int endAMU;
+            int pointsPerAMU;
             if (args.PointsPerAMU != null) CommandSet.SetPointsPerAMU.Parameter = args.PointsPerAMU;
+            try
+            {
+                startAMU = int.Parse(StartAMU);
+                endAMU = int.Parse(EndAMU);
+                if (startAMU >= endAMU) throw new ArgumentException();
+                pointsPerAMU = int.Parse(CommandSet.SetPointsPerAMU.Parameter);
+            }
+            catch (FormatException)
+            {
+                Log("Start or Stop AMU or Points/AMU setting is not an integer");
+                return 2;
+            }
+            catch (ArgumentException)
+            {
+                Log("Stop AMU has to be greater than Start AMU");
+                return 3;
+            }
             if (!args.UseCDEM) CommandSet.TurnHVON.Parameter = "0";
             Config.GapEnabled = false;
             if (args.Gaps != null)
             {
                 int gapCount = args.Gaps.Count();
                 Config.GapEnabled = gapCount > 0;
-                if (Config.GapEnabled) GapSwappedAverages.AddRange(new MovingAverageContainer[gapCount + 1]);
+                if (Config.GapEnabled)
+                {
+                    GapSwappedAverages.AddRange(new MovingAverageContainer[gapCount + 1]);
+                    for (int i = 0; i < GapSwappedAverages.Count; i++)
+                    {
+                        GapSwappedAverages[i] = new MovingAverageContainer(Config.MovingAverageWindowWidth, (endAMU - startAMU) * pointsPerAMU);
+                    }
+                }
             }
             if (Config.GapEnabled)
             {
@@ -183,23 +210,23 @@ namespace Acquisition
 
         private static void ToggleAroundGap()
         {
-            GapIndex = ++GapIndex % Gaps.Count;
-            if (GapIndex == 0)
+            PartIndex = ++PartIndex % (Gaps.Count + 1); //Gaps = cake cuts
+            if (PartIndex == 0)
             {
                 CommandSet.SetStartAMU.Parameter = StartAMU;
                 CommandSet.SetEndAMU.Parameter = Gaps.First().Item1;
             }
-            else if (GapIndex == (Gaps.Count - 1))
+            else if (PartIndex == Gaps.Count)
             {
                 CommandSet.SetStartAMU.Parameter = Gaps.Last().Item2;
                 CommandSet.SetEndAMU.Parameter = EndAMU;
             }
             else
             {
-                CommandSet.SetStartAMU.Parameter = Gaps[GapIndex - 1].Item2;
-                CommandSet.SetEndAMU.Parameter = Gaps[GapIndex].Item1;
+                CommandSet.SetStartAMU.Parameter = Gaps[PartIndex - 1].Item2;
+                CommandSet.SetEndAMU.Parameter = Gaps[PartIndex].Item1;
             }
-            Average = GapSwappedAverages[GapIndex];
+            Average = GapSwappedAverages[PartIndex];
         }
 
         private static void Console_CancelKeyPress(object sender, ConsoleCancelEventArgs e)

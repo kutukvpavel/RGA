@@ -2,8 +2,8 @@
   "profiles": {
     "Acquisition": {
       "commandName": "Project",
-      "commandLineArgs": "COM1 11 50 10 1",
-      "workingDirectory": "C:\\RESULTS\\LabPID_FIX_TEST"
+      "commandLineArgs": "acquire -p COM1 -b 17 -e 70 -m -g 27,33",
+      "workingDirectory": "C:\\RESULTS\\2025-04-11_Blank_Rezonit_NO2"
     }
   }
 }
