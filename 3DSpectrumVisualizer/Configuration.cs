@@ -98,6 +98,7 @@ namespace _3DSpectrumVisualizer
         public string ExportUVTrueString { get; set; } = "1";
         public string ExportUVFalseString { get; set; } = "0";
         public bool AutoupdateXScale { get; set; } = false;
+        public bool AutoupdateYScale { get; set; } = false;
         public float ColorPositionSliderPrecision { get; set; } = 0.005f;
         public bool ShowTemperatureProfile { get; set; } = true;
         public bool ShowGasRegions { get; set; } = true;

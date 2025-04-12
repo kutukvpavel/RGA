@@ -134,8 +134,8 @@ namespace _3DSpectrumVisualizer
                 int c = (int)(DataRepositories.Average(x => x.AverageScanTime) * 10 * (ScalingFactor * ScanSpacing) + 
                     (FastMode ? FastModeDepth : 0.5f));
                 if (c > 10) c = -1;
-                else if (c < 3) c -= 4;
-                if (c % 2 == 0) c -= 1;
+                else if (c < 4) c -= 4;
+                while ((c % 2 == 0) || (c % 3 == 0)) c -= 1;
                 return c;
             }
         }

@@ -562,6 +562,17 @@ namespace _3DSpectrumVisualizer
             {
                 p.MoveTo(t, val);
             }
+            if (float.IsFinite(logVal))
+            {
+                if (lp.PointCount > 0)
+                {
+                    lp.LineTo(t, logVal);
+                }
+                else
+                {
+                    lp.MoveTo(t, logVal);
+                }
+            }
             // Handle VI mode
             if ((index != VIModeCurrentIndex) && (index != VIModeVoltageIndex)) return;
             int timePointsCount = Math.Min(SensorProfiles[VIModeVoltageIndex].PointCount, SensorProfiles[VIModeCurrentIndex].PointCount);
@@ -583,17 +594,6 @@ namespace _3DSpectrumVisualizer
                         SensorProfiles[VIModeCurrentIndex][i].Y * VIModeCurrentMultiplier
                     ));
                     VIModeTimestamps.Add(SensorProfiles[VIModeCurrentIndex][i].X);
-                }
-            }
-            if (float.IsFinite(logVal))
-            {
-                if (lp.PointCount > 0)
-                {
-                    lp.LineTo(t, logVal);
-                }
-                else
-                {
-                    lp.MoveTo(t, logVal);
                 }
             }
         }

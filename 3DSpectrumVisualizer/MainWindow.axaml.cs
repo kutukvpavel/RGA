@@ -41,6 +41,7 @@ namespace _3DSpectrumVisualizer
                 }
                 ColorPositionSlider.SmallChange = Program.Config.ColorPositionSliderPrecision;
                 AutoupdateXScaleCheckbox.IsChecked = Program.Config.AutoupdateXScale;
+                AutoYCheckbox.IsChecked = Program.Config.AutoupdateYScale;
                 GLLabel.Background = SkiaCustomControl.OpenGLEnabled ? Brushes.Lime : Brushes.OrangeRed;
                 Spectrum3D.Background = Program.Config.SpectraBackground;
                 Spectrum3D.TimeAxisInterval = Program.Config.LastTimeAxisInterval;
@@ -56,6 +57,7 @@ namespace _3DSpectrumVisualizer
                 Program.Config.ShowGasRegions = SectionPlot.RenderGasRegions;
                 Program.Config.ShowTemperatureProfile = SectionPlot.RenderTemperatureProfile;
                 Program.Config.AutoupdateXScale = AutoupdateXScaleCheckbox.IsChecked.Value;
+                Program.Config.AutoupdateYScale = AutoYCheckbox.IsChecked.Value;
                 Program.Config.LastAMUSection = SectionPlot.AMU;
                 Program.Config.LastTimeAxisInterval = Spectrum3D.TimeAxisInterval;
                 Program.Config.SpectraBackground = Spectrum3D.Background;

@@ -161,9 +161,10 @@ namespace _3DSpectrumVisualizer
                     return 0;
                 }
             });
-            AutoscalingYEngine(min, max, invalidate, out float yScale, out float yTranslate);
+            AutoscalingYEngine(min, max, out float yScale, out float yTranslate);
             YScaling = yScale;
             YTranslate = yTranslate;
+            if (invalidate) InvalidateVisual();
         }
         public void AutoscaleYSensors(bool invalidate = true)
         {
@@ -175,10 +176,11 @@ namespace _3DSpectrumVisualizer
             float min = nonEmpty.Min(x => x.Min(y => y.Bounds.Bottom));
             if (max != min)
             {
-                AutoscalingYEngine(min, max, invalidate, out float yScale, out float yTranslate);
+                AutoscalingYEngine(min, max, out float yScale, out float yTranslate);
                 YScalingSensors = yScale;
                 YTranslateSensors = yTranslate;
             }
+            if (invalidate) InvalidateVisual();
         }
 
         public void AutoscaleYForAllSections(bool invalidate = true)
@@ -187,7 +189,7 @@ namespace _3DSpectrumVisualizer
             //MS
             float max = DataRepositories.Max(x => x.Max);
             float min = DataRepositories.Min(x => x.Min);
-            AutoscalingYEngine(min, max, invalidate, out float yScale, out float yTranslate);
+            AutoscalingYEngine(min, max, out float yScale, out float yTranslate);
             YScaling = yScale;
             YTranslate = yTranslate;
             //Sensors
@@ -240,11 +242,10 @@ namespace _3DSpectrumVisualizer
                 });
         }
 
-        private void AutoscalingYEngine(float min, float max, bool invalidate, out float yScale, out float yTranslate)
+        private void AutoscalingYEngine(float min, float max, out float yScale, out float yTranslate)
         {
             yScale = (float)Bounds.Height * 0.9f / (max - min);
-            yTranslate = min * YScaling - (float)Bounds.Height * 0.05f;
-            if (invalidate) InvalidateVisual();
+            yTranslate = min * yScale - (float)Bounds.Height * 0.05f;
         }
 
         protected override string UpdateCoordinatesString()
@@ -404,7 +405,7 @@ namespace _3DSpectrumVisualizer
                     try
                     {
                         canvas.Translate(XTr, YTrS);
-                        canvas.Scale(XSc, -YScS);
+                        canvas.Scale(XSc, YScS);
                         RenderSensorProfiles(canvas);
                     }
                     catch (Exception ex)
@@ -460,7 +461,7 @@ namespace _3DSpectrumVisualizer
                 canvas.DrawText(text, 0, LastMouseY + FontPaint.TextSize * 1.1f, FontPaint);
                 canvas.DrawLine(0, LastMouseY, FontPaint.MeasureText(text) * 1.5f * TicksScale, LastMouseY, FontPaint);
                 //Sensors
-                value = (YTrS - LastMouseY) / YScS;
+                value = -(YTrS - LastMouseY) / YScS;
                 if (Data.Any(x => x.SensorLogScale)) value = MathF.Pow(10, value);
                 text = value.ToString(IntensityLabelFormat);
                 float labelWidth = FontPaint.MeasureText(text);
