@@ -272,7 +272,11 @@ namespace _3DSpectrumVisualizer
         public void InvalidateSpectrum(object sender, EventArgs e)
         {
             if (AutoupdateXScaleCheckbox.IsChecked == true) SectionPlot.AutoscaleX(false);
-            if (AutoYCheckbox.IsChecked == true) SectionPlot.AutoscaleY(false);
+            if (AutoYCheckbox.IsChecked == true)
+            {
+                SectionPlot.AutoscaleY(false);
+                SectionPlot.AutoscaleYSensors(false);
+            }
             Spectrum3D.InvalidateVisual();
             SectionPlot.InvalidateVisual();
             Program.LogMemoryFootprint();
@@ -563,7 +567,8 @@ namespace _3DSpectrumVisualizer
 
         private void OnSectionAutoscaleYClick(object sender, RoutedEventArgs e)
         {
-            SectionPlot.AutoscaleY();
+            SectionPlot.AutoscaleY(false);
+            SectionPlot.AutoscaleYSensors();
         }
 
         private void OnRestore3DViewClick(object sender, RoutedEventArgs e)
