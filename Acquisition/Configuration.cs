@@ -46,7 +46,7 @@ namespace Acquisition
         public double CdemEnabledAdditionalDivisionFactor { get; set; } = 1000;
         public int BackgroundAMURoundingDigits { get; set; } = 2;
         public double BackgroundScaling { get; set; } = 1;
-        public int MovingAverageWindowWidth { get; set; } = 1;
+        public int MovingAverageWindowWidth { get; set; } = 4;
         public double CdemGain { get; set; } = 1;
         public bool GapEnabled { get; set; } = false;
         public bool LogPipeMessages { get; set; } = false;

@@ -53,6 +53,7 @@ namespace Acquisition
                 if ((gpibPipeName?.Length ?? 0) > 0)
                 {
                     _GPIBClient = new NamedPipeClient<string>(gpibPipeName);
+                    _GPIBClient.AutoReconnect = true;
                     _GPIBClient.Start();
                     _GPIBClient.ServerMessage += GPIBClient_ServerMessage;
                 }
@@ -70,7 +71,8 @@ namespace Acquisition
             try
             {
                 var packet = JsonConvert.DeserializeObject<GPIBServerPacket>(message);
-                if (packet != null) GpibPacketReceived?.Invoke(this, packet);
+                if (packet?.Response != null && packet?.InstrumentName != null) GpibPacketReceived?.Invoke(this, packet);
+                else LogEvent?.Invoke(this, "Warning: GPIB message was empty");
             }
             catch (Exception ex)
             {
