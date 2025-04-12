@@ -1,7 +1,8 @@
 {
   "profiles": {
     "3DSpectrumVisualizer": {
-      "commandName": "Project"
+      "commandName": "Project",
+      "workingDirectory": "C:\\RESULTS\\2025-04-12_ZnO-300-Pd_Air"
     }
   }
 }

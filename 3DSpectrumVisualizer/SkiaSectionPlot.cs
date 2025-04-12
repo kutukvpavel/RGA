@@ -1,6 +1,7 @@
 ﻿using Avalonia;
 using Avalonia.Data;
 using Avalonia.Input;
+using Avalonia.Threading;
 using SkiaSharp;
 using System;
 using System.Collections.Generic;
@@ -168,19 +169,22 @@ namespace _3DSpectrumVisualizer
         }
         public void AutoscaleYSensors(bool invalidate = true)
         {
-            if (!DataRepositories.Any()) return;
-            var nonEmpty = DataRepositories.Select(x => (x.SensorLogScale ? x.LogSensorProfiles : x.SensorProfiles)
-                            .Where((y, i) => !y.IsEmpty && (i < RenderSensorProfiles.Count ? RenderSensorProfiles[i].Visible : true)))
-                            .Where(x => x.Any());
-            float max = nonEmpty.Max(x => x.Max(y => y.Bounds.Top));
-            float min = nonEmpty.Min(x => x.Min(y => y.Bounds.Bottom));
-            if (max != min)
+            Dispatcher.UIThread.Post(() =>
             {
-                AutoscalingYEngine(min, max, out float yScale, out float yTranslate);
-                YScalingSensors = yScale;
-                YTranslateSensors = yTranslate;
-            }
-            if (invalidate) InvalidateVisual();
+                if (!DataRepositories.Any()) return;
+                var nonEmpty = DataRepositories.Select(x => (x.SensorLogScale ? x.LogSensorProfiles : x.SensorProfiles)
+                                .Where((y, i) => !y.IsEmpty && (i < RenderSensorProfiles.Count ? RenderSensorProfiles[i].Visible : true)))
+                                .Where(x => x.Any());
+                float max = nonEmpty.Max(x => x.Max(y => y.Bounds.Bottom));
+                float min = nonEmpty.Min(x => x.Min(y => y.Bounds.Top));
+                if (max != min)
+                {
+                    AutoscalingYEngine(min, max, out float yScale, out float yTranslate);
+                    YScalingSensors = yScale;
+                    YTranslateSensors = yTranslate;
+                }
+                if (invalidate) InvalidateVisual();
+            });
         }
 
         public void AutoscaleYForAllSections(bool invalidate = true)
@@ -405,7 +409,7 @@ namespace _3DSpectrumVisualizer
                     try
                     {
                         canvas.Translate(XTr, YTrS);
-                        canvas.Scale(XSc, YScS);
+                        canvas.Scale(XSc, -YScS);
                         RenderSensorProfiles(canvas);
                     }
                     catch (Exception ex)
@@ -461,7 +465,7 @@ namespace _3DSpectrumVisualizer
                 canvas.DrawText(text, 0, LastMouseY + FontPaint.TextSize * 1.1f, FontPaint);
                 canvas.DrawLine(0, LastMouseY, FontPaint.MeasureText(text) * 1.5f * TicksScale, LastMouseY, FontPaint);
                 //Sensors
-                value = -(YTrS - LastMouseY) / YScS;
+                value = (YTrS - LastMouseY) / YScS;
                 if (Data.Any(x => x.SensorLogScale)) value = MathF.Pow(10, value);
                 text = value.ToString(IntensityLabelFormat);
                 float labelWidth = FontPaint.MeasureText(text);
