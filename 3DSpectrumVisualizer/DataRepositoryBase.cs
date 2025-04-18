@@ -575,6 +575,7 @@ namespace _3DSpectrumVisualizer
             }
             // Handle VI mode
             if ((index != VIModeCurrentIndex) && (index != VIModeVoltageIndex)) return;
+            if (SensorProfiles.Count <= VIModeCurrentIndex || SensorProfiles.Count <= VIModeVoltageIndex) return;
             int timePointsCount = Math.Min(SensorProfiles[VIModeVoltageIndex].PointCount, SensorProfiles[VIModeCurrentIndex].PointCount);
             if (timePointsCount <= VIModeProfile.PointCount) return;
             if (VIModeProfile.PointCount == 0)

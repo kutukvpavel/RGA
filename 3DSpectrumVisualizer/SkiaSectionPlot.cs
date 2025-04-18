@@ -169,19 +169,25 @@ namespace _3DSpectrumVisualizer
         }
         public void AutoscaleYSensors(bool invalidate = true)
         {
+            var nonEmpty = DataRepositories.Select(x => (x.SensorLogScale ? x.LogSensorProfiles : x.SensorProfiles).Where(y => !y.IsEmpty));
+            if (!nonEmpty.Any())
+            {
+                if (invalidate) InvalidateVisual();
+                return;
+            }
             Dispatcher.UIThread.Post(() =>
             {
-                if (!DataRepositories.Any()) return;
-                var nonEmpty = DataRepositories.Select(x => (x.SensorLogScale ? x.LogSensorProfiles : x.SensorProfiles)
-                                .Where((y, i) => !y.IsEmpty && (i < RenderSensorProfiles.Count ? RenderSensorProfiles[i].Visible : true)))
-                                .Where(x => x.Any());
-                float max = nonEmpty.Max(x => x.Max(y => y.Bounds.Bottom));
-                float min = nonEmpty.Min(x => x.Min(y => y.Bounds.Top));
-                if (max != min)
+                nonEmpty = nonEmpty.Select(x => x.Where((y, i) => i < RenderSensorProfiles.Count ? RenderSensorProfiles[i].Visible : true)).Where(x => x.Any());
+                if (nonEmpty.Any())
                 {
-                    AutoscalingYEngine(min, max, out float yScale, out float yTranslate);
-                    YScalingSensors = yScale;
-                    YTranslateSensors = yTranslate;
+                    float max = nonEmpty.Max(x => x.Max(y => y.Bounds.Bottom));
+                    float min = nonEmpty.Min(x => x.Min(y => y.Bounds.Top));
+                    if (max != min)
+                    {
+                        AutoscalingYEngine(min, max, out float yScale, out float yTranslate);
+                        YScalingSensors = yScale;
+                        YTranslateSensors = yTranslate;
+                    }
                 }
                 if (invalidate) InvalidateVisual();
             });

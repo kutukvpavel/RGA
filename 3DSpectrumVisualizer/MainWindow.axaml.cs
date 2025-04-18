@@ -102,6 +102,7 @@ namespace _3DSpectrumVisualizer
         private CheckBox SensorLogScale;
         private Grid VIPlotGrid;
         private Grid MainGrid;
+        private SkiaVIPlot VIPlot;
 
         private void InitializeComponent()
         {
@@ -145,6 +146,8 @@ namespace _3DSpectrumVisualizer
             SectionCoords.IsVisible = false;
             CoordsLabel.IsVisible = false;
 #endif
+            VIPlot = this.FindControl<SkiaVIPlot>("VIPlot");
+            VIPlot.DataRepositories = Program.Repositories;
         }
 
         private void Save3DCoords()
@@ -279,6 +282,7 @@ namespace _3DSpectrumVisualizer
             }
             Spectrum3D.InvalidateVisual();
             SectionPlot.InvalidateVisual();
+            VIPlot.InvalidateVisual();
             Program.LogMemoryFootprint();
         }
 
