@@ -2,7 +2,7 @@
   "profiles": {
     "3DSpectrumVisualizer": {
       "commandName": "Project",
-      "workingDirectory": "C:\\RESULTS\\2025-04-11_Blank_Rezonit_NO2"
+      "workingDirectory": "C:\\RESULTS\\2025-04-17_ZnO-300-Pd_NO2_VI"
     }
   }
 }

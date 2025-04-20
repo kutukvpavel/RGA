@@ -79,6 +79,7 @@ namespace _3DSpectrumVisualizer
 
         private Dictionary<ViewStates, float[]> LastViewCoords = new Dictionary<ViewStates, float[]>();
         private int ExportSectionReentrancyTracker = 0;
+        private int ExportVIReentrancyTracker = 0;
         private Button ExportSectionButton;
         private Skia3DSpectrum Spectrum3D;
         private CheckBox LogarithmicIntensity;
@@ -103,6 +104,7 @@ namespace _3DSpectrumVisualizer
         private Grid VIPlotGrid;
         private Grid MainGrid;
         private SkiaVIPlot VIPlot;
+        private Button ExportVIButton;
 
         private void InitializeComponent()
         {
@@ -148,6 +150,7 @@ namespace _3DSpectrumVisualizer
 #endif
             VIPlot = this.FindControl<SkiaVIPlot>("VIPlot");
             VIPlot.DataRepositories = Program.Repositories;
+            ExportVIButton = this.FindControl<Button>("btnExportVI");
         }
 
         private void Save3DCoords()
@@ -265,6 +268,10 @@ namespace _3DSpectrumVisualizer
                     {
                         MainGrid.ColumnDefinitions[3].Width = new GridLength(0, GridUnitType.Auto);
                     }
+                    else
+                    {
+                        VIPlot.Autoscale();
+                    }
                 }
                 LoadingLabel.IsVisible = false;
                 SectionPlot.UpdateRepos();
@@ -290,6 +297,46 @@ namespace _3DSpectrumVisualizer
 
 #region UI events
 
+        private async void OnVIExport_Click(object sender, RoutedEventArgs e)
+        {
+            if (!Program.Config.EnableVI) return;
+            SaveFileDialog sd = new SaveFileDialog()
+            {
+                DefaultExtension = "csv",
+                Filters = new List<FileDialogFilter>()
+                { new FileDialogFilter() { Extensions = new List<string>() { "csv" }, Name = "Comma-separated values" } }
+            };
+            if (Directory.Exists(Program.Config.LastExportDir)) sd.Directory = Program.Config.LastExportDir;
+            string path = await sd.ShowAsync(this);
+            if (path == null) return;
+            ExportVIReentrancyTracker++;
+            var buttonContent = ExportVIButton.Content;
+            var buttonBrush = ExportVIButton.Background;
+            ExportVIButton.Content = "Exporting...";
+            ExportVIButton.Background = Brushes.Gray;
+            try
+            {
+                await Task.Run(() => DataRepositoryBase.ExportVI(Program.Repositories, VIPlot.HideFirstPercentOfResults, 1 - VIPlot.HideLastPercentOfResults, path));
+            }
+            catch (Exception ex)
+            {
+                Program.LogException(this, ex);
+            }
+            finally
+            {
+                if (--ExportVIReentrancyTracker == 0)
+                {
+                    ExportVIButton.Content = buttonContent;
+                    ExportVIButton.Background = buttonBrush;
+                }
+            }
+        }
+
+        private void OnVIAutoscale_Click(object sender, RoutedEventArgs e)
+        {
+            VIPlot.Autoscale();
+        }
+
         private void SensorLogScale_Click(object sender, RoutedEventArgs e)
         {
             if (SensorLogScale.IsChecked == null) return;
@@ -308,6 +355,7 @@ namespace _3DSpectrumVisualizer
             {
                 if (e.NewValue == null || !e.IsEffectiveValueChange) return;
                 SectionPlot.HideLastPercentOfResults = (float)(double)e.NewValue;
+                VIPlot.HideLastPercentOfResults = (float)(double)e.NewValue;
             }
         }
 
@@ -318,6 +366,7 @@ namespace _3DSpectrumVisualizer
             {
                 if (e.NewValue == null || !e.IsEffectiveValueChange) return;
                 SectionPlot.HideFirstPercentOfResults = (float)(double)e.NewValue;
+                VIPlot.HideFirstPercentOfResults = (float)(double)e.NewValue;
             }
         }
 

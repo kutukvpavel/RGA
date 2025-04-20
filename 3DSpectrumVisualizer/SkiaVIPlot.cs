@@ -22,7 +22,7 @@ namespace _3DSpectrumVisualizer
 
         public SKPaint FontPaint { get; set; } = new SKPaint()
         { 
-            Color = SKColor.Parse("#ECE2E2"), StrokeWidth = 1, TextSize = 14.0f, TextScaleX = 1,
+            Color = SKColor.Parse("#0B0A0A"), StrokeWidth = 1, TextSize = 14.0f, TextScaleX = 1,
             IsAntialias = true
         };
 
@@ -79,10 +79,19 @@ namespace _3DSpectrumVisualizer
 
         #region Public Methods
 
-        public void Autoscale()
+        public void Autoscale(bool invalidate = true)
         {
-
-            InvalidateVisual();
+            var nonEmpty = DataRepositories.Where(x => !x.VIModeProfile.IsEmpty);
+            if (!nonEmpty.Any()) return;
+            float yMin = nonEmpty.Min(x => x.VIModeProfile.Bounds.Top);
+            float yMax = nonEmpty.Min(x => x.VIModeProfile.Bounds.Bottom);
+            float xMin = nonEmpty.Min(x => x.VIModeProfile.Bounds.Left);
+            float xMax = nonEmpty.Max(x => x.VIModeProfile.Bounds.Right);
+            YScaling = (float)Bounds.Height * 0.9f / (yMax - yMin);
+            YTranslate = 0; //yMin * YScaling - (float)Bounds.Height * 0.05f;
+            XScaling = (float)Bounds.Width * 0.9f / (xMax - xMin);
+            XTranslate = 0;//xMin * XScaling - (float)Bounds.Width * 0.05f;
+            if (invalidate) InvalidateVisual();
         }
 
         #endregion
@@ -122,7 +131,6 @@ namespace _3DSpectrumVisualizer
                 YScaling += YScaling * delta;
                 correction = YScaling / correction;
                 YTranslate *= correction;
-                YTranslate += (correction - 1) * (float)(Bounds.Height - pos.Y);
             }
             if (!e.KeyModifiers.HasFlag(KeyModifiers.Control))
             {
@@ -130,7 +138,6 @@ namespace _3DSpectrumVisualizer
                 XScaling += XScaling * delta;
                 correction = XScaling / correction;
                 XTranslate *= correction;
-                XTranslate -= (correction - 1) * (float)pos.X;
             }
             RaiseCoordsChanged();
             InvalidateVisual();
@@ -167,10 +174,7 @@ namespace _3DSpectrumVisualizer
             private readonly float XSc;
             private readonly float YSc;
             private readonly SKPaint FontPaint;
-            private readonly float ResultsBegin;
-            private readonly float ResultsEnd;
             private readonly float LastMouseY;
-            private readonly float LastMouseX;
             private readonly IEnumerable<DataRepositoryBase> Data;
             private readonly float VoltageAxisInterval;
             private readonly string CurrentLabelFormat;
@@ -184,13 +188,14 @@ namespace _3DSpectrumVisualizer
                 YSc = parent.YScaling;
                 Data = parent.DataRepositories.Where(x => x.Enabled);
                 FontPaint = parent.FontPaint;
-                ResultsBegin = 1 - parent.HideFirstPercentOfResults;
-                ResultsEnd = 1 - parent.HideLastPercentOfResults;
                 LastMouseY = lastMouseY;
-                LastMouseX = lastMouseX;
                 VoltageAxisInterval = parent.VoltageAxisInterval;
                 CurrentLabelFormat = parent.CurrentLabelFormat;
                 VoltageLabelFormat = parent.VoltageLabelFormat;
+                foreach (var item in Data)
+                {
+                    item.VIPaint.PathEffect = SKPathEffect.CreateTrim(parent.HideFirstPercentOfResults, 1 - parent.HideLastPercentOfResults);
+                }
             }
 
             protected override void RenderCanvas(SKCanvas canvas)
@@ -204,8 +209,7 @@ namespace _3DSpectrumVisualizer
                     canvas.Scale(XSc, YSc);
                     foreach (var item in Data)
                     {
-                        SKPath path = item.VIModeProfile;
-                        canvas.DrawPath(path, item.SectionPaint);
+                        canvas.DrawPath(item.VIModeProfile, item.VIPaint);
                     }
                 }
                 RenderVoltageAxis(canvas);
@@ -215,7 +219,7 @@ namespace _3DSpectrumVisualizer
 
             private void RenderVoltageAxis(SKCanvas canvas)
             {
-                SKPoint origin = new SKPoint(XTr * XSc, YTr * YSc);
+                SKPoint origin = new SKPoint(XTr, YTr);
                 var min = Data.Min(x =>
                 {
                     if (x.VIModeProfile.GetBounds(out SKRect bounds))
@@ -238,16 +242,15 @@ namespace _3DSpectrumVisualizer
                         return 0;
                     }
                 });
-                int ticksPerSide = (int)MathF.Floor(canvas.LocalClipBounds.Width / (2 * VoltageAxisInterval));
+                int ticksPerSide = (int)MathF.Floor((canvas.LocalClipBounds.Width / XSc) / (2 * VoltageAxisInterval));
+                if (ticksPerSide > 10) ticksPerSide = 10;
                 float tripleStroke = FontPaint.StrokeWidth * 3;
                 float tickHeightHalf = FontPaint.TextSize * 0.75f;
-                canvas.DrawText("0", origin.X + tripleStroke, origin.Y + FontPaint.TextSize, FontPaint);
-                canvas.DrawLine(origin.X, origin.Y - tickHeightHalf, origin.X, origin.Y + tickHeightHalf, FontPaint);
                 float step = VoltageAxisInterval * XSc;
                 for (int i = -ticksPerSide; i <= ticksPerSide; i++)
                 {
-                    var x = MathF.FusedMultiplyAdd(i, step, FontPaint.StrokeWidth);
-                    canvas.DrawText((VoltageAxisInterval * i).ToString(VoltageLabelFormat), x + tripleStroke, origin.Y + FontPaint.TextSize, FontPaint);
+                    var x = MathF.FusedMultiplyAdd(i, step, FontPaint.StrokeWidth + origin.X);
+                    canvas.DrawText(i == 0 ? "0" : (VoltageAxisInterval * i).ToString(VoltageLabelFormat), x + tripleStroke, origin.Y + FontPaint.TextSize, FontPaint);
                     canvas.DrawLine(x, origin.Y - tickHeightHalf, x, origin.Y + tickHeightHalf, FontPaint);
                 }
             }

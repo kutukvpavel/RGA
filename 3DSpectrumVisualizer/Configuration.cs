@@ -81,7 +81,7 @@ namespace _3DSpectrumVisualizer
         public int VIModeVoltageSensorIndex { get; set; } = -1;
         public int VIModeCurrentSensorIndex { get; set; } = -1;
         [JsonIgnore]
-        public bool EnableVI => VIModeCurrentSensorIndex > 0 && VIModeVoltageSensorIndex > 0;
+        public bool EnableVI => VIModeCurrentSensorIndex > -1 && VIModeVoltageSensorIndex > -1;
         public float VIModeCurrentMultiplier { get; set; } = 1;
         public double GradientPositionSliderLawPower { get; set; } = 2.5;
         public int AMURoundingDigits { get; set; } = 1;

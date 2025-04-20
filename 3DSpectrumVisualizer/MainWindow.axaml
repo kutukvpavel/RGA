@@ -99,9 +99,9 @@ Gradient</CheckBox>
 				Loading...
 			</Label>
 			<TextBlock VerticalAlignment="Center" Margin="10,3,3,3">Hide results:</TextBlock>
-			<Slider x:Name="sldHideStart" Minimum="0" Maximum="1" SmallChange="0.01" Width="100"
+			<Slider x:Name="sldHideStart" Minimum="0" Maximum="1" SmallChange="0.001" Width="200"
 					Value="{Binding #Spectrum3D.HideFirstPercentOfResults, Mode=TwoWay}"></Slider>
-			<Slider x:Name="sldHideEnd" Minimum="0" Maximum="1" SmallChange="0.01" Width="100"
+			<Slider x:Name="sldHideEnd" Minimum="0" Maximum="1" SmallChange="0.001" Width="200"
 					Value="{Binding #Spectrum3D.HideLastPercentOfResults, Mode=TwoWay}"></Slider>
 			<Button Content="Top View" Background="LightBlue" Button.Click="OnTopViewClick"></Button>
 			<Button Content="Front View" Background="LightBlue" Button.Click="OnFrontViewClick"></Button>
@@ -161,7 +161,11 @@ Gradient</CheckBox>
 		</Grid>
 		<GridSplitter Grid.Row="0" Grid.RowSpan="4" Grid.Column="2" ResizeDirection="Columns" Background="#6F6F6F"></GridSplitter>
 		<Grid Grid.Column="3" Grid.Row="0" Grid.RowSpan="4" ColumnDefinitions="*" RowDefinitions="auto,*" x:Name="grdVIPlot">
-			<TextBlock Grid.Column="0" Grid.Row="0" Margin="5">VI Plot</TextBlock>
+			<StackPanel Grid.Column="0" Grid.Row="0" Margin="2" DataContext="{x:Static local:Program.Config}" IsVisible="{Binding EnableVI}">
+				<TextBlock Margin="5" VerticalAlignment="Center" FontSize="14">VI Plot</TextBlock>
+				<Button Button.Click="OnVIAutoscale_Click" Background="#ADE6BF">Autoscale</Button>
+				<Button Button.Click="OnVIExport_Click" Background="#EFAA30" x:Name="btnExportVI">Export</Button>
+			</StackPanel>
 			<local:SkiaVIPlot Grid.Column="0" Grid.Row="1" x:Name="VIPlot" Margin="5"></local:SkiaVIPlot>
 		</Grid>
 	</Grid>

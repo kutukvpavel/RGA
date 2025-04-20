@@ -46,6 +46,7 @@ namespace _3DSpectrumVisualizer
 
         #region Static
 
+        public static string SensorExportFormat { get; set; } = "E3";
         public static float ColorPositionSliderPrecision { get; set; }
         public static CsvConfiguration ExportCsvConfig { get; set; } = new CsvConfiguration(CultureInfo.CurrentCulture)
         {
@@ -78,6 +79,77 @@ namespace _3DSpectrumVisualizer
         protected static SKPointXEqualityComparer XEqualityComparer = new SKPointXEqualityComparer();
         protected static Func<GradientColor, float> ColorPosSelector =
             new Func<GradientColor, float>(x => x.Position);
+
+        public static void ExportVI(IList<DataRepositoryBase> repos, float startFraction, float endFraction, string path)
+        {
+            bool lockTaken = false;
+            foreach (var item in repos)
+            {
+                lockTaken = Monitor.TryEnter(item.UpdateSynchronizingObject, 20000);
+                if (!lockTaken) break;
+            }
+            if (!lockTaken)
+            {
+                foreach (var item in repos)
+                {
+                    try
+                    {
+                        Monitor.Exit(item.UpdateSynchronizingObject);
+                    }
+                    catch (SynchronizationLockException)
+                    { }
+                }
+                throw new TimeoutException("Can't acquire update lock to export the section.");
+            }
+            try
+            {
+                using TextWriter tw = new StreamWriter(path, false);
+                using CsvWriter cw = new CsvWriter(tw, ExportCsvConfig);
+                int len = repos.Max(x => x.VIModeTimestamps.Count);
+                int start = (int)MathF.Round(len * startFraction);
+                int end = (int)MathF.Round(len * endFraction);
+                foreach (var item in repos)
+                {
+                    cw.WriteField(item.Location.Split(Path.DirectorySeparatorChar).LastOrDefault());
+                    cw.WriteField("V");
+                    cw.WriteField("I");
+                }
+                cw.NextRecord();
+                for (int i = start; i < end; i++)
+                {
+                    try
+                    {
+                        foreach (var item in repos)
+                        {
+                            if (item.VIModeTimestamps.Count < i)
+                            {
+                                cw.WriteField(item.VIModeTimestamps[i].ToString(Program.Config.ExportXFormat));
+                                cw.WriteField(item.VIModeProfile[i].X.ToString(SensorExportFormat));
+                                cw.WriteField(item.VIModeProfile[i].Y.ToString(SensorExportFormat));
+                            }
+                            else
+                            {
+                                cw.WriteField(string.Empty);
+                                cw.WriteField(string.Empty);
+                                cw.WriteField(string.Empty);
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Program.LogException(repos, ex);
+                    }
+                    cw.NextRecord();
+                }
+            }
+            finally
+            {
+                foreach (var item in repos)
+                {
+                    Monitor.Exit(item.UpdateSynchronizingObject);
+                }
+            }
+        }
 
         public static void ExportSections(IList<DataRepositoryBase> repos, float amu, string path)
         {
@@ -146,7 +218,7 @@ namespace _3DSpectrumVisualizer
                                 //Sensors
                                 for (int k = 0; k < item.SensorProfiles.Count; k++)
                                 {
-                                    t = FindProfilePoint(item.SensorProfiles[k], p, ref sensorIndex[j][k], "E3");
+                                    t = FindProfilePoint(item.SensorProfiles[k], p, ref sensorIndex[j][k], SensorExportFormat);
                                     cw.WriteField(t);
                                 }
                             }
@@ -155,7 +227,7 @@ namespace _3DSpectrumVisualizer
                                 int columns = 5 + item.SensorProfiles.Count;
                                 for (int k = 0; k < columns; k++)
                                 {
-                                    cw.WriteField("");
+                                    cw.WriteField(string.Empty);
                                 }
                             }
                         }
@@ -209,6 +281,13 @@ namespace _3DSpectrumVisualizer
         public List<UVRegion> UVProfile { get; } = new List<UVRegion>();
         public List<GasRegion> GasProfile { get; } = new List<GasRegion>();
         public SKPaint PaintStroke { get; set; } = new SKPaint()
+        {
+            Color = FallbackColor,
+            Style = SKPaintStyle.Stroke,
+            StrokeWidth = 0,
+            IsAntialias = false
+        };
+        public SKPaint VIPaint { get; set; } = new SKPaint()
         {
             Color = FallbackColor,
             Style = SKPaintStyle.Stroke,
@@ -383,6 +462,10 @@ namespace _3DSpectrumVisualizer
             if (p != null)
             {
                 p.Complete((float)(EndTime - StartTime).TotalSeconds);
+            }
+            if (Program.Config.EnableVI)
+            {
+                VIPaint.Color = SensorColors[Program.Config.VIModeCurrentSensorIndex].Color;
             }
         }
         protected IEnumerable<string> ReadLines(StreamReader r)

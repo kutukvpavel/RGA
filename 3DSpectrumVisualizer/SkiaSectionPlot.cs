@@ -382,6 +382,13 @@ namespace _3DSpectrumVisualizer
                 ShowTemperatureProfile = parent.RenderTemperatureProfile;
                 ShowSensors = parent.RenderSensorProfiles.Select(x => x.Visible).ToList();
                 LastMouseY = lastMouseY;
+                foreach (var item in Data)
+                {
+                    foreach (var color in item.SensorColors)
+                    {
+                        color.PathEffect = SKPathEffect.CreateTrim(parent.HideFirstPercentOfResults, ResultsEnd);
+                    }
+                }
             }
 
             protected override void RenderCanvas(SKCanvas canvas)
