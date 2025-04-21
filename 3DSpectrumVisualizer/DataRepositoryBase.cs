@@ -350,9 +350,13 @@ namespace _3DSpectrumVisualizer
         public SKPath MassAxis { get; protected set; } = new SKPath();
         public SKPath TimeAxis { get; protected set; } = new SKPath();
         public Dictionary<float, SpectrumSection> Sections { get; protected set; } = new Dictionary<float, SpectrumSection>();
+        public int VIModeStartOffset { get; protected set; } = 0;
+        public int VIModeVoltageStartOffset => VIModeStartOffset > 0 ? VIModeStartOffset : 0;
+        public int VIModeCurrentStartOffset => VIModeStartOffset < 0 ? -VIModeStartOffset : 0;
+
 
         #endregion
-         
+
         #region Public Methods
 
         public void LoadData()
@@ -663,21 +667,33 @@ namespace _3DSpectrumVisualizer
             if (timePointsCount <= VIModeProfile.PointCount) return;
             if (VIModeProfile.PointCount == 0)
             {
+                float viStartTime = Math.Max(SensorProfiles[VIModeVoltageIndex][0].X, SensorProfiles[VIModeCurrentIndex][0].X);
+                int currentStartIndex = FindPathStartIndex(SensorProfiles[VIModeCurrentIndex], viStartTime);
+                int voltageStartIndex = FindPathStartIndex(SensorProfiles[VIModeVoltageIndex], viStartTime) - 1; //Voltage precedes current in VI scans
+                if (currentStartIndex < 0 || voltageStartIndex < 0) return;
+                VIModeStartOffset = voltageStartIndex - currentStartIndex;
                 VIModeProfile.MoveTo(new SKPoint(
-                    SensorProfiles[VIModeVoltageIndex][0].Y,
-                    SensorProfiles[VIModeCurrentIndex][0].Y * VIModeCurrentMultiplier
+                    SensorProfiles[VIModeVoltageIndex][VIModeVoltageStartOffset].Y,
+                    SensorProfiles[VIModeCurrentIndex][VIModeCurrentStartOffset].Y * VIModeCurrentMultiplier
                     ));
-                VIModeTimestamps.Add(SensorProfiles[VIModeCurrentIndex][0].X);
+                VIModeTimestamps.Add(SensorProfiles[VIModeCurrentIndex][VIModeCurrentStartOffset].X);
             }
             else
             {
                 for (int i = VIModeProfile.PointCount; i < timePointsCount; i++)
                 {
-                    VIModeProfile.LineTo(new SKPoint(
-                        SensorProfiles[VIModeVoltageIndex][i].Y,
-                        SensorProfiles[VIModeCurrentIndex][i].Y * VIModeCurrentMultiplier
-                    ));
-                    VIModeTimestamps.Add(SensorProfiles[VIModeCurrentIndex][i].X);
+                    try
+                    {
+                        VIModeProfile.LineTo(new SKPoint(
+                            SensorProfiles[VIModeVoltageIndex][i + VIModeVoltageStartOffset].Y,
+                            SensorProfiles[VIModeCurrentIndex][i + VIModeCurrentStartOffset].Y * VIModeCurrentMultiplier
+                        ));
+                        VIModeTimestamps.Add(SensorProfiles[VIModeCurrentIndex][i + VIModeCurrentStartOffset].X);
+                    }
+                    catch (ArgumentOutOfRangeException)
+                    {
+
+                    }
                 }
             }
         }
@@ -687,7 +703,14 @@ namespace _3DSpectrumVisualizer
             time = (float)(DateTime.Parse(split[0], CultureInfo.InvariantCulture) - StartTime).TotalSeconds;
             return split[1];
         }
-
+        protected int FindPathStartIndex(SKPath p, float t)
+        {
+            for (int i = 0; i < p.PointCount; i++)
+            {
+                if (p[i].X >= t) return i;
+            }
+            return -1;
+        }
         #endregion
     }
 }
