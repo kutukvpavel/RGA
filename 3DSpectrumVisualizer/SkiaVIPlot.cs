@@ -110,7 +110,7 @@ namespace _3DSpectrumVisualizer
         protected override CustomDrawOp PrepareCustomDrawingOperation()
         {
             if (DisableRendering) return null;
-            return new DrawVIPlot(this, (float)(_LastPressedPoint?.X ?? Bounds.Width / 2), (float)(_LastPressedPoint?.Y ?? Bounds.Height / 2));
+            return new DrawVIPlot(this, (float)(_LastPressedPoint?.Y ?? Bounds.Height / 2));
         }
 
         private void SkiaSectionPlot_PointerPressed(object sender, PointerPressedEventArgs e)
@@ -180,7 +180,7 @@ namespace _3DSpectrumVisualizer
             private readonly string CurrentLabelFormat;
             private readonly string VoltageLabelFormat;
 
-            public DrawVIPlot(SkiaVIPlot parent, float lastMouseX, float lastMouseY) : base(parent)
+            public DrawVIPlot(SkiaVIPlot parent, float lastMouseY) : base(parent)
             {
                 XTr = parent.XTranslate + (float)parent.Bounds.Width / 2;
                 YTr = parent.YTranslate + (float)parent.Bounds.Height / 2;
@@ -194,7 +194,9 @@ namespace _3DSpectrumVisualizer
                 VoltageLabelFormat = parent.VoltageLabelFormat;
                 foreach (var item in Data)
                 {
-                    item.VIPaint.PathEffect = SKPathEffect.CreateTrim(parent.HideFirstPercentOfResults, 1 - parent.HideLastPercentOfResults);
+                    item.VIPaint.PathEffect = SKPathEffect.CreateTrim(
+                        (parent.HideFirstPercentOfResults * item.Duration - item.VIModeTimestamps.FirstOrDefault()) / item.VIModeDuration,
+                        1 - ((parent.HideLastPercentOfResults - 1) * item.Duration + item.VIModeTimestamps.LastOrDefault()) / item.VIModeDuration);
                 }
             }
 
@@ -206,7 +208,7 @@ namespace _3DSpectrumVisualizer
                 using (SKAutoCanvasRestore ar = new SKAutoCanvasRestore(canvas))
                 {
                     canvas.Translate(XTr, YTr);
-                    canvas.Scale(XSc, YSc);
+                    canvas.Scale(XSc, -YSc);
                     foreach (var item in Data)
                     {
                         canvas.DrawPath(item.VIModeProfile, item.VIPaint);

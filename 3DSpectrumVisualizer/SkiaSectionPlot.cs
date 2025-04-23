@@ -363,6 +363,7 @@ namespace _3DSpectrumVisualizer
             private readonly List<bool> ShowSensors;
             private readonly float LastMouseY;
             private readonly IEnumerable<DataRepositoryBase> Data;
+            private List<SKRect> ClipRects;
 
             public DrawSectionPlot(SkiaSectionPlot parent, float lastMouseY) : base(parent)
             {
@@ -382,13 +383,22 @@ namespace _3DSpectrumVisualizer
                 ShowTemperatureProfile = parent.RenderTemperatureProfile;
                 ShowSensors = parent.RenderSensorProfiles.Select(x => x.Visible).ToList();
                 LastMouseY = lastMouseY;
-                foreach (var item in Data)
+                /*foreach (var item in Data)
                 {
                     foreach (var color in item.SensorColors)
                     {
                         color.PathEffect = SKPathEffect.CreateTrim(parent.HideFirstPercentOfResults, ResultsEnd);
                     }
-                }
+                }*/
+                ClipRects = Data.Select(item =>
+                {
+                    var path = item.LogarithmicIntensity ? item.Sections[AMU].LogPath : item.Sections[AMU].LinearPath;
+                    return new SKRect(
+                                path.Bounds.Right - path.Bounds.Width * ResultsBegin,
+                                float.NegativeInfinity,
+                                path.Bounds.Left + path.Bounds.Width * ResultsEnd,
+                                float.PositiveInfinity);
+                }).ToList();
             }
 
             protected override void RenderCanvas(SKCanvas canvas)
@@ -434,18 +444,16 @@ namespace _3DSpectrumVisualizer
                 {
                     canvas.Translate(XTr, YTr);
                     canvas.Scale(XSc, -YSc);
+                    int i = 0;
                     foreach (var item in Data)
                     {
                         var path = item.LogarithmicIntensity ? item.Sections[AMU].LogPath : item.Sections[AMU].LinearPath;
                         if (ResultsEnd != 1 || ResultsBegin != 1)
                         {
-                            canvas.ClipRect(new SKRect(
-                                path.Bounds.Right - path.Bounds.Width * ResultsBegin,
-                                path.Bounds.Top,
-                                path.Bounds.Left + path.Bounds.Width * ResultsEnd,
-                                path.Bounds.Bottom));
+                            canvas.ClipRect(new SKRect(ClipRects[i].Left, path.Bounds.Top, ClipRects[i].Right, path.Bounds.Bottom));
                         }
                         canvas.DrawPath(path, item.SectionPaint);
+                        i++;
                     }
                 }
                 RenderTimeAxis(canvas);
@@ -489,8 +497,13 @@ namespace _3DSpectrumVisualizer
 
             private void RenderRegions(SKCanvas canvas)
             {
+                int i = 0;
                 foreach (var item in Data)
                 {
+                    if (ResultsEnd != 1 || ResultsBegin != 1)
+                    {
+                        canvas.ClipRect(new SKRect(ClipRects[i].Left, 0, ClipRects[i].Right, canvas.LocalClipBounds.Height));
+                    }
                     if (ShowGasRegions)
                     {
                         foreach (var reg in item.GasProfile)
@@ -502,27 +515,41 @@ namespace _3DSpectrumVisualizer
                     {
                         canvas.DrawRect(IRegion.GetRect(reg, 0, canvas.LocalClipBounds.Height), item.UVRegionPaint);
                     }
+                    i++;
                 }
             }
 
             private void RenderTemperatureProfile(SKCanvas canvas)
             {
+                int i = 0;
                 foreach (var item in Data)
                 {
+                    if (ResultsEnd != 1 || ResultsBegin != 1)
+                    {
+                        canvas.ClipRect(new SKRect(ClipRects[i].Left, item.TemperatureProfile.Bounds.Top,
+                            ClipRects[i].Right, item.TemperatureProfile.Bounds.Bottom));
+                    }
                     canvas.DrawPath(item.TemperatureProfile, item.TemperaturePaint);
+                    i++;
                 }
             }
 
             private void RenderSensorProfiles(SKCanvas canvas)
             {
+                int j = 0;
                 foreach (var item in Data)
                 {
+                    if (ResultsEnd != 1 || ResultsBegin != 1)
+                    {
+                        canvas.ClipRect(new SKRect(ClipRects[j].Left, canvas.LocalClipBounds.Top, ClipRects[j].Right, canvas.LocalClipBounds.Bottom));
+                    }
                     for (int i = 0; i < item.SensorProfiles.Count; i++)
                     {
                         if (!(i < ShowSensors.Count ? ShowSensors[i] : true)) continue;
                         canvas.DrawPath(item.SensorLogScale ? item.LogSensorProfiles[i] : item.SensorProfiles[i],
                             item.SensorColors.Length > i ? item.SensorColors[i] : item.PaintWideStroke);
                     }
+                    j++;
                 }   
             }
         }

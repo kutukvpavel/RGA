@@ -364,10 +364,8 @@ namespace _3DSpectrumVisualizer
                 {
                     if (i % DropCoef != 0) return false;
                 }
-                if ((float)(scan.CreationTime - item.StartTime).TotalSeconds
-                    / item.Duration < ResultsBegin) return reverseOrder;
-                if ((float)(item.EndTime - scan.CreationTime).TotalSeconds
-                    / item.Duration < ResultsEnd) return !reverseOrder;
+                if ((float)(scan.CreationTime - item.StartTime).TotalSeconds < ResultsBegin * item.Duration) return reverseOrder;
+                if ((float)(item.EndTime - scan.CreationTime).TotalSeconds < ResultsEnd * item.Duration) return !reverseOrder;
                 var path = item.LogarithmicIntensity ? scan.LogPath2D : scan.Path2D;
                 if (path == null) return false;
                 View3D.Save();

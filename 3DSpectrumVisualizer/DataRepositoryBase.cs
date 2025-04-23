@@ -350,10 +350,9 @@ namespace _3DSpectrumVisualizer
         public SKPath MassAxis { get; protected set; } = new SKPath();
         public SKPath TimeAxis { get; protected set; } = new SKPath();
         public Dictionary<float, SpectrumSection> Sections { get; protected set; } = new Dictionary<float, SpectrumSection>();
-        public int VIModeStartOffset { get; protected set; } = 0;
-        public int VIModeVoltageStartOffset => VIModeStartOffset > 0 ? VIModeStartOffset : 0;
-        public int VIModeCurrentStartOffset => VIModeStartOffset < 0 ? -VIModeStartOffset : 0;
-
+        public int VILastAddedCurrentIndex { get; protected set; } = 0;
+        public int VILastAddedVoltageIndex { get; protected set; } = 0;
+        public float VIModeDuration => VIModeTimestamps.LastOrDefault() - VIModeTimestamps.FirstOrDefault();
 
         #endregion
 
@@ -467,9 +466,67 @@ namespace _3DSpectrumVisualizer
             {
                 p.Complete((float)(EndTime - StartTime).TotalSeconds);
             }
-            if (Program.Config.EnableVI)
+            if (Program.Config.EnableVI && (SensorProfiles.Count > VIModeCurrentIndex && SensorProfiles.Count > VIModeVoltageIndex))
             {
                 VIPaint.Color = SensorColors[Program.Config.VIModeCurrentSensorIndex].Color;
+                if (VIModeProfile.PointCount == 0)
+                {
+                    var intersection = SKRect.Intersect(SensorProfiles[VIModeVoltageIndex].Bounds, SensorProfiles[VIModeCurrentIndex].Bounds);
+                    if (!intersection.IsEmpty)
+                    {
+                        VILastAddedVoltageIndex = SensorProfiles[VIModeVoltageIndex].Points.TakeWhile(x => x.X < intersection.Left).Count();
+                        VILastAddedCurrentIndex = SensorProfiles[VIModeCurrentIndex].Points.TakeWhile(x => x.X < intersection.Left).Count();
+                        var voltages = SensorProfiles[VIModeVoltageIndex].Points.Skip(VILastAddedVoltageIndex).TakeWhile(x => x.X <= intersection.Right);
+                        var currents = SensorProfiles[VIModeCurrentIndex].Points.Skip(VILastAddedCurrentIndex).TakeWhile(x => x.X <= intersection.Right);
+                        if (voltages.First().X > currents.First().X)
+                        {
+                            currents = currents.Skip(1);
+                            VILastAddedCurrentIndex++;
+                        }
+                        VIModeProfile.MoveTo(new SKPoint(
+                            voltages.First().Y,
+                            currents.First().Y * VIModeCurrentMultiplier
+                        ));
+                        VIModeTimestamps.Add(currents.First().X);
+                        voltages = voltages.Skip(1);
+                        var voltageIterator = voltages.GetEnumerator();
+                        voltageIterator.MoveNext();
+                        currents = currents.Skip(1);
+                        foreach (var item in currents)
+                        {
+                            float v = float.NaN;
+                            do
+                            {
+                                if (voltageIterator.Current.X > item.X) break;
+                                v = voltageIterator.Current.Y;
+                                VILastAddedVoltageIndex++;
+                            } while (voltageIterator.MoveNext());
+                            VILastAddedCurrentIndex++;
+                            if (!float.IsFinite(v)) continue;
+                            VIModeProfile.LineTo(new SKPoint(v, item.Y));
+                            VIModeTimestamps.Add(item.X);
+                        }
+                    }
+                }
+                else
+                {
+                    for (int i = VILastAddedCurrentIndex + 1; i < SensorProfiles[VIModeCurrentIndex].PointCount; i++)
+                    {
+                        SKPoint item = SensorProfiles[VIModeCurrentIndex][i];
+                        float v = float.NaN;
+                        for (int j = VILastAddedVoltageIndex + 1; j < SensorProfiles[VIModeVoltageIndex].PointCount; j++)
+                        {
+                            var voltagePoint = SensorProfiles[VIModeVoltageIndex][j];
+                            if (voltagePoint.X > item.X) break;
+                            v = voltagePoint.Y;
+                            VILastAddedVoltageIndex++;
+                        }
+                        VILastAddedCurrentIndex++;
+                        if (!float.IsFinite(v)) continue;
+                        VIModeProfile.LineTo(new SKPoint(v, item.Y));
+                        VIModeTimestamps.Add(item.X);
+                    }
+                }
             }
         }
         protected IEnumerable<string> ReadLines(StreamReader r)
@@ -629,6 +686,7 @@ namespace _3DSpectrumVisualizer
                 TemperatureProfile.MoveTo(t, val);
             }
         }
+
         protected void AddSensorInfoLine(string l, int index)
         {
             l = ParseInfoLine(l, out float t);
@@ -658,42 +716,6 @@ namespace _3DSpectrumVisualizer
                 else
                 {
                     lp.MoveTo(t, logVal);
-                }
-            }
-            // Handle VI mode
-            if ((index != VIModeCurrentIndex) && (index != VIModeVoltageIndex)) return;
-            if (SensorProfiles.Count <= VIModeCurrentIndex || SensorProfiles.Count <= VIModeVoltageIndex) return;
-            int timePointsCount = Math.Min(SensorProfiles[VIModeVoltageIndex].PointCount, SensorProfiles[VIModeCurrentIndex].PointCount);
-            if (timePointsCount <= VIModeProfile.PointCount) return;
-            if (VIModeProfile.PointCount == 0)
-            {
-                float viStartTime = Math.Max(SensorProfiles[VIModeVoltageIndex][0].X, SensorProfiles[VIModeCurrentIndex][0].X);
-                int currentStartIndex = FindPathStartIndex(SensorProfiles[VIModeCurrentIndex], viStartTime);
-                int voltageStartIndex = FindPathStartIndex(SensorProfiles[VIModeVoltageIndex], viStartTime) - 1; //Voltage precedes current in VI scans
-                if (currentStartIndex < 0 || voltageStartIndex < 0) return;
-                VIModeStartOffset = voltageStartIndex - currentStartIndex;
-                VIModeProfile.MoveTo(new SKPoint(
-                    SensorProfiles[VIModeVoltageIndex][VIModeVoltageStartOffset].Y,
-                    SensorProfiles[VIModeCurrentIndex][VIModeCurrentStartOffset].Y * VIModeCurrentMultiplier
-                    ));
-                VIModeTimestamps.Add(SensorProfiles[VIModeCurrentIndex][VIModeCurrentStartOffset].X);
-            }
-            else
-            {
-                for (int i = VIModeProfile.PointCount; i < timePointsCount; i++)
-                {
-                    try
-                    {
-                        VIModeProfile.LineTo(new SKPoint(
-                            SensorProfiles[VIModeVoltageIndex][i + VIModeVoltageStartOffset].Y,
-                            SensorProfiles[VIModeCurrentIndex][i + VIModeCurrentStartOffset].Y * VIModeCurrentMultiplier
-                        ));
-                        VIModeTimestamps.Add(SensorProfiles[VIModeCurrentIndex][i + VIModeCurrentStartOffset].X);
-                    }
-                    catch (ArgumentOutOfRangeException)
-                    {
-
-                    }
                 }
             }
         }
