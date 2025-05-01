@@ -46,7 +46,7 @@ namespace _3DSpectrumVisualizer
             string path = Path.Combine(Location, InfoSubfolder, InfoFileName);
             if (!File.Exists(path))
             {
-                File.WriteAllText(path, Path.GetDirectoryName(Location) + Environment.NewLine);
+                File.WriteAllText(path, Path.GetFileName(Location) + Environment.NewLine);
             }
             new Process()
             {
