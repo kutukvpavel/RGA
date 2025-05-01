@@ -77,6 +77,7 @@ namespace _3DSpectrumVisualizer
         public string TemperatureFileName { get; set; } = "Temp.txt";
         public string UVFileName { get; set; } = "UV.txt";
         public string GasFileName { get; set; } = "Gas.txt";
+        public string InfoFileName { get; set; } = "info.txt";
         public string SensorFileName { get; set; } = "Sensor{0}.txt";
         public int VIModeVoltageSensorIndex { get; set; } = -1;
         public int VIModeCurrentSensorIndex { get; set; } = -1;

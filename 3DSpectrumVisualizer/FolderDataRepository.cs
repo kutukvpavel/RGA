@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Timers;
 using System.Text.RegularExpressions;
+using System.Diagnostics;
 
 namespace _3DSpectrumVisualizer
 {
@@ -38,6 +39,32 @@ namespace _3DSpectrumVisualizer
                 $@"^{Regex.Escape(infoSubfolder + Path.DirectorySeparatorChar)}{SensorFileName.Replace("{0}", "[0-9]+").Replace(".", @"\.")}$";
             _SensorPathes = Directory.GetFiles(infoSubfolder).Where(x => Regex.IsMatch(x, sensorsPattern)).ToArray();
             _SensorStreams = new TextReader[_SensorPathes.Length];
+        }
+
+        public override void OpenDescriptionFile()
+        {
+            string path = Path.Combine(Location, InfoSubfolder, InfoFileName);
+            if (!File.Exists(path))
+            {
+                File.WriteAllText(path, Path.GetDirectoryName(Location) + Environment.NewLine);
+            }
+            new Process()
+            {
+                StartInfo = new ProcessStartInfo(path)
+                {
+                    UseShellExecute = true
+                }
+            }.Start();
+        }
+        public override void OpenRepoLocation()
+        {
+            new Process()
+            {
+                StartInfo = new ProcessStartInfo(Location)
+                {
+                    UseShellExecute = true
+                }
+            }.Start();
         }
 
         protected override void LoadDataInternal()

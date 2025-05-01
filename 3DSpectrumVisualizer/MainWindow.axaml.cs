@@ -296,6 +296,34 @@ namespace _3DSpectrumVisualizer
 #endregion
 
 #region UI events
+        private void OnShowInfoClick(object sender, RoutedEventArgs e)
+        {
+            foreach (var item in Program.Repositories)
+            {
+                try
+                {
+                    item.OpenDescriptionFile();
+                }
+                catch (Exception ex)
+                {
+                    Program.LogException(this, ex);
+                }
+            }
+        }
+        private void OnOpenFolderClick(object sender, RoutedEventArgs e)
+        {
+            foreach (var item in Program.Repositories)
+            {
+                try
+                {
+                    item.OpenRepoLocation();
+                }
+                catch (Exception ex)
+                {
+                    Program.LogException(this, ex);
+                }
+            }
+        }
 
         private async void OnVIExport_Click(object sender, RoutedEventArgs e)
         {

@@ -100,6 +100,7 @@ namespace _3DSpectrumVisualizer
             DataRepositoryBase.AMURoundingDigits = Config.AMURoundingDigits;
             DataRepositoryBase.FallbackColor = Config.FallbackColor;
             DataRepositoryBase.GasFileName = Config.GasFileName;
+            DataRepositoryBase.InfoFileName = Config.InfoFileName;
             DataRepositoryBase.InfoSplitter = Config.InfoSplitter;
             DataRepositoryBase.InfoSubfolder = Config.InfoSubfolder;
             DataRepositoryBase.LightGradient = Config.LightGradient;

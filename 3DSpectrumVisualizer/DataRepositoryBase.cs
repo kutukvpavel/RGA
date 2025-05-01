@@ -40,6 +40,8 @@ namespace _3DSpectrumVisualizer
         #region Abstract
 
         public abstract void Initialize();
+        public abstract void OpenDescriptionFile();
+        public abstract void OpenRepoLocation();
         protected abstract void LoadDataInternal();
 
         #endregion
@@ -58,6 +60,7 @@ namespace _3DSpectrumVisualizer
         public static string UVFileName { get; set; }
         public static string GasFileName { get; set; }
         public static string SensorFileName { get; set; }
+        public static string InfoFileName { get; set; }
         public static int VIModeVoltageIndex { get; set; }
         public static int VIModeCurrentIndex { get; set; }
         public static float VIModeCurrentMultiplier { get; set; }

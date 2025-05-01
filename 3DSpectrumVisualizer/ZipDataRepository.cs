@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -34,6 +35,32 @@ namespace _3DSpectrumVisualizer
             _SensorEntries = e.Where(x => Regex.IsMatch(x.FullName, dataPattern)).OrderBy(x => x.Name).ToArray();
             dataPattern = $@"^{Regex.Escape(root)}[^/]{Filter.Replace(".", @"\.")}$";
             _DataEntries = e.Where(x => Regex.IsMatch(x.FullName, dataPattern));
+            dataPattern = infoDir + InfoFileName;
+            _InfoFileEntry = e.FirstOrDefault(x => x.FullName == dataPattern);
+        }
+
+        public override void OpenDescriptionFile()
+        {
+            if (_InfoFileEntry == null) return;
+            string path = Path.GetTempFileName();
+            _InfoFileEntry.ExtractToFile(path, true);
+            new Process()
+            {
+                StartInfo = new ProcessStartInfo(path)
+                {
+                    UseShellExecute = true
+                }
+            }.Start();
+        }
+        public override void OpenRepoLocation()
+        {
+            new Process()
+            {
+                StartInfo = new ProcessStartInfo(Location)
+                {
+                    UseShellExecute = true
+                }
+            }.Start();
         }
 
         protected override void LoadDataInternal()
@@ -81,6 +108,7 @@ namespace _3DSpectrumVisualizer
         private ZipArchiveEntry _GasInfoEntry;
 
         private ZipArchiveEntry[] _SensorEntries;
+        private ZipArchiveEntry _InfoFileEntry;
 
         private void LoadInfoFile(ZipArchiveEntry f, Action<string> addLineMethod)
         {

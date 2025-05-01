@@ -49,7 +49,9 @@
 			</Expander.Styles>
 			<ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Visible">
 				<StackPanel Orientation="Vertical">
-					<CheckBox x:Name="chkHorizontalGradient" Margin="0,0,20,10" 
+					<Button Background="LightGreen" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Click="OnShowInfoClick">Show Info</Button>
+					<Button Background="LightBlue" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Click="OnOpenFolderClick">Open Folder</Button>
+					<CheckBox x:Name="chkHorizontalGradient" Margin="0,10,20,10" 
 							  IsChecked="{x:Static local:DataRepositoryBase.UseHorizontalGradient}"
 							  Click="OnHorizontalGradientChecked">Horizontal
 Gradient</CheckBox>
