@@ -124,7 +124,7 @@ namespace _3DSpectrumVisualizer
                     {
                         foreach (var item in repos)
                         {
-                            if (item.VIModeTimestamps.Count < i)
+                            if (item.VIModeTimestamps.Count > i)
                             {
                                 cw.WriteField(item.VIModeTimestamps[i].ToString(Program.Config.ExportXFormat));
                                 cw.WriteField(item.VIModeProfile[i].X.ToString(SensorExportFormat));
@@ -670,10 +670,10 @@ namespace _3DSpectrumVisualizer
                     if (lastRegion != null) lastRegion.Complete(t);
                 }
             }
-            else
+            /*else
             {
                 if (val && (lastRegion != null)) lastRegion.Complete(t);
-            }
+            }*/
             _LastUVState = val;
         }
         protected void AddTempInfoLine(string l)
