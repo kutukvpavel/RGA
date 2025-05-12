@@ -48,6 +48,7 @@ namespace _3DSpectrumVisualizer
 
         #region Static
 
+        public static string TemperatureExportFormat { get; set; } = "F1";
         public static string SensorExportFormat { get; set; } = "E3";
         public static float ColorPositionSliderPrecision { get; set; }
         public static CsvConfiguration ExportCsvConfig { get; set; } = new CsvConfiguration(CultureInfo.CurrentCulture)
@@ -111,9 +112,12 @@ namespace _3DSpectrumVisualizer
                 int len = repos.Max(x => x.VIModeTimestamps.Count);
                 int start = (int)MathF.Round(len * startFraction);
                 int end = (int)MathF.Round(len * endFraction);
+                int[] tempIndex = new int[repos.Count];
                 foreach (var item in repos)
                 {
                     cw.WriteField(item.Location.Split(Path.DirectorySeparatorChar).LastOrDefault());
+                    cw.WriteField("T");
+                    cw.WriteField("UV");
                     cw.WriteField("V");
                     cw.WriteField("I");
                 }
@@ -122,17 +126,23 @@ namespace _3DSpectrumVisualizer
                 {
                     try
                     {
-                        foreach (var item in repos)
+                        for (int j = 0; j < repos.Count; j++)
                         {
+                            var item = repos[j];
+                            float t = item.VIModeTimestamps[i];
+                            cw.WriteField(t.ToString(Program.Config.ExportXFormat));
+                            //Temperature
+                            cw.WriteField(FindProfilePoint(item.TemperatureProfile, t, ref tempIndex[j], TemperatureExportFormat));
+                            //UV
+                            cw.WriteField(item.HitTestUVRegion(t) ?
+                                Program.Config.ExportUVTrueString : Program.Config.ExportUVFalseString);
                             if (item.VIModeTimestamps.Count > i)
                             {
-                                cw.WriteField(item.VIModeTimestamps[i].ToString(Program.Config.ExportXFormat));
                                 cw.WriteField(item.VIModeProfile[i].X.ToString(SensorExportFormat));
                                 cw.WriteField(item.VIModeProfile[i].Y.ToString(SensorExportFormat));
                             }
                             else
                             {
-                                cw.WriteField(string.Empty);
                                 cw.WriteField(string.Empty);
                                 cw.WriteField(string.Empty);
                             }
@@ -210,7 +220,7 @@ namespace _3DSpectrumVisualizer
                                 cw.WriteField(p.X.ToString(Program.Config.ExportXFormat));
                                 cw.WriteField(p.Y.ToString(Program.Config.ExportYFormat));
                                 //Temperature
-                                string t = FindProfilePoint(item.TemperatureProfile, p, ref tempIndex[j], "F1");
+                                string t = FindProfilePoint(item.TemperatureProfile, p.X, ref tempIndex[j], TemperatureExportFormat);
                                 cw.WriteField(t);
                                 //UV
                                 cw.WriteField(item.HitTestUVRegion(p.X) ?
@@ -221,7 +231,7 @@ namespace _3DSpectrumVisualizer
                                 //Sensors
                                 for (int k = 0; k < item.SensorProfiles.Count; k++)
                                 {
-                                    t = FindProfilePoint(item.SensorProfiles[k], p, ref sensorIndex[j][k], SensorExportFormat);
+                                    t = FindProfilePoint(item.SensorProfiles[k], p.X, ref sensorIndex[j][k], SensorExportFormat);
                                     cw.WriteField(t);
                                 }
                             }
@@ -251,14 +261,14 @@ namespace _3DSpectrumVisualizer
             }
         }
 
-        private static string FindProfilePoint(SKPath profile, SKPoint p, ref int index, string format)
+        private static string FindProfilePoint(SKPath profile, float timeStamp, ref int index, string format)
         {
             string t = "";
             try
             {
-                if (profile[index].X <= p.X)
+                if (profile[index].X <= timeStamp)
                 {
-                    while (profile[index].X < p.X) index++;
+                    while (profile[index].X < timeStamp) index++;
                     t = profile[index].Y.ToString(format);
                 }
             }
