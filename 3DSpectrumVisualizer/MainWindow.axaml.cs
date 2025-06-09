@@ -105,6 +105,7 @@ namespace _3DSpectrumVisualizer
         private Grid MainGrid;
         private SkiaVIPlot VIPlot;
         private Button ExportVIButton;
+        private Button PurgeButton;
 
         private void InitializeComponent()
         {
@@ -151,6 +152,7 @@ namespace _3DSpectrumVisualizer
             VIPlot = this.FindControl<SkiaVIPlot>("VIPlot");
             VIPlot.DataRepositories = Program.Repositories;
             ExportVIButton = this.FindControl<Button>("btnExportVI");
+            PurgeButton = this.FindControl<Button>("btnPurge");
         }
 
         private void Save3DCoords()
@@ -276,6 +278,7 @@ namespace _3DSpectrumVisualizer
                 LoadingLabel.IsVisible = false;
                 SectionPlot.UpdateRepos();
                 InvalidateSpectrum(this, null);
+                PurgeButton.IsEnabled = Program.Repositories.Any(x => x.CanPurge);
             });
         }
 
@@ -293,9 +296,25 @@ namespace _3DSpectrumVisualizer
             Program.LogMemoryFootprint();
         }
 
-#endregion
+        #endregion
 
-#region UI events
+        #region UI events
+
+        private async void OnRemoveBackupClick(object sender, RoutedEventArgs e)
+        {
+            PurgeButton.IsEnabled = false;
+            object content = PurgeButton.Content;
+            PurgeButton.Content = "Purging...";
+            await Task.Run(() =>
+            {
+                foreach (var item in Program.Repositories)
+                {
+                    if (item.CanPurge) item.Purge();
+                }
+            });
+            PurgeButton.Content = content;
+            PurgeButton.IsEnabled = Program.Repositories.Any(x => x.CanPurge);
+        }
         private void OnShowInfoClick(object sender, RoutedEventArgs e)
         {
             foreach (var item in Program.Repositories)

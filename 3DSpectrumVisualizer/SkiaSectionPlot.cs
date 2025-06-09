@@ -364,9 +364,11 @@ namespace _3DSpectrumVisualizer
             private readonly float LastMouseY;
             private readonly IEnumerable<DataRepositoryBase> Data;
             private List<SKRect> ClipRects;
+            private readonly bool AnySensors;
 
             public DrawSectionPlot(SkiaSectionPlot parent, float lastMouseY) : base(parent)
             {
+                AnySensors = Data.Any(x => x.SensorProfiles.Count > 0);
                 XTr = parent.XTranslate;
                 YTr = parent.YTranslate + (float)parent.Bounds.Height /** 0.95f*/;
                 XSc = parent.XScaling;
@@ -486,6 +488,7 @@ namespace _3DSpectrumVisualizer
                 canvas.DrawText(text, 0, LastMouseY + FontPaint.TextSize * 1.1f, FontPaint);
                 canvas.DrawLine(0, LastMouseY, FontPaint.MeasureText(text) * 1.5f * TicksScale, LastMouseY, FontPaint);
                 //Sensors
+                if (!AnySensors) return;
                 value = (YTrS - LastMouseY) / YScS;
                 if (Data.Any(x => x.SensorLogScale)) value = MathF.Pow(10, value);
                 text = value.ToString(IntensityLabelFormat);

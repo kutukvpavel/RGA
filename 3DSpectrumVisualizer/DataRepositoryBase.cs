@@ -40,9 +40,11 @@ namespace _3DSpectrumVisualizer
         #region Abstract
 
         public abstract void Initialize();
+        public abstract void Purge();
         public abstract void OpenDescriptionFile();
         public abstract void OpenRepoLocation();
         protected abstract void LoadDataInternal();
+        public abstract bool CanPurge { get; protected set; }
 
         #endregion
 
@@ -57,6 +59,7 @@ namespace _3DSpectrumVisualizer
         };
         public static string InfoSplitter { get; set; }
         public static string InfoSubfolder { get; set; }
+        public static string BackupDataSubfolder { get; set; } = "backup";
         public static string TemperatureFileName { get; set; }
         public static string UVFileName { get; set; }
         public static string GasFileName { get; set; }

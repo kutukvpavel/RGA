@@ -15,6 +15,8 @@ namespace _3DSpectrumVisualizer
 
         }
 
+        public override bool CanPurge { get => false; protected set => throw new NotImplementedException(); }
+
         #region Public Methods
 
         public override void Initialize()
@@ -62,7 +64,10 @@ namespace _3DSpectrumVisualizer
                 }
             }.Start();
         }
-
+        public override void Purge()
+        {
+            throw new NotImplementedException();
+        }
         protected override void LoadDataInternal()
         {
             if (_Archive == null) throw new InvalidOperationException("Zip repository is not initialized.");

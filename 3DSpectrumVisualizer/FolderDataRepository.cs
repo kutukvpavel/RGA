@@ -19,6 +19,8 @@ namespace _3DSpectrumVisualizer
 
         #region Properties
 
+        public override bool CanPurge { get; protected set; }
+
         public override bool Enabled
         {
             get { return _PollTimer.Enabled; }
@@ -39,6 +41,21 @@ namespace _3DSpectrumVisualizer
                 $@"^{Regex.Escape(infoSubfolder + Path.DirectorySeparatorChar)}{SensorFileName.Replace("{0}", "[0-9]+").Replace(".", @"\.")}$";
             _SensorPathes = Directory.GetFiles(infoSubfolder).Where(x => Regex.IsMatch(x, sensorsPattern)).ToArray();
             _SensorStreams = new TextReader[_SensorPathes.Length];
+            CanPurge = Directory.Exists(Path.Combine(Location, BackupDataSubfolder));
+        }
+
+        public override void Purge()
+        {
+            if (!CanPurge) return;
+            try
+            {
+                Directory.Delete(Path.Combine(Location, BackupDataSubfolder), true);
+                CanPurge = false;
+            }
+            catch (Exception ex)
+            {
+                Program.LogException(this, ex);
+            }
         }
 
         public override void OpenDescriptionFile()
@@ -128,6 +145,7 @@ namespace _3DSpectrumVisualizer
         private TextReader[] _SensorStreams;
         private DateTime _LastFileCreationTime = DateTime.MinValue;
         private readonly System.Timers.Timer _PollTimer;
+
         private bool ReadAvailableInfoLines(ref TextReader s, string path, Action<string> addMethod)
         {
             string l;
