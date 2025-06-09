@@ -368,7 +368,6 @@ namespace _3DSpectrumVisualizer
 
             public DrawSectionPlot(SkiaSectionPlot parent, float lastMouseY) : base(parent)
             {
-                AnySensors = Data.Any(x => x.SensorProfiles.Count > 0);
                 XTr = parent.XTranslate;
                 YTr = parent.YTranslate + (float)parent.Bounds.Height /** 0.95f*/;
                 XSc = parent.XScaling;
@@ -401,6 +400,7 @@ namespace _3DSpectrumVisualizer
                                 path.Bounds.Left + path.Bounds.Width * ResultsEnd,
                                 float.PositiveInfinity);
                 }).ToList();
+                AnySensors = Data.Any(x => (x.SensorProfiles.Count > 0));
             }
 
             protected override void RenderCanvas(SKCanvas canvas)
