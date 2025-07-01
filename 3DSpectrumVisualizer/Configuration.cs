@@ -94,6 +94,7 @@ namespace _3DSpectrumVisualizer
         public bool UseHorizontalGradient { get; set; } = false;
         public float LastTimeAxisInterval { get; set; } = 2.5f;
         public string LastExportDir { get; set; }
+        public string LastExportName { get; set; }
         public string ExportYFormat { get; set; } = "E4";
         public string ExportXFormat { get; set; } = "F1";
         public string ExportUVTrueString { get; set; } = "1";

@@ -10,6 +10,7 @@ using CsvHelper;
 using SkiaSharp;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -356,6 +357,7 @@ namespace _3DSpectrumVisualizer
             if (Directory.Exists(Program.Config.LastExportDir)) sd.Directory = Program.Config.LastExportDir;
             string path = await sd.ShowAsync(this);
             if (path == null) return;
+            Program.Config.LastExportDir = sd.Directory;
             ExportVIReentrancyTracker++;
             var buttonContent = ExportVIButton.Content;
             var buttonBrush = ExportVIButton.Background;
@@ -434,24 +436,69 @@ namespace _3DSpectrumVisualizer
 
         private async void OnExportSectionClick(object sender, RoutedEventArgs e)
         {
+            const char nameSeparator = '_';
+            const char amuSeparator = ';';
+            const string extension = "csv";
+
+            //Open dialog
             if (!Program.Repositories.Any(x => x.Sections.ContainsKey(SectionPlot.AMU))) return;
             SaveFileDialog sd = new SaveFileDialog()
             {
+                Title = "Use ; after _ to separate m/z for multiple export: name_10;11.csv",
+                InitialFileName = "name_10;11.csv",
                 DefaultExtension = "csv",
                 Filters = new List<FileDialogFilter>()
-                { new FileDialogFilter() { Extensions = new List<string>() { "csv" }, Name = "Comma-separated values" } }
+                { new FileDialogFilter() { Extensions = new List<string>() { extension }, Name = "Comma-separated values" } }
             };
             if (Directory.Exists(Program.Config.LastExportDir)) sd.Directory = Program.Config.LastExportDir;
+            if (Program.Config.LastExportName != null) sd.InitialFileName = Program.Config.LastExportName;
             string path = await sd.ShowAsync(this);
             if (path == null) return;
+
+            //If OK, indicate export has started and process info
+            string directory = Path.GetDirectoryName(path);
+            Program.Config.LastExportDir = directory;
+            string name = Path.GetFileNameWithoutExtension(path);
             ExportSectionReentrancyTracker++;
             var buttonContent = ExportSectionButton.Content;
             var buttonBrush = ExportSectionButton.Background;
             ExportSectionButton.Content = "Exporting...";
             ExportSectionButton.Background = Brushes.Gray;
+
+            //Parse m/z
+            List<float> amus = new List<float>();
+            string sampleName = name;
+            if (name.Contains(nameSeparator))
+            {
+                string lastNameFragment = name.Split(nameSeparator, StringSplitOptions.RemoveEmptyEntries).Last();
+                if (lastNameFragment.Contains(amuSeparator))
+                {
+                    sampleName = sampleName.Remove(sampleName.Length - lastNameFragment.Length - 1);
+                    string[] splt = lastNameFragment.Split(amuSeparator, StringSplitOptions.RemoveEmptyEntries);
+                    foreach (var item in splt)
+                    {
+                        if (float.TryParse(item, NumberStyles.Float, CultureInfo.CurrentUICulture, out float amu)) amus.Add(amu);
+                    }
+                }
+                else
+                {
+                    amus.Add(SectionPlot.AMU);
+                }
+            }
+            else
+            {
+                amus.Add(SectionPlot.AMU);
+            }
+            Program.Config.LastExportName = sampleName;
+
+            //Export
             try
             {
-                await Task.Run(() => DataRepositoryBase.ExportSections(Program.Repositories, SectionPlot.AMU, path));
+                foreach (var item in amus)
+                {
+                    string annotatedPath = Path.Combine(directory, $"{sampleName}{nameSeparator}{item:G4}.{extension}");
+                    await Task.Run(() => DataRepositoryBase.ExportSections(Program.Repositories, item, annotatedPath));
+                }
             }
             catch (Exception ex)
             {
@@ -463,6 +510,7 @@ namespace _3DSpectrumVisualizer
                 {
                     ExportSectionButton.Content = buttonContent;
                     ExportSectionButton.Background = buttonBrush;
+                    Program.Config.Save();
                 }
             }
         }
