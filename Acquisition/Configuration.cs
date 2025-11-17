@@ -27,7 +27,8 @@ namespace Acquisition
         public string GpibPipeName { get; set; } = "GPIBServer_Broadcast_Pipe0";
         public string FirstGpibInstrument { get; set; } = "ElectrolysisSource";
         public string SecondGpibInstrument { get; set; } = "ResistanceMeter";
-        public int GpibResponseFieldIndex { get; set; } = 0;
+        public int FirstGpibResponseFieldIndex { get; set; } = 0;
+        public int SecondGpibResponseFieldIndex { get; set; } = 0;
         [JsonIgnore]
         public static string WorkingDirectory { get => Environment.CurrentDirectory; }
         [JsonIgnore]

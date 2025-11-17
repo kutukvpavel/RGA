@@ -413,13 +413,14 @@ namespace Acquisition
             {
                 if (Config.FirstGpibInstrument != null && Config.SecondGpibInstrument != null)
                 {
-                    double response = ConditionGpibOutput(e.Response);
                     if (e.InstrumentName == Config.FirstGpibInstrument)
                     {
+                        double response = ConditionGpibOutput(e.Response, Config.FirstGpibResponseFieldIndex);
                         AppendLine(string.Format(Config.SensorFileName, 0), response.ToString(Config.SensorNumberFormat, CultureInfo.InvariantCulture));
                     }
-                    else if (e.InstrumentName == Config.SecondGpibInstrument)
+                    if (e.InstrumentName == Config.SecondGpibInstrument)
                     {
+                        double response = ConditionGpibOutput(e.Response, Config.SecondGpibResponseFieldIndex);
                         AppendLine(string.Format(Config.SensorFileName, 1), response.ToString(Config.SensorNumberFormat, CultureInfo.InvariantCulture));
                     }
                 }
@@ -484,11 +485,11 @@ namespace Acquisition
             _PendingTasks.Add(task);
         }
         private static readonly char[] GpibNumberSign = { '+', '-' };
-        private static double ConditionGpibOutput(string response)
+        private static double ConditionGpibOutput(string response, int fieldIndex)
         {
             if (response.Contains(','))
             {
-                response = response.Split(',')[Config.GpibResponseFieldIndex];
+                response = response.Split(',')[fieldIndex];
             }
             int signIndex = response.IndexOfAny(GpibNumberSign);
             if (signIndex > 0)
