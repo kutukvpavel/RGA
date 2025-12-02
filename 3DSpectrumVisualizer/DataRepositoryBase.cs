@@ -487,13 +487,14 @@ namespace _3DSpectrumVisualizer
                 VIPaint.Color = SensorColors[Program.Config.VIModeCurrentSensorIndex].Color;
                 if (VIModeProfile.PointCount == 0)
                 {
-                    var intersection = SKRect.Intersect(SensorProfiles[VIModeVoltageIndex].Bounds, SensorProfiles[VIModeCurrentIndex].Bounds);
-                    if (!intersection.IsEmpty)
+                    var intersectionLeft = Math.Max(SensorProfiles[VIModeVoltageIndex].Bounds.Left, SensorProfiles[VIModeCurrentIndex].Bounds.Left);
+                    var intersectionRight = Math.Min(SensorProfiles[VIModeVoltageIndex].Bounds.Right, SensorProfiles[VIModeCurrentIndex].Bounds.Right);
+                    if (intersectionLeft < intersectionRight) //Time axes intersection non-empty
                     {
-                        VILastAddedVoltageIndex = SensorProfiles[VIModeVoltageIndex].Points.TakeWhile(x => x.X < intersection.Left).Count();
-                        VILastAddedCurrentIndex = SensorProfiles[VIModeCurrentIndex].Points.TakeWhile(x => x.X < intersection.Left).Count();
-                        var voltages = SensorProfiles[VIModeVoltageIndex].Points.Skip(VILastAddedVoltageIndex).TakeWhile(x => x.X <= intersection.Right);
-                        var currents = SensorProfiles[VIModeCurrentIndex].Points.Skip(VILastAddedCurrentIndex).TakeWhile(x => x.X <= intersection.Right);
+                        VILastAddedVoltageIndex = SensorProfiles[VIModeVoltageIndex].Points.TakeWhile(x => x.X < intersectionLeft).Count();
+                        VILastAddedCurrentIndex = SensorProfiles[VIModeCurrentIndex].Points.TakeWhile(x => x.X < intersectionLeft).Count();
+                        var voltages = SensorProfiles[VIModeVoltageIndex].Points.Skip(VILastAddedVoltageIndex).TakeWhile(x => x.X <= intersectionRight);
+                        var currents = SensorProfiles[VIModeCurrentIndex].Points.Skip(VILastAddedCurrentIndex).TakeWhile(x => x.X <= intersectionRight);
                         if (voltages.First().X > currents.First().X)
                         {
                             currents = currents.Skip(1);

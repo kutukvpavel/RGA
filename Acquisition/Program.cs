@@ -70,6 +70,7 @@ namespace Acquisition
             int returnCode = 0;
             //Init
             CommandSet.SetNoiseFloor.Parameter = Config.NoiseFloorSetting.ToString();
+            CommandSet.TurnFilamentON.Parameter = Config.FilamentCurrent.ToString("F2", CultureInfo.InvariantCulture);
             InitBackgroundRemoval();
             InitDevice(args.Port);
             InitPipe(Config.LabPidPipeName, Config.MgaPipeName, Config.GpibPipeName);
