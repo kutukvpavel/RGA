@@ -277,6 +277,8 @@ namespace _3DSpectrumVisualizer
             }
             catch (IndexOutOfRangeException)
             { }
+            catch (ArgumentOutOfRangeException)
+            { }
             return t;
         }
 
