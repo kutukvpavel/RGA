@@ -522,7 +522,7 @@ namespace _3DSpectrumVisualizer
                             } while (voltageIterator.MoveNext());
                             VILastAddedCurrentIndex++;
                             if (!float.IsFinite(v)) continue;
-                            VIModeProfile.LineTo(new SKPoint(v, item.Y));
+                            VIModeProfile.LineTo(new SKPoint(v, item.Y * VIModeCurrentMultiplier));
                             VIModeTimestamps.Add(item.X);
                         }
                     }
@@ -542,7 +542,7 @@ namespace _3DSpectrumVisualizer
                         }
                         VILastAddedCurrentIndex++;
                         if (!float.IsFinite(v)) continue;
-                        VIModeProfile.LineTo(new SKPoint(v, item.Y));
+                        VIModeProfile.LineTo(new SKPoint(v, item.Y * VIModeCurrentMultiplier));
                         VIModeTimestamps.Add(item.X);
                     }
                 }
