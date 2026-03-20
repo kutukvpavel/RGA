@@ -92,6 +92,7 @@ namespace _3DSpectrumVisualizer
         private SkiaSectionPlot SectionPlot;
         private Label SectionCoords;
         private Slider SectionAMUSlider;
+        private Slider RatioRefAMUSlider;
         private CheckBox HorizontalGradient;
         private Label LoadingLabel;
         private CheckBox AutoupdateXScaleCheckbox;
@@ -130,6 +131,8 @@ namespace _3DSpectrumVisualizer
             SectionCoords = this.FindControl<Label>("lblSectionCoords");
             SectionAMUSlider = this.FindControl<Slider>("SectionAMUSlider");
             SectionAMUSlider.PropertyChanged += SectionAMUSlider_PropertyChanged;
+            RatioRefAMUSlider = this.FindControl<Slider>("SectionAMUSlider");
+            RatioRefAMUSlider.PropertyChanged += RatioRefAMUSlider_PropertyChanged;
             HorizontalGradient = this.FindControl<CheckBox>("chkHorizontalGradient");
             LoadingLabel = this.FindControl<Label>("lblLoading");
             ExportSectionButton = this.FindControl<Button>("btnExportSection");
@@ -526,6 +529,17 @@ namespace _3DSpectrumVisualizer
             }
         }
 
+        private void RatioRefAMUSlider_PropertyChanged(object sender, AvaloniaPropertyChangedEventArgs e)
+        {
+            if (!IsInitialized) return;
+            if (e.Property == Slider.ValueProperty)
+            {
+                if (e.NewValue == null || !e.IsEffectiveValueChange) return;
+                if (AutoYCheckbox.IsChecked ?? false) SectionPlot.AutoscaleY(false);
+                SectionPlot.InvalidateVisual();
+            }
+        }
+
         private void OnTimeAxisSliderChanged(object sender, AvaloniaPropertyChangedEventArgs e)
         {
             if (!IsInitialized) return;
@@ -759,6 +773,6 @@ namespace _3DSpectrumVisualizer
             ViewState = ViewStates.Front;
         }
 
-#endregion
+        #endregion
     }
 }

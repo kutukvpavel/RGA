@@ -134,10 +134,15 @@ Gradient</CheckBox>
 				<Slider SmallChange="0.1" LargeChange="1" DockPanel.Dock="Left" Minimum="1" Maximum="65"
 						Value="{Binding #SpectrumSection.AMU, Mode=TwoWay, Converter={x:Static local:MainWindow.AMURoundingValueConverter}}"
 						x:Name="SectionAMUSlider" TickFrequency="1" IsSnapToTickEnabled="{Binding !#chkSnap.IsChecked}"></Slider>
+				<Slider SmallChange="0.1" LargeChange="1" DockPanel.Dock="Left" Minimum="1" Maximum="65"
+						Value="{Binding #SpectrumSection.RatioRefAMU, Mode=TwoWay, Converter={x:Static local:MainWindow.AMURoundingValueConverter}}"
+						x:Name="RatioRefAMUSlider" TickFrequency="1" IsSnapToTickEnabled="{Binding !#chkSnap.IsChecked}"
+						IsVisible="{Binding #chkRatio.IsChecked}"></Slider>
 			</DockPanel>
 			<local:SkiaSectionPlot x:Name="SpectrumSection" Margin="10,0,10,0" Grid.Row="1" >
 			</local:SkiaSectionPlot>
 			<StackPanel Grid.Row="2" Orientation="Horizontal">
+				<CheckBox IsChecked="{Binding #SpectrumSection.RatioMode, Mode=TwoWay}" x:Name="chkRatio">Ratio</CheckBox>
 				<CheckBox IsChecked="{Binding #SpectrumSection.RenderTemperatureProfile, Mode=TwoWay}"
 						  Click="OnShowTempProfileClick">Temperature</CheckBox>
 				<CheckBox IsChecked="{Binding #SpectrumSection.RenderGasRegions, Mode=TwoWay}"

@@ -26,6 +26,8 @@ namespace _3DSpectrumVisualizer
             IsAntialias = true
         };
 
+        public bool RatioMode { get; set; } = false;
+
         public new SKColor Background
         {
             get => base.Background;
