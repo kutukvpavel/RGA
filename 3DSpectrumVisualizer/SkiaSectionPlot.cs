@@ -30,6 +30,22 @@ namespace _3DSpectrumVisualizer
                 }
             });
             RenderSensorProfiles.CollectionChanged += RenderSensorProfiles_CollectionChanged;
+            RatioModeProperty.Changed.Subscribe((e) =>
+            {
+                if (!IsInitialized) return;
+                if (e.IsEffectiveValueChange && e.NewValue.HasValue)
+                {
+                    RatioMode = e.NewValue.Value;
+                }
+            });
+            RatioRefAMUProperty.Changed.Subscribe((e) =>
+            {
+                if (!IsInitialized) return;
+                if (e.IsEffectiveValueChange && e.NewValue.HasValue)
+                {
+                    RatioRefAMU = e.NewValue.Value;
+                }
+            });
         }
 
         #region Properties
@@ -37,6 +53,10 @@ namespace _3DSpectrumVisualizer
             defaultBindingMode: BindingMode.TwoWay);
         public AvaloniaProperty<bool> AMUPresent = AvaloniaProperty.Register<SkiaSectionPlot, bool>("AMUPresent",
             defaultBindingMode: BindingMode.OneWay, defaultValue: false);
+        public AvaloniaProperty<float> RatioRefAMUProperty = AvaloniaProperty.Register<SkiaSectionPlot, float>("RatioRefAMU",
+            defaultBindingMode: BindingMode.TwoWay);
+        public AvaloniaProperty<bool> RatioModeProperty = AvaloniaProperty.Register<SkiaSectionPlot, bool>("RatioMode",
+            defaultBindingMode: BindingMode.TwoWay, defaultValue: false);
 
         public SKPaint FontPaint { get; set; } = new SKPaint()
         { 
@@ -77,6 +97,28 @@ namespace _3DSpectrumVisualizer
                 _AMU = value;
                 SetValue(AMUProperty, _AMU);
                 SetValue(AMUPresent, DataRepositories.Any(x => x.Sections.ContainsKey(_AMU)));
+            }
+        }
+        private float _RatioRefAMU = -1;
+        public float RatioRefAMU
+        {
+            get => _RatioRefAMU;
+            set
+            {
+                if (_RatioRefAMU == value) return;
+                _RatioRefAMU = value;
+                SetValue(RatioRefAMUProperty, _RatioRefAMU);
+            }
+        }
+        private bool _RatioMode = false;
+        public bool RatioMode
+        {
+            get => _RatioMode;
+            set
+            {
+                if (_RatioMode == value) return;
+                _RatioMode = value;
+                SetValue(RatioModeProperty, _RatioMode);
             }
         }
 
@@ -365,6 +407,7 @@ namespace _3DSpectrumVisualizer
             private readonly IEnumerable<DataRepositoryBase> Data;
             private List<SKRect> ClipRects;
             private readonly bool AnySensors;
+            private readonly float RatioRefAMU;
 
             public DrawSectionPlot(SkiaSectionPlot parent, float lastMouseY) : base(parent)
             {
@@ -401,6 +444,7 @@ namespace _3DSpectrumVisualizer
                                 float.PositiveInfinity);
                 }).ToList();
                 AnySensors = Data.Any(x => (x.SensorProfiles.Count > 0));
+                RatioRefAMU = parent.RatioMode ? parent.RatioRefAMU : -1;
             }
 
             protected override void RenderCanvas(SKCanvas canvas)
