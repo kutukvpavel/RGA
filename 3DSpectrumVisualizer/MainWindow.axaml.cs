@@ -108,6 +108,7 @@ namespace _3DSpectrumVisualizer
         private SkiaVIPlot VIPlot;
         private Button ExportVIButton;
         private Button PurgeButton;
+        private Slider ReferenceAngleSlider;
 
         private void InitializeComponent()
         {
@@ -157,6 +158,8 @@ namespace _3DSpectrumVisualizer
             VIPlot.DataRepositories = Program.Repositories;
             ExportVIButton = this.FindControl<Button>("btnExportVI");
             PurgeButton = this.FindControl<Button>("btnPurge");
+            ReferenceAngleSlider = this.FindControl<Slider>("VIReferenceSlider");
+            ReferenceAngleSlider.PropertyChanged += ReferenceAngleSlider_PropertyChanged;
         }
 
         private void Save3DCoords()
@@ -419,6 +422,17 @@ namespace _3DSpectrumVisualizer
                 if (e.NewValue == null || !e.IsEffectiveValueChange) return;
                 SectionPlot.HideFirstPercentOfResults = (float)(double)e.NewValue;
                 VIPlot.HideFirstPercentOfResults = (float)(double)e.NewValue;
+            }
+        }
+
+        private void ReferenceAngleSlider_PropertyChanged(object sender, AvaloniaPropertyChangedEventArgs e)
+        {
+            if (!IsInitialized) return;
+            if (e.Property == Slider.ValueProperty)
+            {
+                if (e.NewValue == null || !e.IsEffectiveValueChange) return;
+                VIPlot.ReferenceAngle = (float)(double)e.NewValue;
+                VIPlot.InvalidateVisual();
             }
         }
 

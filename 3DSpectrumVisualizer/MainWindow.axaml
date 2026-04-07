@@ -125,7 +125,7 @@ Gradient</CheckBox>
 		</StackPanel>
 		<local:Skia3DSpectrum x:Name="Spectrum3D" Grid.Row="1" Grid.Column="1"></local:Skia3DSpectrum>
 		<GridSplitter Grid.Row="2" Grid.Column="1" ResizeDirection="Rows" Background="#6F6F6F"></GridSplitter>
-		<Grid Grid.Row="3" Grid.Column="1" ColumnDefinitions="*" RowDefinitions="auto,*,auto">
+		<Grid Grid.Row="3" Grid.Column="1" ColumnDefinitions="*" RowDefinitions="auto,auto,*,auto">
 			<DockPanel Grid.Row="0" LastChildFill="True">
 				<CheckBox x:Name="chkSnap" DockPanel.Dock="Right" Margin="10,0,10,0">0.1 AMU Ticks</CheckBox>
 				<TextBlock DockPanel.Dock="Left" Margin="10,10,0,10" FontSize="16">AMU: </TextBlock>
@@ -134,14 +134,18 @@ Gradient</CheckBox>
 				<Slider SmallChange="0.1" LargeChange="1" DockPanel.Dock="Left" Minimum="1" Maximum="65"
 						Value="{Binding #SpectrumSection.AMU, Mode=TwoWay, Converter={x:Static local:MainWindow.AMURoundingValueConverter}}"
 						x:Name="SectionAMUSlider" TickFrequency="1" IsSnapToTickEnabled="{Binding !#chkSnap.IsChecked}"></Slider>
+			</DockPanel>
+			<DockPanel Grid.Row="1" LastChildFill="True" IsVisible="{Binding #chkRatio.IsChecked}">
+				<TextBlock DockPanel.Dock="Left" Margin="10,10,0,10" FontSize="16">Ref: </TextBlock>
+				<TextBlock DockPanel.Dock="Left" Margin="5,10,10,10" FontSize="16"
+						   Text="{Binding #RatioRefAMUSlider.Value, Mode=OneWay, Converter={x:Static local:MainWindow.AMUStringValueConverter}}"></TextBlock>
 				<Slider SmallChange="0.1" LargeChange="1" DockPanel.Dock="Left" Minimum="1" Maximum="65"
 						Value="{Binding #SpectrumSection.RatioRefAMU, Mode=TwoWay, Converter={x:Static local:MainWindow.AMURoundingValueConverter}}"
-						x:Name="RatioRefAMUSlider" TickFrequency="1" IsSnapToTickEnabled="{Binding !#chkSnap.IsChecked}"
-						IsVisible="{Binding #chkRatio.IsChecked}"></Slider>
+						x:Name="RatioRefAMUSlider" TickFrequency="1" IsSnapToTickEnabled="{Binding !#chkSnap.IsChecked}"></Slider>
 			</DockPanel>
-			<local:SkiaSectionPlot x:Name="SpectrumSection" Margin="10,0,10,0" Grid.Row="1" >
+			<local:SkiaSectionPlot x:Name="SpectrumSection" Margin="10,0,10,0" Grid.Row="2" >
 			</local:SkiaSectionPlot>
-			<StackPanel Grid.Row="2" Orientation="Horizontal">
+			<StackPanel Grid.Row="3" Orientation="Horizontal">
 				<CheckBox IsChecked="{Binding #SpectrumSection.RatioMode, Mode=TwoWay}" x:Name="chkRatio">Ratio</CheckBox>
 				<CheckBox IsChecked="{Binding #SpectrumSection.RenderTemperatureProfile, Mode=TwoWay}"
 						  Click="OnShowTempProfileClick">Temperature</CheckBox>
@@ -174,6 +178,9 @@ Gradient</CheckBox>
 				<TextBlock Margin="5" VerticalAlignment="Center" FontSize="14">VI Plot</TextBlock>
 				<Button Button.Click="OnVIAutoscale_Click" Background="#ADE6BF">Autoscale</Button>
 				<Button Button.Click="OnVIExport_Click" Background="#EFAA30" x:Name="btnExportVI">Export</Button>
+				<TextBlock Margin="10,5,3,5" VerticalAlignment="Center">Reference Angle:</TextBlock>
+				<Slider SmallChange="0.005" LargeChange="0.1" Minimum="0" Maximum="1" MinWidth="120"
+						Value="{Binding #VIPlot.ReferenceAngle, Mode=TwoWay}" x:Name="VIReferenceSlider"></Slider>
 			</StackPanel>
 			<local:SkiaVIPlot Grid.Column="0" Grid.Row="1" x:Name="VIPlot" Margin="5"></local:SkiaVIPlot>
 		</Grid>

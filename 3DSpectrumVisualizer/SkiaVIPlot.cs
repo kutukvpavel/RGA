@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Data;
 using Avalonia.Input;
 using SkiaSharp;
 using System;
@@ -26,7 +27,10 @@ namespace _3DSpectrumVisualizer
             IsAntialias = true
         };
 
-        public bool RatioMode { get; set; } = false;
+        public SKPaint ReferencePaint { get; set; } = new SKPaint()
+        {
+            Color = SKColors.DarkSlateGray, StrokeWidth = 0, IsAntialias = true
+        };
 
         public new SKColor Background
         {
@@ -36,6 +40,20 @@ namespace _3DSpectrumVisualizer
                 var grayscale = value.Red * 0.299 + value.Green * 0.587 + value.Blue * 0.114;
                 FontPaint.Color = SKColor.Parse(grayscale > 167 ? "#000000" : "#FFFFFF");
                 base.Background = value;
+            }
+        }
+
+        public AvaloniaProperty<float> ReferenceAngleProperty = AvaloniaProperty.Register<SkiaVIPlot, float>("ReferenceAngle",
+            defaultBindingMode: BindingMode.TwoWay, defaultValue: 0.5f);
+        private float _ReferenceAngle = 0.5f; // 0-1 = 0-90 deg
+        public float ReferenceAngle
+        {
+            get => _ReferenceAngle;
+            set
+            {
+                if (_ReferenceAngle == value) return;
+                _ReferenceAngle = value;
+                SetValue(ReferenceAngleProperty, _ReferenceAngle);
             }
         }
 
@@ -176,11 +194,13 @@ namespace _3DSpectrumVisualizer
             private readonly float XSc;
             private readonly float YSc;
             private readonly SKPaint FontPaint;
+            private readonly SKPaint ReferencePaint;
             private readonly float LastMouseY;
             private readonly IEnumerable<DataRepositoryBase> Data;
             private readonly float VoltageAxisInterval;
             private readonly string CurrentLabelFormat;
             private readonly string VoltageLabelFormat;
+            private readonly float ReferenceAngle;
 
             public DrawVIPlot(SkiaVIPlot parent, float lastMouseY) : base(parent)
             {
@@ -190,6 +210,7 @@ namespace _3DSpectrumVisualizer
                 YSc = parent.YScaling;
                 Data = parent.DataRepositories.Where(x => x.Enabled);
                 FontPaint = parent.FontPaint;
+                ReferencePaint = parent.ReferencePaint;
                 LastMouseY = lastMouseY;
                 VoltageAxisInterval = parent.VoltageAxisInterval;
                 CurrentLabelFormat = parent.CurrentLabelFormat;
@@ -200,6 +221,7 @@ namespace _3DSpectrumVisualizer
                         (parent.HideFirstPercentOfResults * item.Duration - item.VIModeTimestamps.FirstOrDefault()) / item.VIModeDuration,
                         1 - ((parent.HideLastPercentOfResults - 1) * item.Duration + item.VIModeTimestamps.LastOrDefault()) / item.VIModeDuration);
                 }
+                ReferenceAngle = parent.ReferenceAngle * 90;
             }
 
             protected override void RenderCanvas(SKCanvas canvas)
@@ -215,6 +237,13 @@ namespace _3DSpectrumVisualizer
                     {
                         canvas.DrawPath(item.VIModeProfile, item.VIPaint);
                     }
+                }
+                using (SKAutoCanvasRestore ar = new SKAutoCanvasRestore(canvas))
+                {
+                    canvas.Translate(XTr, YTr);
+                    canvas.RotateDegrees(-ReferenceAngle);
+                    canvas.Scale(XSc, -YSc);
+                    canvas.DrawLine(-10, 0, 10, 0, ReferencePaint);
                 }
                 RenderVoltageAxis(canvas);
                 RenderCurrentAxis(canvas);
