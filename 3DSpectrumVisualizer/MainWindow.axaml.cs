@@ -109,6 +109,7 @@ namespace _3DSpectrumVisualizer
         private Button ExportVIButton;
         private Button PurgeButton;
         private Slider ReferenceAngleSlider;
+        private Button btnCalcRatio;
 
         private void InitializeComponent()
         {
@@ -160,6 +161,8 @@ namespace _3DSpectrumVisualizer
             PurgeButton = this.FindControl<Button>("btnPurge");
             ReferenceAngleSlider = this.FindControl<Slider>("VIReferenceSlider");
             ReferenceAngleSlider.PropertyChanged += ReferenceAngleSlider_PropertyChanged;
+            btnCalcRatio = this.FindControl<Button>("btnCalcRatio");
+            btnCalcRatio.Click += BtnCalcRatio_Click;
         }
 
         private void Save3DCoords()
@@ -349,6 +352,12 @@ namespace _3DSpectrumVisualizer
                     Program.LogException(this, ex);
                 }
             }
+        }
+
+        private void BtnCalcRatio_Click(object sender, RoutedEventArgs e)
+        {
+            SectionPlot.CalculateRatio();
+            SectionPlot.InvalidateVisual();
         }
 
         private async void OnVIExport_Click(object sender, RoutedEventArgs e)

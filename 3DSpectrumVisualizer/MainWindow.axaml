@@ -136,6 +136,7 @@ Gradient</CheckBox>
 						x:Name="SectionAMUSlider" TickFrequency="1" IsSnapToTickEnabled="{Binding !#chkSnap.IsChecked}"></Slider>
 			</DockPanel>
 			<DockPanel Grid.Row="1" LastChildFill="True" IsVisible="{Binding #chkRatio.IsChecked}">
+				<Button x:Name="btnCalcRatio" DockPanel.Dock="Right">Calculate</Button>
 				<TextBlock DockPanel.Dock="Left" Margin="10,10,0,10" FontSize="16">Ref: </TextBlock>
 				<TextBlock DockPanel.Dock="Left" Margin="5,10,10,10" FontSize="16"
 						   Text="{Binding #RatioRefAMUSlider.Value, Mode=OneWay, Converter={x:Static local:MainWindow.AMUStringValueConverter}}"></TextBlock>

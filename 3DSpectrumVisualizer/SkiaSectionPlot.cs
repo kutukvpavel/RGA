@@ -65,6 +65,7 @@ namespace _3DSpectrumVisualizer
         };
 
         public ObservableCollection<SensorVisibility> RenderSensorProfiles { get; set; } = new ObservableCollection<SensorVisibility>();
+        public ObservableCollection<SKPath> RatioPaths { get; } = new ObservableCollection<SKPath>();
 
         public bool RenderGasRegions { get; set; } = true;
 
@@ -157,9 +158,15 @@ namespace _3DSpectrumVisualizer
 
         public void UpdateRepos()
         {
+            int c = 0;
             foreach (var item in DataRepositories)
             {
                 item.DataAdded += Item_DataAdded;
+                c++;
+            }
+            while (RatioPaths.Count < c)
+            {
+                RatioPaths.Add(new SKPath());
             }
             Item_DataAdded(this, null);
         }
@@ -246,6 +253,20 @@ namespace _3DSpectrumVisualizer
             YTranslate = yTranslate;
             //Sensors
             AutoscaleYSensors(invalidate);
+        }
+
+        public void CalculateRatio()
+        {
+            int i = 0;
+            foreach (var item in DataRepositories)
+            {
+                SKPath numerator = item.LogarithmicIntensity ? item.Sections[AMU].LogPath : item.Sections[AMU].LinearPath;
+                for (int j = 0; j < numerator.PointCount; j++)
+                {
+                    
+                }
+                i++;
+            }
         }
 
         #endregion
