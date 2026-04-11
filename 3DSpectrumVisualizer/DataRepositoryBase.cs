@@ -81,7 +81,8 @@ namespace _3DSpectrumVisualizer
             Color = SKColor.Parse("#fff"),
             IsAntialias = true,
             Style = SKPaintStyle.Fill,
-            StrokeWidth = 0
+            StrokeWidth = 0,
+            BlendMode = SKBlendMode.SrcOver
         };
         protected static SKPointXEqualityComparer XEqualityComparer = new SKPointXEqualityComparer();
         protected static Func<GradientColor, float> ColorPosSelector =
