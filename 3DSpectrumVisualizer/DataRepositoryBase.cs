@@ -78,7 +78,7 @@ namespace _3DSpectrumVisualizer
         public static SKColor[] LightGradient { get; set; }
         public static SKPaint RegionPaintTemplate { get; set; } = new SKPaint()
         {
-            Color = SKColor.Parse("#fff"),
+            Color = SKColor.Parse("#02FFFFFF"),
             IsAntialias = true,
             Style = SKPaintStyle.Fill,
             StrokeWidth = 0,
