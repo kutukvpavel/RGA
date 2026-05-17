@@ -14,6 +14,7 @@ namespace _3DSpectrumVisualizer
     class SkiaSectionPlot : SkiaCustomControl
     {
         public static string IntensityLabelFormat { get; set; }
+        public static string AuxIntensityLabelFormat { get; set; }
         public static float TicksScale { get; set; } = 1;
 
         public SkiaSectionPlot() : base()
@@ -556,7 +557,7 @@ namespace _3DSpectrumVisualizer
                 if (!AnySensors) return;
                 value = (YTrS - LastMouseY) / YScS;
                 if (Data.Any(x => x.SensorLogScale)) value = MathF.Pow(10, value);
-                text = value.ToString(IntensityLabelFormat);
+                text = value.ToString(AuxIntensityLabelFormat);
                 float labelWidth = FontPaint.MeasureText(text);
                 canvas.DrawText(text, canvas.LocalClipBounds.Width - labelWidth * 1.1f, LastMouseY + FontPaint.TextSize * 1.1f, FontPaint);
                 canvas.DrawLine(canvas.LocalClipBounds.Width - labelWidth * 1.5f * TicksScale, 
