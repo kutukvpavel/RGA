@@ -119,6 +119,7 @@ namespace _3DSpectrumVisualizer
             Skia3DSpectrum.IntensityLabelFormat = Config.IntensityLabelFormat;
             SkiaCustomControl.EnableCaching = Config.EnableRenderCaching;
             SkiaSectionPlot.IntensityLabelFormat = Config.IntensityLabelFormat;
+            SkiaSectionPlot.AuxIntensityLabelFormat = Config.AuxIntensityLabelFormat;
         }
 
         private static void CollectSettings()
