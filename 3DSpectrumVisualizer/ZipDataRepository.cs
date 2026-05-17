@@ -36,7 +36,7 @@ namespace _3DSpectrumVisualizer
             dataPattern = $@"^{Regex.Escape(infoDir)}{SensorFileName.Replace("{0}", "[0-9]+").Replace(".", @"\.")}$";
             _SensorEntries = e.Where(x => Regex.IsMatch(x.FullName, dataPattern)).OrderBy(x => x.Name).ToArray();
             dataPattern = $@"^{Regex.Escape(root)}[^/]{Filter.Replace(".", @"\.")}$";
-            _DataEntries = e.Where(x => Regex.IsMatch(x.FullName, dataPattern));
+            _DataEntries = e.Where(x => Regex.IsMatch(x.FullName, dataPattern)).ToArray();
             dataPattern = infoDir + InfoFileName;
             _InfoFileEntry = e.FirstOrDefault(x => x.FullName == dataPattern);
         }
@@ -104,7 +104,7 @@ namespace _3DSpectrumVisualizer
 
         private ZipArchive _Archive;
 
-        private IEnumerable<ZipArchiveEntry> _DataEntries;
+        private ZipArchiveEntry[] _DataEntries;
 
         private ZipArchiveEntry _TempInfoEntry;
 

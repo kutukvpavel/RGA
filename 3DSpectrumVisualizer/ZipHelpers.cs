@@ -12,7 +12,7 @@ namespace _3DSpectrumVisualizer
     {
         public const char ZipDirectorySeparator = '/';
         public const string ZipFileExtension = ".zip";
-        public const string ZipRootSearchEntity = "/backup/";
+        public const string ZipRootSearchEntity = "/acquisition_settings.json";
 
         public static string FindRootFolder(ReadOnlyCollection<ZipArchiveEntry> e, string searchEntity = ZipRootSearchEntity)
         {
